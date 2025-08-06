@@ -1,0 +1,6 @@
+# pixi environments
+.pixi
+*.egg-info
+
+# ROOT files for local testing
+*.root
