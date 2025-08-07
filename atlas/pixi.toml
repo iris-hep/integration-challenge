@@ -1,0 +1,28 @@
+[project]
+name = "atlas-integration-challenge"
+version = "0.0.1"
+description = "IRIS-HEP ATLAS integration challenge"
+authors = ["Alexander Held <alexander.held@cern.ch>"]
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "linux-64"]
+
+[tasks.lab]
+description = "Start a JupyterLab instance"
+cmd = "jupyter lab"
+
+[tasks.start]
+description = "Get started with the repository"
+depends-on = ["lab"]
+
+[dependencies]
+notebook = ">=7.4.5,<8"
+jupyterlab = ">=4.4.5,<5"
+coffea = ">=2025.7.3,<2026"
+mplhep = ">=0.4.0,<0.5"
+xrootd = ">=5.8.1,<6"
+fsspec-xrootd = ">=0.5.1,<0.6"
+ipywidgets = ">=8.1.7,<9"
+
+[pypi-dependencies]
+atlas-schema = { git = "https://github.com/scipp-atlas/atlas-schema.git", rev = "feat/systematicsHandling" }
+atlasopenmagic = { git = "https://github.com/atlas-outreach-data-tools/atlasopenmagic", rev = "main" }
