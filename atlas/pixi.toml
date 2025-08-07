@@ -6,7 +6,13 @@ authors = ["Alexander Held <alexander.held@cern.ch>"]
 channels = ["conda-forge"]
 platforms = ["osx-arm64"]
 
-[tasks]
+[tasks.lab]
+description = "Start a JupyterLab instance"
+cmd = "jupyter lab"
+
+[tasks.start]
+description = "Get started with the repository"
+depends-on = ["lab"]
 
 [dependencies]
 coffea = ">=2025.7.3,<2026"
