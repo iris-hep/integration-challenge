@@ -21,6 +21,8 @@ coffea = ">=2025.7.3,<2026"
 mplhep = ">=0.4.0,<0.5"
 xrootd = ">=5.8.1,<6"
 fsspec-xrootd = ">=0.5.1,<0.6"
+ipywidgets = ">=8.1.7,<9"
 
 [pypi-dependencies]
 atlas-schema = { git = "https://github.com/scipp-atlas/atlas-schema.git", rev = "feat/systematicsHandling" }
+atlasopenmagic = { git = "https://github.com/atlas-outreach-data-tools/atlasopenmagic", rev = "main" }

@@ -15,3 +15,7 @@ Get a ttbar sample to test with:
 ## Step 2: coffea for ntuple processing
 
 Using https://github.com/scipp-atlas/atlas-schema, example notebook for usage is `process_ntuples.ipynb`.
+
+related issues / PRs / MRs:
+- `atlasopenmagic` warnings in notebooks: https://github.com/atlas-outreach-data-tools/atlasopenmagic/issues/31
+- identifying weight systematics more easily: https://gitlab.cern.ch/atlas/athena/-/merge_requests/81794
