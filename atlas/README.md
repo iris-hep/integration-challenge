@@ -11,6 +11,38 @@ Get a ttbar sample to test with:
 - `centralpage --scope=mc23_13p6TeV --physlite Top TTbar Baseline PowhegPythia` (`-l` to help navigate)
 - `mc23_13p6TeV.601229.PhPy8EG_A14_ttbar_hdamp258p75_SingleLep.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697`, download smallest file `mc23_13p6TeV:DAOD_PHYSLITE.43700597._000010.pool.root.1` (10k events)
 
+Basic setup:
+
+```bash
+git clone ssh://git@gitlab.cern.ch:7999/atlasphys-top/reco/TopCPToolkit.git
+cd TopCPToolkit
+mkdir -p build run
+git checkout v2.21.0
+setupATLAS
+cd build
+asetup AnalysisBase,25.2.58
+cmake ../source
+make -j4
+source */setup.sh
+cd ../run/
+```
+
+Restore later on:
+
+```bash
+setupATLAS
+cd build
+asetup --restore
+source */setup.sh
+cd ../run/
+```
+
+To run:
+
+```bash
+runTop_el.py -h
+```
+
 
 ## Step 2: coffea for ntuple processing
 
