@@ -16,25 +16,23 @@ Basic setup:
 ```bash
 git clone ssh://git@gitlab.cern.ch:7999/atlasphys-top/reco/TopCPToolkit.git
 cd TopCPToolkit
-mkdir -p build run
 git checkout v2.21.0
 setupATLAS
-cd build
 asetup AnalysisBase,25.2.58
-cmake ../source
-make -j4
-source */setup.sh
-cd ../run/
+cmake -S source -B build
+cmake --build build --parallel 4
+source build/*/setup.sh
+mkdir -p run
+cd run/
 ```
 
 Restore later on:
 
 ```bash
 setupATLAS
-cd build
 asetup --restore
 source */setup.sh
-cd ../run/
+cd run/
 ```
 
 To run:
