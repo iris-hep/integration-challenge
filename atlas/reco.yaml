@@ -1,0 +1,160 @@
+CommonServices:
+    systematicsHistogram: 'listOfSystematics'
+    filterSystematics: "^(EG_|EL_|FT_|JET_|MET_).*$|^$"
+    # onlySystematicsCategories:
+    #   - jets
+    #   - ftag
+    #   - met
+    #   - electrons
+    #   - muons
+    #   - event
+
+PileupReweighting: {}
+
+EventCleaning:
+    runEventCleaning: True
+
+GeneratorLevelAnalysis: {}
+
+Jets:
+  - containerName: 'AnaJets'
+    jetCollection: 'AntiKt4EMPFlowJets'
+    runJvtUpdate: False
+    runNNJvtUpdate: True
+    runGhostMuonAssociation: True
+    systematicsModelJES: 'Category'
+    systematicsModelJER: 'Full'
+    JVT: {}
+    PtEtaSelection:
+        minPt: 25000.0
+        maxEta: 2.5
+    FlavourTagging:
+      - btagger: 'DL1dv01'
+        btagWP: 'FixedCutBEff_85'
+        bTagCalibFile: '/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/xAODBTaggingEfficiency/13TeV/2023-22-13TeV-MC20-CDI-2023-09-13_v1.root'
+      - btagger: 'DL1dv01'
+        btagWP: 'FixedCutBEff_77'
+        bTagCalibFile: '/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/xAODBTaggingEfficiency/13TeV/2023-22-13TeV-MC20-CDI-2023-09-13_v1.root'
+      - btagger: 'DL1dv01'
+        btagWP: 'FixedCutBEff_70'
+        bTagCalibFile: '/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/xAODBTaggingEfficiency/13TeV/2023-22-13TeV-MC20-CDI-2023-09-13_v1.root'
+      - btagger: 'DL1dv01'
+        btagWP: 'Continuous'
+        bTagCalibFile: '/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/xAODBTaggingEfficiency/13TeV/2023-22-13TeV-MC20-CDI-2023-09-13_v1.root'
+    FlavourTaggingEventSF:
+      - containerName: 'AnaJets.baselineJvt'
+        btagger: 'DL1dv01'
+        btagWP: 'Continuous'
+        generator: 'default'  # https://topcptoolkit.docs.cern.ch/latest/settings/jets/#ftagjetsfblock
+        # https://ftag.docs.cern.ch/recommendations/superseded/#dl1dv01-pcbt-september-2023
+        bTagCalibFile: '/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/xAODBTaggingEfficiency/13TeV/2023-22-13TeV-MC20-CDI-2023-09-13_v1.root'
+
+Electrons:
+  - containerName: 'AnaElectrons'
+    crackVeto: True
+    IFFClassification: {}
+    WorkingPoint:
+      - selectionName: 'loose'
+        identificationWP: 'TightLH'
+        isolationWP: 'NonIso'
+        noEffSF: True
+      - selectionName: 'tight'
+        identificationWP: 'TightLH'
+        isolationWP: 'Tight_VarRad'
+        noEffSF: True
+    PtEtaSelection:
+        minPt: 7000.
+        useClusterEta: True
+        maxEta: 2.47
+
+MissingET:
+  - containerName: 'AnaMET'
+    # Format should follow Object: '<containerName>.<postfix>'
+    jets: 'AnaJets'
+    electrons: 'AnaElectrons.tight'
+    setMuonJetEMScale: False
+
+# containerName and postfix must be defined in their respective blocks
+OverlapRemoval:
+  inputLabel: 'preselectOR'
+  outputLabel: 'passesOR'
+  # Format should follow Object: '<containerName>.<postfix>'
+  jets: 'AnaJets.baselineJvt'
+  electrons: 'AnaElectrons.tight'
+
+# ObjectCutFlow:
+#   - containerName: 'AnaElectrons'
+#     selectionName: 'tight'
+#   - containerName: 'AnaJets'
+#     selectionName: 'baselineJvt'
+
+Thinning:
+  - containerName: 'AnaJets'
+    outputName: 'OutJets'
+    selectionName: 'baselineJvt'
+  - containerName: 'AnaElectrons'
+    outputName: 'OutElectrons'
+    selectionName: 'tight||loose'
+
+Trigger:
+  triggerChainsPerYear:  # https://twiki.cern.ch/twiki/bin/viewauth/Atlas/LowestUnprescaled
+    '2015':
+      - 'HLT_e24_lhmedium_L1EM20VH || HLT_e60_lhmedium || HLT_e120_lhloose'
+      - 'HLT_mu20_iloose_L1MU15 || HLT_mu50'
+    '2016':
+      - 'HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e140_lhloose_nod0'
+      - 'HLT_mu26_ivarmedium || HLT_mu50'
+    '2017':
+      - 'HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e140_lhloose_nod0'
+      - 'HLT_mu26_ivarmedium || HLT_mu50'
+    '2018':
+      - 'HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e140_lhloose_nod0'
+      - 'HLT_mu26_ivarmedium || HLT_mu50'
+
+  noFilter: False
+  postfix: '_emu'
+  electrons: 'AnaElectrons.tight'
+  electronID: 'Tight'
+  electronIsol: 'Tight_VarRad'
+
+EventSelection:
+  - electrons: 'AnaElectrons.loose'
+    jets: 'AnaJets.baselineJvt'
+    met: 'AnaMET'
+    btagDecoration: 'ftag_select_DL1dv01_FixedCutBEff_77'
+    noFilter: False
+    cutFlowHistograms: True
+    selectionCutsDict:
+      'SUBcommon': |
+        GLOBALTRIGMATCH _emu
+        JET_N 25000 >= 2
+        JET_N_BTAG >= 1
+        SAVE
+      'fourjetoneb_el': |
+        IMPORT SUBcommon
+        EL_N 27000 >= 1
+        JET_N 25000 >= 4
+        SAVE
+      #'fourjetoneb_mu': |
+      #  IMPORT SUBcommon
+      #  MU_N 27000 >= 1
+      #  JET_N 25000 >= 4
+      #  SAVE
+
+# After configuring each container, many variables will be saved automatically.
+Output:
+  treeName: 'reco'
+  vars: []
+  metVars: []
+  containers:
+      # Format should follow: '<suffix>:<output container>'
+      el_: 'OutElectrons'
+      jet_: 'OutJets'
+      met_: 'AnaMET'
+      '': 'EventInfo'
+  commands:
+      # Turn output branches on and off with 'enable' and 'disable'
+      - disable jet_jvtEfficiency.*
+      - disable trigPassed_HLT.*
+
+AddConfigBlocks: []
