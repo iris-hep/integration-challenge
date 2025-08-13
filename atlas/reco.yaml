@@ -1,6 +1,13 @@
 CommonServices:
     systematicsHistogram: 'listOfSystematics'
-    #filterSystematics: "^(?=.*(?:JER_EffectiveNP_1_|JER_EffectiveNP_1_PseudoData|JET_Pileup_RhoTopology|MUON_SCALE)|$).*"
+    filterSystematics: "^(EG_|EL_|FT_|JET_|MET_).*$|^$"
+    # onlySystematicsCategories:
+    #   - jets
+    #   - ftag
+    #   - met
+    #   - electrons
+    #   - muons
+    #   - event
 
 PileupReweighting: {}
 
@@ -75,11 +82,11 @@ OverlapRemoval:
   jets: 'AnaJets.baselineJvt'
   electrons: 'AnaElectrons.tight'
 
-ObjectCutFlow:
-  - containerName: 'AnaElectrons'
-    selectionName: 'tight'
-  - containerName: 'AnaJets'
-    selectionName: 'baselineJvt'
+# ObjectCutFlow:
+#   - containerName: 'AnaElectrons'
+#     selectionName: 'tight'
+#   - containerName: 'AnaJets'
+#     selectionName: 'baselineJvt'
 
 Thinning:
   - containerName: 'AnaJets'

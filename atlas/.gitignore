@@ -204,3 +204,7 @@ __marimo__/
 
 # ROOT files for local testing
 *.root
+# ntuple processing and batch
+.asetup.save
+*.out
+*.err
