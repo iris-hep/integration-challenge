@@ -1,0 +1,20 @@
+universe = vanilla
+
+output = logs/myjob.$(cluster).$(process).out
+error = logs/myjob.$(cluster).$(process).err
+log = logs/myjob.log
+
+executable = job.sh
+arguments = $(dsid) $(inputfile)
+
+#use_x509userproxy = true
+#x509userproxy = /home/alheld/x509proxy
+    
+request_memory = 3GB
+request_cpus = 1
+
+transfer_output_files = ""
+
++queue="short"
+
+queue dsid,inputfile from inputlist.txt
