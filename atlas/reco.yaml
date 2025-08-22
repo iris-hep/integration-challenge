@@ -24,10 +24,10 @@ Jets:
     runGhostMuonAssociation: True
     systematicsModelJES: 'Category'
     systematicsModelJER: 'Full'
-    JVT: {}
+    JVT: {} # To do : JVT > 0.59 for the jets with pT < 60 GeV and eta < 24
     PtEtaSelection:
-        minPt: 25000.0
-        maxEta: 2.5
+        minPt: 15000.0
+        maxEta: 2.8
     FlavourTagging:
       - btagger: 'DL1dv01'
         btagWP: 'FixedCutBEff_85'
@@ -63,24 +63,43 @@ Electrons:
         isolationWP: 'Tight_VarRad'
         noEffSF: True
     PtEtaSelection:
-        minPt: 7000.
+        minPt: 15000.
         useClusterEta: True
-        maxEta: 2.47
+        maxEta: 2.8
+
+Muons:
+  - containerName: 'AnaMuons'
+    IFFClassification: {}
+    WorkingPoint:
+      - selectionName: 'loose'
+        quality: 'Medium'
+        isolation: 'NonIso'
+        saveCombinedSF: True
+      - selectionName: 'tight'
+        quality: 'Medium'
+        isolation: 'Tight_VarRad'
+        saveCombinedSF: True
+    PtEtaSelection:
+        minPt: 15000.0
+        maxEta: 2.8
+
 
 MissingET:
   - containerName: 'AnaMET'
     # Format should follow Object: '<containerName>.<postfix>'
     jets: 'AnaJets'
     electrons: 'AnaElectrons.tight'
+    muons: 'AnaMuons.tight'
     setMuonJetEMScale: False
 
 # containerName and postfix must be defined in their respective blocks
-OverlapRemoval:
+OverlapRemoval: # To do: two steps ATL-COM-PHYS-2016-103 (manual implementation required?) tight or loose?
   inputLabel: 'preselectOR'
   outputLabel: 'passesOR'
   # Format should follow Object: '<containerName>.<postfix>'
   jets: 'AnaJets.baselineJvt'
   electrons: 'AnaElectrons.tight'
+  muons: 'AnaMuons.tight'
 
 # ObjectCutFlow:
 #   - containerName: 'AnaElectrons'
@@ -94,6 +113,9 @@ Thinning:
     selectionName: 'baselineJvt'
   - containerName: 'AnaElectrons'
     outputName: 'OutElectrons'
+    selectionName: 'tight||loose'
+  - containerName: 'AnaMuons'
+    outputName: 'OutMuons'
     selectionName: 'tight||loose'
 
 Trigger:
@@ -110,15 +132,19 @@ Trigger:
     '2018':
       - 'HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e140_lhloose_nod0'
       - 'HLT_mu26_ivarmedium || HLT_mu50'
-
+  #To do: tight or loose?
   noFilter: False
   postfix: '_emu'
   electrons: 'AnaElectrons.tight'
   electronID: 'Tight'
   electronIsol: 'Tight_VarRad'
+  muons: 'AnaMuons.tight'
+  muonID: 'Medium'
 
-EventSelection:
+
+EventSelection: #To do: re-check all selection cuts for ojbect definitions
   - electrons: 'AnaElectrons.loose'
+    muons: 'AnaMuons.loose'
     jets: 'AnaJets.baselineJvt'
     met: 'AnaMET'
     btagDecoration: 'ftag_select_DL1dv01_FixedCutBEff_77'
@@ -152,6 +178,7 @@ Output:
       jet_: 'OutJets'
       met_: 'AnaMET'
       '': 'EventInfo'
+      mu_: 'OutMuons'
   commands:
       # Turn output branches on and off with 'enable' and 'disable'
       - disable jet_jvtEfficiency.*
