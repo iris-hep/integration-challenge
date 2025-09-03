@@ -1,0 +1,10 @@
+Runing TopCPT without EventSelection:
+
+PrimaryVertexSelectorAlg INFO    accepted 30000 out of 30000 events for filter VertexSelection (vertex selection)
+EventFlagSelectionAlg    INFO    accepted 29911 out of 30000 events for filter JetCleaning (selecting events passing: DFCommonJets_eventClean_LooseBad,as_char)
+TrigEventSelectionAlg    INFO    accepted 11636 out of 29911 events for filter TriggerEventSelection (trigger event selection)
+
+
+Warning during execution: 
+
+ToolSvc.MuonTrigEff_Me...WARNING Could not find what you are looking for in the efficiency map. The trigger you are looking for, year and mc are not consistent, or the trigger is unavailable in this data period. Returning efficiency = 0.

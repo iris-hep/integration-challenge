@@ -118,7 +118,7 @@ Thinning:
     outputName: 'OutMuons'
     selectionName: 'tight||loose'
 
-Trigger:
+Trigger: #DOUBLE CHEKC MUONS 
   triggerChainsPerYear:  # https://twiki.cern.ch/twiki/bin/viewauth/Atlas/LowestUnprescaled
     '2015':
       - 'HLT_e24_lhmedium_L1EM20VH || HLT_e60_lhmedium || HLT_e120_lhloose'
