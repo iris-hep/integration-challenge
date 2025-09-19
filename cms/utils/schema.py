@@ -244,76 +244,6 @@ class GeneralConfig(SubscriptableModel):
 
 
 # ------------------------
-# JAX configuration
-# ------------------------
-class JaxConfig(SubscriptableModel):
-    soft_selection: Annotated[
-        FunctorConfig,
-        Field(
-            description="The differentiable selection function. It "
-            "should return a per-event weight."
-        ),
-    ]
-    params: Annotated[
-        dict[str, float],
-        Field(
-            description="A dictionary of all optimizable "
-            + "parameters and their initial values."
-        ),
-    ]
-    optimise: Annotated[
-        bool,
-        Field(
-            default=True,
-            description="If True, run the gradient-based optimisation of parameters.",
-        ),
-    ]
-    learning_rate: Annotated[
-        float,
-        Field(
-            default=0.01,
-            description="The default learning rate for the optimiser.",
-        ),
-    ]
-    max_iterations: Annotated[
-        Optional[int],
-        Field(
-            default=25,
-            description="The number of optimisation steps to perform.",
-        ),
-    ]
-    param_updates: Annotated[
-        dict[str, Callable[[float, float], float]],
-        Field(
-            default_factory=dict,
-            description="Optional per-parameter update/clamping rules. "
-            + "Maps a parameter name to a callable that accepts "
-            + "(current_value, update_delta) and returns "
-            + "the new value. Example: "
-            + "{'met_threshold': lambda x, d: jnp.clip(x + d, 20, 150)}",
-        ),
-    ]
-
-    learning_rates: Annotated[
-        Optional[dict[str, float]],
-        Field(
-            default=None,
-            description="A dictionary of parameter-specific learning rates, \
-                        overriding the default.",
-        ),
-    ]
-
-    explicit_optimisation: Annotated[
-        bool,
-        Field(
-            default=False,
-            description="If True, use a manual optimisation loop instead of the \
-                `jaxopt` solver.",
-        ),
-    ]
-
-
-# ------------------------
 # Dataset configuration
 # ------------------------
 class DatasetConfig(SubscriptableModel):
@@ -479,14 +409,6 @@ class ObservableConfig(SubscriptableModel):
             description="A LaTeX-formatted string for plot axis labels.",
         ),
     ]
-    works_with_jax: Annotated[
-        bool,
-        Field(
-            default=True,
-            description="If True, the function is compatible with the JAX backend "
-            "for differentiable analysis.",
-        ),
-    ]
 
     @model_validator(mode="after")
     def validate_binning(self) -> "ObservableConfig":
@@ -555,13 +477,6 @@ class GhostObservable(SubscriptableModel):
         Field(
             description="A list of (object, variable) tuples "
             + "specifying the inputs for the function."
-        ),
-    ]
-    works_with_jax: Annotated[
-        bool,
-        Field(
-            default=True,
-            description="If True, the function is compatible with the JAX backend.",
         ),
     ]
 
@@ -755,24 +670,6 @@ class SystematicConfig(SubscriptableModel):
 
         return self
 
-
-class PlottingJaxConfig(SubscriptableModel):
-    aux_param_labels: Annotated[
-        Optional[dict[str, str]],
-        Field(
-            default=None,
-            description="LaTeX labels for auxiliary parameters in JAX‐scan plots",
-        ),
-    ]
-    fit_param_labels: Annotated[
-        Optional[dict[str, str]],
-        Field(
-            default=None,
-            description="LaTeX labels for fit parameters in JAX‐scan plots",
-        ),
-    ]
-
-
 class PlottingConfig(SubscriptableModel):
     process_colors: Annotated[
         Optional[dict[str, str]],
@@ -789,11 +686,6 @@ class PlottingConfig(SubscriptableModel):
         Optional[List[str]],
         Field(default=None, description="Draw/order sequence for processes"),
     ]
-    jax: Annotated[
-        Optional[PlottingJaxConfig],
-        Field(default=None, description="JAX‐specific label overrides"),
-    ]
-
 
 # =================================
 # MVA configuration
@@ -807,35 +699,6 @@ class ActivationKey(str, Enum):
     relu = "relu"
     tanh = "tanh"
     sigmoid = "sigmoid"
-
-
-# ========
-# Gradient optimisation configuration
-# ========
-class GradOptimConfig(SubscriptableModel):
-    optimise: Annotated[
-        bool,
-        Field(
-            default=True,
-            description="Include this MVA’s weights in the global optimisation",
-        ),
-    ]
-    learning_rate: Annotated[
-        float,
-        Field(
-            default=1e-3,
-            description="Learning rate for this MVA when optimise=True",
-        ),
-    ]
-    log_param_changes: Annotated[
-        bool,
-        Field(
-            default=False,
-            description="If True, log the mean of weight/bias changes \
-                during optimisation.",
-        ),
-    ]
-
 
 # ========
 # Network layers configuration
@@ -963,13 +826,6 @@ class MVAConfig(SubscriptableModel):
     name: Annotated[
         str, Field(..., description="Unique name for this neural network")
     ]
-    use_in_diff: Annotated[
-        bool,
-        Field(
-            default=False,
-            description="Whether to include this MVA in the global JAX gradient",
-        ),
-    ]  # is this useful?
     framework: Annotated[
         Literal["jax", "keras", "tf"],
         Field(..., description="Framework to use for building/training"),
@@ -979,13 +835,6 @@ class MVAConfig(SubscriptableModel):
         float,
         Field(
             default=0.01, description="Step size for pre-training the network"
-        ),
-    ]
-    grad_optimisation: Annotated[
-        GradOptimConfig,
-        Field(
-            default_factory=GradOptimConfig,
-            description="Per-MVA optimisation settings",
         ),
     ]
     layers: Annotated[
@@ -1126,13 +975,6 @@ class MVAConfig(SubscriptableModel):
 class Config(SubscriptableModel):
     general: Annotated[
         GeneralConfig, Field(description="Global settings for the analysis")
-    ]
-    jax: Annotated[
-        Optional[JaxConfig],
-        Field(
-            default=None,
-            description="JAX configuration block for differentiable analysis",
-        ),
     ]
     ghost_observables: Annotated[
         Optional[List[GhostObservable]],
