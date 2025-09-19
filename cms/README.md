@@ -5,7 +5,7 @@ This project uses [pixi](https://pixi.sh/) for environment management. To set up
 
 ```sh
 pixi install
-pixi run pixi activate
+source pixi_activate.sh # for conda-like environment
 ```
 
 ## Code structure
