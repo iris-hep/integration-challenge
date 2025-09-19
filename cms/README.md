@@ -33,7 +33,7 @@ To skim NanoAOD datasets, use the provided scripts and configuration files in th
 Currently, the code writes out skimmed files as intermediate outputs. The plan is to integrate the workflow so that all steps, including skimming, are performed on-the-fly without writing intermediate files, streamlining the analysis process.
 
 If you need pre-skimmed data, it is available on CERNBox upon request. Please contact Mohamed Aly (mohamed.aly@cern.ch) for access.
-If you want to reproduce the skimmed files yourself, set the option `general.run_skimming=True` in the configuration file `cms/user/configuration.py`.
+If you want to reproduce the skimmed files yourself, set the option `general.run_skimming=True` in the configuration file `cms/user/configuration.py`. This takes roughly 1-1.5 hours for the whole set of data. If you want only a subset, you can specify the maximum number of files to process per dataset using the `datasets.max_files` option in the same configuration file under the dataset configuration section.
 
 ## Running code
 To run the main analysis chain, execute the relevant Python scripts or notebooks. Outputs such as histograms and fit results will be saved in the `outputs/` directory. For example:
