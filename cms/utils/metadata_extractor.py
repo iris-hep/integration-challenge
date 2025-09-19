@@ -119,7 +119,7 @@ class FilesetBuilder:
         Manages dataset configurations, including paths and tree names.
     """
 
-    def __init__(self, dataset_manager: ConfigurableDatasetManager):
+    def __init__(self, dataset_manager: ConfigurableDatasetManager, output_manager) -> None:
         """
         Initializes the FilesetBuilder.
 
@@ -129,6 +129,7 @@ class FilesetBuilder:
             A dataset manager instance (required).
         """
         self.dataset_manager = dataset_manager
+        self.output_manager = output_manager
 
     def build_fileset(
         self, identifiers: Optional[Union[int, List[int]]] = None
@@ -204,8 +205,8 @@ class FilesetBuilder:
         """
         Saves the built fileset to a JSON file.
 
-        The output path is determined by the `metadata_output_dir` configured
-        in the `dataset_manager`.
+        The output path is determined by the `self.output_manager.get_metadata_dir()`
+        configured in the `output_manager`.
 
         Parameters
         ----------
@@ -213,7 +214,7 @@ class FilesetBuilder:
             The fileset mapping to save.
         """
         # Construct the full path for the fileset JSON file
-        output_dir = Path(self.dataset_manager.config.metadata_output_dir)
+        output_dir = Path(self.output_manager.get_metadata_dir())
         output_dir.mkdir(parents=True, exist_ok=True)
         fileset_path = output_dir / "fileset.json"
 
@@ -336,7 +337,7 @@ class NanoAODMetadataGenerator:
         self.output_directory = self.output_manager.get_metadata_dir()
 
         # Initialize modularized components for fileset building and metadata extraction
-        self.fileset_builder = FilesetBuilder(self.dataset_manager)
+        self.fileset_builder = FilesetBuilder(self.dataset_manager, self.output_manager)
         self.metadata_extractor = CoffeaMetadataExtractor()
 
         # Attributes to store generated/read metadata.

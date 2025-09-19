@@ -38,17 +38,17 @@ general_config = {
         "weight_branch": "genWeight",
         "analysis": "nondiff",
         "run_skimming": False,
-        "run_histogramming": False,
-        "run_statistics": False,
-        "run_systematics": False,
+        "run_histogramming": True,
+        "run_statistics": True,
+        "run_systematics": True,
         "run_plots_only": False,
-        "run_mva_training": True,
-        "run_metadata_generation": True,
+        "run_mva_training": False,
+        "run_metadata_generation": False,
         "read_from_cache": True,
         "output_dir": "example/outputs/",
         "lumifile": "./corrections/Cert_271036-284044_13TeV_Legacy2016_"\
             "Collisions16_JSON.txt",
-        "cache_dir": "/tmp/graep/",
+        "cache_dir": "/tmp/integration/",
         # Optional: specify existing metadata/skimmed directories
         # "metadata_dir": "path/to/existing/metadata/",
         # "skimmed_dir": "path/to/existing/skimmed/",
@@ -142,19 +142,6 @@ good_object_masks_config = {
 # ==============================================================================
 
 channels_config = [
-    {
-        "name": "CMS_WORKSHOP",
-        "fit_observable": "workshop_mtt",
-        "observables": LIST_OF_VARS,
-        "selection": {
-            "function": Zprime_hardcuts,
-            "use": [
-                ("Muon", None),
-                ("Jet", None),
-                ("FatJet", None),
-            ],
-        },
-    },
     {
         "name": "CMS_WORKSHOP",
         "fit_observable": "workshop_mtt",
@@ -328,7 +315,7 @@ systematics_config = [
 #  Statistics Configuration
 # ==============================================================================
 
-statistics_config = {"cabinetry_config": "cabinetry/cabinetry_config.yaml"}
+statistics_config = {"cabinetry_config": "example/outputs/cabinetry/cabinetry_config.yaml"}
 
 # ==============================================================================
 #  Plotting Configuration

@@ -630,6 +630,14 @@ class SystematicConfig(SubscriptableModel):
         Optional[Callable],
         Field(default=None, description="Callable for 'down' variation"),
     ]
+    transform: Annotated[
+        Optional[Callable],
+        Field(
+            default=lambda *x: x,
+            description="Optional function to apply transformation to inputs "
+            + "before applying systematic variation",
+        ),
+    ]
     target: Annotated[
         Optional[Union[ObjVar, List[ObjVar]]],
         Field(default=None, description="Target (object, variable) to modify"),

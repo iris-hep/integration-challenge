@@ -1,6 +1,4 @@
 from . import datasets
-from . import evm_stats
-from . import jax_stats
 from . import logging
 from . import metadata_extractor
 from . import mva
@@ -12,8 +10,6 @@ from . import tools
 
 __all__ = [
     "datasets",
-    "evm_stats",
-    "jax_stats",
     "logging",
     "metadata_extractor",
     "mva",

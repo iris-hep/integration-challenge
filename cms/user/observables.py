@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 # -----------------------------
 # Register backends
 # -----------------------------
-ak.jax.register_and_check()
 vector.register_awkward()
 
 

@@ -24,7 +24,6 @@ from utils.tools import get_function_arguments
 # -----------------------------
 # Register backends
 # -----------------------------
-ak.jax.register_and_check()
 vector.register_awkward()
 
 # -----------------------------
@@ -409,11 +408,14 @@ class NonDiffAnalysis(Analysis):
                 data,
                 close_figure=False,
                 config=cabinetry_config,
+                figure_folder=self.output_manager.get_statistics_dir(),
+
             )
             cabinetry.visualize.data_mc(
                 postfit_predictions,
                 data,
                 close_figure=False,
                 config=cabinetry_config,
+                figure_folder=self.output_manager.get_statistics_dir(),
             )
-            cabinetry.visualize.pulls(fit_results, close_figure=False)
+            cabinetry.visualize.pulls(fit_results, close_figure=False, figure_folder=self.output_manager.get_statistics_dir(),)

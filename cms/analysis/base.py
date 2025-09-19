@@ -26,14 +26,12 @@ from utils.output_manager import OutputDirectoryManager
 # -----------------------------
 # Register backends
 # -----------------------------
-ak.jax.register_and_check()
 vector.register_awkward()
 
 # -----------------------------
 # Logging Configuration
 # -----------------------------
 logger = logging.getLogger("BaseAnalysis")
-logging.getLogger("jax._src.xla_bridge").setLevel(logging.ERROR)
 
 NanoAODSchema.warn_missing_crossrefs = False
 warnings.filterwarnings("ignore", category=FutureWarning, module="coffea.*")
@@ -472,19 +470,19 @@ class Analysis:
                 function_name=f"correction::{correction.name}",
             )
             operation = correction.op
-            transform = correction.transform
-            key = correction.key
 
-            # Determine direction mapping
-            dir_map = correction.up_and_down_idx
-            corr_direction = (
-                dir_map[0]
-                if direction == "up"
-                else dir_map[1] if direction in ["up", "down"] else "nominal"
-            )
-
-            # Apply correction
+            # Apply corrections
             if correction.get("use_correctionlib", False):
+                transform = correction.transform
+                key = correction.key
+                # Determine direction mapping
+                dir_map = correction.up_and_down_idx
+                corr_direction = (
+                    dir_map[0]
+                    if direction == "up"
+                    else dir_map[1] if direction in ["up", "down"] else "nominal"
+                )
+
                 corrected_values = self.apply_correctionlib(
                     correction_name=correction.name,
                     correction_key=key,
@@ -581,7 +579,6 @@ class Analysis:
     def compute_ghost_observables(
         self,
         object_copies: Dict[str, ak.Array],
-        use_jax: bool = False,
     ) -> Dict[str, ak.Array]:
         """
         Compute derived observables not present in the original dataset.
@@ -590,8 +587,6 @@ class Analysis:
         ----------
         object_copies : Dict[str, ak.Array]
             Current object copies
-        use_jax : bool, optional
-            Whether JAX is being used (default: False)
 
         Returns
         -------
@@ -599,13 +594,6 @@ class Analysis:
             Updated object copies with new observables
         """
         for ghost in self.config.ghost_observables:
-            # Skip JAX-incompatible ghosts
-            if not ghost.works_with_jax and use_jax:
-                logger.warning(
-                    "Skipping JAX-incompatible ghost observable: %s",
-                    ghost.names,
-                )
-                continue
 
             logger.debug("Computing ghost observables: %s", ghost.names)
             args = get_function_arguments(

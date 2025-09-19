@@ -10,7 +10,7 @@ typing_logger = logging.getLogger(__name__)
 
 
 def save_histograms_to_pickle(
-    histograms: Dict[str, Dict[str, Any]], pickle_path: Union[str, Path]
+    histograms: Dict[str, Dict[str, Any]], output_file: Union[str, Path]
 ) -> None:
     """
     Save a nested dictionary of histograms to a pickle file.
@@ -19,7 +19,7 @@ def save_histograms_to_pickle(
     ----------
     histograms : dict
         Mapping from channel names to observables to histogram objects.
-    pickle_path : str or Path
+    output_file : str or Path
         Path to the output pickle file. The directory will be
         created if it does not exist.
 
@@ -28,7 +28,7 @@ def save_histograms_to_pickle(
     IOError
         If writing to the pickle file fails.
     """
-    path = Path(pickle_path)
+    path = Path(output_file)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("wb") as file:
@@ -40,14 +40,14 @@ def save_histograms_to_pickle(
 
 
 def load_histograms_from_pickle(
-    pickle_path: Union[str, Path],
+    output_file: Union[str, Path],
 ) -> Dict[str, Dict[str, Any]]:
     """
     Load a nested dictionary of histograms from a pickle file.
 
     Parameters
     ----------
-    pickle_path : str or Path
+    output_file : str or Path
         Path to the input pickle file.
 
     Returns
@@ -62,7 +62,7 @@ def load_histograms_from_pickle(
     IOError
         If reading from the pickle file fails.
     """
-    path = Path(pickle_path)
+    path = Path(output_file)
     if not path.exists():
         raise FileNotFoundError(f"Pickle file not found: {path}")
 
@@ -78,7 +78,7 @@ def load_histograms_from_pickle(
 
 def save_histograms_to_root(
     histograms: Dict[str, Dict[str, Any]],
-    root_path: Union[str, Path],
+    output_file: Union[str, Path],
     add_offset: bool = False,
 ) -> None:
     """
@@ -88,7 +88,7 @@ def save_histograms_to_root(
     ----------
     histograms : dict
         Nested mapping of channel names to observables to histogram objects.
-    root_path : str or Path
+    output_file : str or Path
         Path to the output ROOT (.root) file. The directory will be
         created if it does not exist.
     add_offset : bool, optional
@@ -101,7 +101,7 @@ def save_histograms_to_root(
     - Filenames in the ROOT file follow the pattern:
       "<channel>__<observable>__<sample>[__<variation>]".
     """
-    path = Path(root_path)
+    path = Path(output_file)
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         with uproot.recreate(str(path)) as root_file:
