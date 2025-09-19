@@ -47,5 +47,5 @@ Check the configuration files for additional options and details on running syst
 The following is guaranteed to produce a result if skimming is already performed
 
 ```sh
-python3 analysis.py general.run_skimming=False general.read_from_cache=True general.run_mva_training=False general.run_plots_only=True general.run_metadata_generation=False
+python3 analysis.py general.run_skimming=False general.read_from_cache=True general.run_mva_training=False general.run_plots_only=False general.run_metadata_generation=False
 ```
