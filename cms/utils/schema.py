@@ -120,7 +120,7 @@ class GeneralConfig(SubscriptableModel):
     analysis: Annotated[
         Optional[str],
         Field(default="nondiff",
-              description="The analysis mode to run: 'diff' (differentiable), 'nondiff', 'both', or 'skip' (skim-only mode)."),
+              description="The analysis mode to run: 'nondiff' or 'skip' (skim-only mode)."),
     ]
     run_skimming: Annotated[
         bool,
