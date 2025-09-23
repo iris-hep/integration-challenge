@@ -221,7 +221,7 @@ def validate_and_resolve_queries(
     veto_rules: list[Callable[[str], bool]],
     print_only_problematic: bool = True,
     progressbar_description: str = "Resolving queries...",
-) -> dict[str, list[ProcessInfo]]:
+) -> dict[ProcessInfo, list[str] | object]:
     out = {}
     with Progress(console=console) as progress:
         task = progress.add_task(
