@@ -191,21 +191,21 @@ era_run_mapping = {
 data_queries = lambda era: {
     # SingleMuon
     **{
-        ProcessInfo(f"SingleMuonRun{run}", None): QData(f"SingleMuon*", era, run)
+        ProcessInfo(f"SingleMuonRun{run}", None): QData("SingleMuon*", era, run)
         for run in era_run_mapping[era]
     },
     # SingleElectron / EGamma
     **(
         # era=16,17
         {
-            ProcessInfo(f"SingleElectronRun{run}", None): QData(f"SingleElectron*", era, run)
+            ProcessInfo(f"SingleElectronRun{run}", None): QData("SingleElectron*", era, run)
             for run in era_run_mapping[era]
         }
         if era in (16, 17)
         else 
         # era=18
         {
-            ProcessInfo(f"EGammaRun{run}", None): QData(f"EGamma*", era, run)
+            ProcessInfo(f"EGammaRun{run}", None): QData("EGamma*", era, run)
             for run in era_run_mapping[era]
         }
     ),
@@ -341,7 +341,7 @@ if __name__ == "__main__":
         # get file names
         with Progress(console=console) as progress:
             task = progress.add_task(
-                f"[cyan]Querying files...", total=len(to_disk), console=console
+                "[cyan]Querying files...", total=len(to_disk), console=console
             )
             for name, datasets in to_disk.items():
                 progress.console.print(f"[cyan]Querying files for {name}")
