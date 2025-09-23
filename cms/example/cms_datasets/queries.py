@@ -332,10 +332,10 @@ if __name__ == "__main__":
         base = Path(__file__).parent / f"20{era}"
         os.makedirs(base, exist_ok=True)
         # resolved queries
-        with open(base / f"resolved_nanoaod_queries.json", "w") as f:
+        with open(base / "resolved_nanoaod_queries.json", "w") as f:
             json.dump(to_disk, f, indent=2)
         # dataset name to xsec mapping (after resolution)
-        with open(base / f"xsecs.json", "w") as f:
+        with open(base / "xsecs.json", "w") as f:
             json.dump(name_to_xsec, f, indent=2)
 
         # get file names
