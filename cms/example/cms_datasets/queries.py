@@ -339,7 +339,7 @@ if __name__ == "__main__":
             json.dump(name_to_xsec, f, indent=2)
 
         # get file names
-        with Progress() as progress:
+        with Progress(console=console) as progress:
             task = progress.add_task(
                 f"[cyan]Querying files...", total=len(to_disk), console=console
             )
