@@ -1,0 +1,16 @@
+
+## EVENTS ACCEPTED with reco.yaml 
+## Signal ZPrimettbar
+
+
+PrimaryVertexSelectorAlg INFO    accepted 299000 out of 299000 events for filter VertexSelection (vertex selection)
+EventFlagSelectionAlg    INFO    accepted 298292 out of 299000 events for filter JetCleaning (selecting events passing: DFCommonJets_eventClean_LooseBad,as_char)
+TrigEventSelectionAlg    INFO    accepted 113495 out of 298292 events for filter TriggerEventSelection (trigger event selection)
+CutBookkeeperAlgANALYSIS INFO    CutBookkeeper information will be stored in CutBookkeeper_301333_284500_NOSYS
+TrigGlobalSFAlg_emu      INFO    Events passing selection for at least one systematic: 42227 / 113495 for global trigger matching
+TrigGlobalSFAlg_emu      INFO    Events passing selection for at nominal: 42017 / 113495 for global trigger matching
+TrigGlobalSFAlg_emu      INFO    Events passing selection for all systematics: 41830 / 113495 for global trigger matching
+LeakCheckModule          INFO    Memory increase/change during the job:
+LeakCheckModule          INFO      - resident: -0.14899 kB/event (-44548 kB total)
+LeakCheckModule          INFO      - virtual : 2.1149 kB/event (632352 kB total)
+
