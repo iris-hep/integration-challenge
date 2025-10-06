@@ -118,11 +118,11 @@ Thinning:
     outputName: 'OutMuons'
     selectionName: 'tight||loose'
 
-Trigger: #DOUBLE CHEKC MUONS 
+Trigger:
   triggerChainsPerYear:  # https://twiki.cern.ch/twiki/bin/viewauth/Atlas/LowestUnprescaled
     '2015':
       - 'HLT_e24_lhmedium_L1EM20VH || HLT_e60_lhmedium || HLT_e120_lhloose'
-      - 'HLT_mu20_iloose_L1MU15 || HLT_mu50'
+      #- 'HLT_mu20_iloose_L1MU15 || HLT_mu50' #Triggerchain not found trigger is unavailable, returns efficiency = 0
     '2016':
       - 'HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e140_lhloose_nod0'
       - 'HLT_mu26_ivarmedium || HLT_mu50'
@@ -142,25 +142,28 @@ Trigger: #DOUBLE CHEKC MUONS
   muonID: 'Medium'
 
 
-EventSelection: #To do: re-check all selection cuts for ojbect definitions
-  - electrons: 'AnaElectrons.loose'
-    muons: 'AnaMuons.loose'
-    jets: 'AnaJets.baselineJvt'
-    met: 'AnaMET'
-    btagDecoration: 'ftag_select_DL1dv01_FixedCutBEff_77'
-    noFilter: False
-    cutFlowHistograms: True
-    selectionCutsDict:
-      'SUBcommon': |
-        GLOBALTRIGMATCH _emu
-        JET_N 25000 >= 2
-        JET_N_BTAG >= 1
-        SAVE
-      'fourjetoneb_el': |
-        IMPORT SUBcommon
-        EL_N 27000 >= 1
-        JET_N 25000 >= 4
-        SAVE
+
+#Removing all cuts from TCT
+#Cutflow to be made in Coffea
+#EventSelection: #To do: re-check all selection cuts for ojbect definitions
+#  - electrons: 'AnaElectrons.loose'
+#    muons: 'AnaMuons.loose'
+#    jets: 'AnaJets.baselineJvt'
+#    met: 'AnaMET'
+#    btagDecoration: 'ftag_select_DL1dv01_FixedCutBEff_77'
+#    noFilter: False
+#    cutFlowHistograms: True
+#    selectionCutsDict:
+#      'SUBcommon': |
+#        GLOBALTRIGMATCH _emu
+#        JET_N 25000 >= 2
+#        JET_N_BTAG >= 1
+#        SAVE
+#      'fourjetoneb_el': |
+#        IMPORT SUBcommon
+#        EL_N 27000 >= 1
+#        JET_N 25000 >= 4
+#        SAVE
       #'fourjetoneb_mu': |
       #  IMPORT SUBcommon
       #  MU_N 27000 >= 1
