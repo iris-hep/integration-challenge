@@ -20,6 +20,7 @@ from utils.output_files import (
 from utils.output_manager import OutputDirectoryManager
 from utils.stats import get_cabinetry_rebinning_router
 from utils.tools import get_function_arguments
+from utils.logging import setup_logging
 
 # -----------------------------
 # Register backends
@@ -29,6 +30,7 @@ vector.register_awkward()
 # -----------------------------
 # Logging Configuration
 # -----------------------------
+setup_logging()
 logger = logging.getLogger("NonDiffAnalysis")
 logging.getLogger("jax._src.xla_bridge").setLevel(logging.ERROR)
 
@@ -149,7 +151,8 @@ class NonDiffAnalysis(Analysis):
             if (req_channels := self.config.general.channels) is not None:
                 if channel_name not in req_channels:
                     continue
-            logger.info(f"Applying selection for {channel_name} in {process}")
+            logger.info(f"Applying selection for {channel_name} in {process} "
+                         f"with variation {variation}")
             mask = 1
             if (selection_funciton := channel.selection.function) is not None:
                 selection_args = get_function_arguments(

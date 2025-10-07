@@ -523,3 +523,4 @@ def setup_logging(level: str = "INFO") -> None:
     )
     log.addHandler(handler)
     log.setLevel(level)
+
