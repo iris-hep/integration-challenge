@@ -306,14 +306,9 @@ class DatasetConfig(SubscriptableModel):
     file_pattern: Annotated[str, Field(default="*.root", description="File pattern for dataset files")]
     tree_name: Annotated[str, Field(default="Events", description="ROOT tree name")]
     weight_branch: Annotated[Optional[str], Field(default="genWeight", description="Branch name for event weights")]
-    redirector: Annotated[Optional[str], Field(default=None, description="redirector to prefix ROOT file-paths")]
-    is_data: Annotated[bool, Field(default=False, description="Flag indicating whether dataset represents real data")]
-    lumi_mask: Annotated[
-        Optional[FunctorConfig],
-        Field(
-            default=None,
-            description="Optional lumi mask configuration applied to data datasets",
-        ),
+    remote_access: Annotated[
+        Optional[dict[str, str]],
+        Field(default=None, description="Configuration for remote access (EOS, XRootD, etc.)")
     ]
 
 class DatasetManagerConfig(SubscriptableModel):

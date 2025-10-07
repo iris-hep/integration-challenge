@@ -43,16 +43,6 @@ setup_logging()
 logger = logging.getLogger(__name__)
 NanoAODSchema.warn_missing_crossrefs = False
 
-# Counter key delimiters for workitem file/part numbering
-# Format: "{dataset}::{filename}" for files, "{file_key}::{start}_{stop}" for parts
-COUNTER_DELIMITER = "::"
-ENTRY_RANGE_DELIMITER = "_"
-
-
-# =============================================================================
-# Public Utilities
-# =============================================================================
-
 def default_histogram() -> hist.Hist:
     """
     Create a default histogram for tracking processing success/failure.

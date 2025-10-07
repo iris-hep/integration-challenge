@@ -67,14 +67,7 @@ datasets_config = [
         "cross_sections": 1.0,
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": None,
-        "redirector": "",
-        "is_data": True,
-        "lumi_mask": {
-            "function": lumi_mask,
-            "use": [("event", "run"), ("event", "luminosityBlock")],
-            "static_kwargs": {"lumifile": "./example_opendata/corrections/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt"},
-        },
+        "weight_branch": None
     }
 ]
 
