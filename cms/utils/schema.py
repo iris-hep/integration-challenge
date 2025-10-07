@@ -253,7 +253,7 @@ class DatasetConfig(SubscriptableModel):
     cross_section: Annotated[float, Field(description="Cross-section in picobarns")]
     file_pattern: Annotated[str, Field(default="*.root", description="File pattern for dataset files")]
     tree_name: Annotated[str, Field(default="Events", description="ROOT tree name")]
-    weight_branch: Annotated[str, Field(default="genWeight", description="Branch name for event weights")]
+    weight_branch: Annotated[Optional[str], Field(default="genWeight", description="Branch name for event weights")]
     remote_access: Annotated[
         Optional[dict[str, str]],
         Field(default=None, description="Configuration for remote access (EOS, XRootD, etc.)")

@@ -17,6 +17,7 @@ from collections import defaultdict
 import awkward as ak
 import cloudpickle
 import dask
+import dask.bag
 import hist
 import uproot
 from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
@@ -27,7 +28,7 @@ from utils.schema import SkimmingConfig
 from utils.tools import get_function_arguments
 
 logger = logging.getLogger(__name__)
-
+NanoAODSchema.warn_missing_crossrefs = False
 
 def default_histogram() -> hist.Hist:
     """

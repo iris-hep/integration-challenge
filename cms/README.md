@@ -25,7 +25,7 @@ cms/
 - Main scripts and entry points are in `cms/`.
 
 ## Metadata and preprocessing
-Metadata extraction and preprocessing are handled before the main analysis. Metadata includes information about datasets, event counts, and cross sections, and is used to configure the analysis and normalization. Preprocessing steps may include filtering, object selection, and preparing input files for skimming and analysis.
+Metadata extraction and preprocessing are handled before the main analysis. Metadata includes information about datasets, event counts, and cross-sections, and is used to configure the analysis and normalization. Preprocessing steps may include filtering, object selection, and preparing input files for skimming and analysis.
 
 ## Skimming
 To skim NanoAOD datasets, use the provided scripts and configuration files in the `analysis/` and `user/` directories. Adjust the configuration as needed for your analysis channels and observables.

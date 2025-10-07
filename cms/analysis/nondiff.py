@@ -176,7 +176,7 @@ class NonDiffAnalysis(Analysis):
             if ak.sum(mask) == 0:
                 logger.warning(
                     f"{analysis}:: No events left in {channel_name} for {process} with "
-                    + "variation {variation}"
+                    + f"variation {variation}"
                 )
                 continue
 

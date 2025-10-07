@@ -61,7 +61,7 @@ datasets_config = [
         "cross_section": 1.0,
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight"
+        "weight_branch": None
     }
 ]
 
@@ -79,7 +79,7 @@ dataset_manager_config = {
 # ==============================================================================
 
 
-def default_skim_selection(muons, puppimet, hlt):
+def default_skim_selection(puppimet, hlt):
     """
     Default skimming selection function.
 
