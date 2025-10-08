@@ -26,7 +26,9 @@ from tabulate import tabulate
 
 from utils.schema import SkimmingConfig
 from utils.tools import get_function_arguments
+from utils.logging import setup_logging
 
+setup_logging()
 logger = logging.getLogger(__name__)
 NanoAODSchema.warn_missing_crossrefs = False
 
