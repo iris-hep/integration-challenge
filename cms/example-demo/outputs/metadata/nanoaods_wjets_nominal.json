@@ -1,0 +1,13 @@
+{
+    "wjets": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+                    "nevts": 2276917
+                }
+            ],
+            "nevts_total": 2276917
+        }
+    }
+}

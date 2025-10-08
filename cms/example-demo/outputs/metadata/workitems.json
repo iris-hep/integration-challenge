@@ -1,0 +1,1068 @@
+[
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 0,
+        "entrystop": 101372,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 101372,
+        "entrystop": 202744,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 202744,
+        "entrystop": 304116,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 304116,
+        "entrystop": 405488,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 405488,
+        "entrystop": 506860,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 506860,
+        "entrystop": 608232,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 608232,
+        "entrystop": 709604,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 709604,
+        "entrystop": 810976,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 810976,
+        "entrystop": 912348,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 912348,
+        "entrystop": 1013720,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 1013720,
+        "entrystop": 1115092,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 1115092,
+        "entrystop": 1216464,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 1216464,
+        "entrystop": 1317836,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 1317836,
+        "entrystop": 1419208,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 1419208,
+        "entrystop": 1520580,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 1520580,
+        "entrystop": 1621952,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 1621952,
+        "entrystop": 1723324,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 1723324,
+        "entrystop": 1824696,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 1824696,
+        "entrystop": 1926068,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 1926068,
+        "entrystop": 2027440,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 2027440,
+        "entrystop": 2128812,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 2128812,
+        "entrystop": 2230184,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 2230184,
+        "entrystop": 2331556,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 2331556,
+        "entrystop": 2432928,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 2432928,
+        "entrystop": 2534300,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 2534300,
+        "entrystop": 2635672,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 2635672,
+        "entrystop": 2737044,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 2737044,
+        "entrystop": 2838416,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "data",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root",
+        "treename": "Events",
+        "entrystart": 2838416,
+        "entrystop": 2939781,
+        "fileuuid": "5mCWkuwfEeuAsGO84YO+7w==",
+        "usermeta": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 0,
+        "entrystop": 98997,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 98997,
+        "entrystop": 197994,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 197994,
+        "entrystop": 296991,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 296991,
+        "entrystop": 395988,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 395988,
+        "entrystop": 494985,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 494985,
+        "entrystop": 593982,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 593982,
+        "entrystop": 692979,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 692979,
+        "entrystop": 791976,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 791976,
+        "entrystop": 890973,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 890973,
+        "entrystop": 989970,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 989970,
+        "entrystop": 1088967,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 1088967,
+        "entrystop": 1187964,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 1187964,
+        "entrystop": 1286961,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 1286961,
+        "entrystop": 1385958,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 1385958,
+        "entrystop": 1484955,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 1484955,
+        "entrystop": 1583952,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 1583952,
+        "entrystop": 1682949,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 1682949,
+        "entrystop": 1781946,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 1781946,
+        "entrystop": 1880943,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 1880943,
+        "entrystop": 1979940,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 1979940,
+        "entrystop": 2078937,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 2078937,
+        "entrystop": 2177934,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "wjets__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root",
+        "treename": "Events",
+        "entrystart": 2177934,
+        "entrystop": 2276917,
+        "fileuuid": "vvQcQusuEeu53FmWnoa+7w==",
+        "usermeta": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    {
+        "dataset": "ttbar_lep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/6293BAC8-2AB6-4A4A-BFEA-83E328B9C44F.root",
+        "treename": "Events",
+        "entrystart": 0,
+        "entrystop": 101400,
+        "fileuuid": "+ukyHPJREeuKYfTO4YO+7w==",
+        "usermeta": {
+            "process": "ttbar_lep",
+            "variation": "nominal",
+            "xsec": 87.3348
+        }
+    },
+    {
+        "dataset": "ttbar_lep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/6293BAC8-2AB6-4A4A-BFEA-83E328B9C44F.root",
+        "treename": "Events",
+        "entrystart": 101400,
+        "entrystop": 202800,
+        "fileuuid": "+ukyHPJREeuKYfTO4YO+7w==",
+        "usermeta": {
+            "process": "ttbar_lep",
+            "variation": "nominal",
+            "xsec": 87.3348
+        }
+    },
+    {
+        "dataset": "ttbar_lep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/6293BAC8-2AB6-4A4A-BFEA-83E328B9C44F.root",
+        "treename": "Events",
+        "entrystart": 202800,
+        "entrystop": 304200,
+        "fileuuid": "+ukyHPJREeuKYfTO4YO+7w==",
+        "usermeta": {
+            "process": "ttbar_lep",
+            "variation": "nominal",
+            "xsec": 87.3348
+        }
+    },
+    {
+        "dataset": "ttbar_lep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/6293BAC8-2AB6-4A4A-BFEA-83E328B9C44F.root",
+        "treename": "Events",
+        "entrystart": 304200,
+        "entrystop": 405600,
+        "fileuuid": "+ukyHPJREeuKYfTO4YO+7w==",
+        "usermeta": {
+            "process": "ttbar_lep",
+            "variation": "nominal",
+            "xsec": 87.3348
+        }
+    },
+    {
+        "dataset": "ttbar_lep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/6293BAC8-2AB6-4A4A-BFEA-83E328B9C44F.root",
+        "treename": "Events",
+        "entrystart": 405600,
+        "entrystop": 507000,
+        "fileuuid": "+ukyHPJREeuKYfTO4YO+7w==",
+        "usermeta": {
+            "process": "ttbar_lep",
+            "variation": "nominal",
+            "xsec": 87.3348
+        }
+    },
+    {
+        "dataset": "ttbar_had__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0415B772-3CC8-A64E-9410-E622E18AF2E5.root",
+        "treename": "Events",
+        "entrystart": 0,
+        "entrystop": 96000,
+        "fileuuid": "fQQPfuyUEeu3wegGwQq+7w==",
+        "usermeta": {
+            "process": "ttbar_had",
+            "variation": "nominal",
+            "xsec": 380.11432
+        }
+    },
+    {
+        "dataset": "ttbar_had__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0415B772-3CC8-A64E-9410-E622E18AF2E5.root",
+        "treename": "Events",
+        "entrystart": 96000,
+        "entrystop": 192000,
+        "fileuuid": "fQQPfuyUEeu3wegGwQq+7w==",
+        "usermeta": {
+            "process": "ttbar_had",
+            "variation": "nominal",
+            "xsec": 380.11432
+        }
+    },
+    {
+        "dataset": "ttbar_had__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0415B772-3CC8-A64E-9410-E622E18AF2E5.root",
+        "treename": "Events",
+        "entrystart": 192000,
+        "entrystop": 288000,
+        "fileuuid": "fQQPfuyUEeu3wegGwQq+7w==",
+        "usermeta": {
+            "process": "ttbar_had",
+            "variation": "nominal",
+            "xsec": 380.11432
+        }
+    },
+    {
+        "dataset": "ttbar_had__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0415B772-3CC8-A64E-9410-E622E18AF2E5.root",
+        "treename": "Events",
+        "entrystart": 288000,
+        "entrystop": 384000,
+        "fileuuid": "fQQPfuyUEeu3wegGwQq+7w==",
+        "usermeta": {
+            "process": "ttbar_had",
+            "variation": "nominal",
+            "xsec": 380.11432
+        }
+    },
+    {
+        "dataset": "ttbar_had__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0415B772-3CC8-A64E-9410-E622E18AF2E5.root",
+        "treename": "Events",
+        "entrystart": 384000,
+        "entrystop": 480000,
+        "fileuuid": "fQQPfuyUEeu3wegGwQq+7w==",
+        "usermeta": {
+            "process": "ttbar_had",
+            "variation": "nominal",
+            "xsec": 380.11432
+        }
+    },
+    {
+        "dataset": "ttbar_had__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0415B772-3CC8-A64E-9410-E622E18AF2E5.root",
+        "treename": "Events",
+        "entrystart": 480000,
+        "entrystop": 576000,
+        "fileuuid": "fQQPfuyUEeu3wegGwQq+7w==",
+        "usermeta": {
+            "process": "ttbar_had",
+            "variation": "nominal",
+            "xsec": 380.11432
+        }
+    },
+    {
+        "dataset": "ttbar_had__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0415B772-3CC8-A64E-9410-E622E18AF2E5.root",
+        "treename": "Events",
+        "entrystart": 576000,
+        "entrystop": 672000,
+        "fileuuid": "fQQPfuyUEeu3wegGwQq+7w==",
+        "usermeta": {
+            "process": "ttbar_had",
+            "variation": "nominal",
+            "xsec": 380.11432
+        }
+    },
+    {
+        "dataset": "ttbar_semilep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root",
+        "treename": "Events",
+        "entrystart": 0,
+        "entrystop": 103385,
+        "fileuuid": "KkQcrPHGEeuRzzW94YO+7w==",
+        "usermeta": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    {
+        "dataset": "ttbar_semilep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root",
+        "treename": "Events",
+        "entrystart": 103385,
+        "entrystop": 206770,
+        "fileuuid": "KkQcrPHGEeuRzzW94YO+7w==",
+        "usermeta": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    {
+        "dataset": "ttbar_semilep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root",
+        "treename": "Events",
+        "entrystart": 206770,
+        "entrystop": 310155,
+        "fileuuid": "KkQcrPHGEeuRzzW94YO+7w==",
+        "usermeta": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    {
+        "dataset": "ttbar_semilep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root",
+        "treename": "Events",
+        "entrystart": 310155,
+        "entrystop": 413540,
+        "fileuuid": "KkQcrPHGEeuRzzW94YO+7w==",
+        "usermeta": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    {
+        "dataset": "ttbar_semilep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root",
+        "treename": "Events",
+        "entrystart": 413540,
+        "entrystop": 516925,
+        "fileuuid": "KkQcrPHGEeuRzzW94YO+7w==",
+        "usermeta": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    {
+        "dataset": "ttbar_semilep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root",
+        "treename": "Events",
+        "entrystart": 516925,
+        "entrystop": 620310,
+        "fileuuid": "KkQcrPHGEeuRzzW94YO+7w==",
+        "usermeta": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    {
+        "dataset": "ttbar_semilep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root",
+        "treename": "Events",
+        "entrystart": 620310,
+        "entrystop": 723695,
+        "fileuuid": "KkQcrPHGEeuRzzW94YO+7w==",
+        "usermeta": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    {
+        "dataset": "ttbar_semilep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root",
+        "treename": "Events",
+        "entrystart": 723695,
+        "entrystop": 827080,
+        "fileuuid": "KkQcrPHGEeuRzzW94YO+7w==",
+        "usermeta": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    {
+        "dataset": "ttbar_semilep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root",
+        "treename": "Events",
+        "entrystart": 827080,
+        "entrystop": 930465,
+        "fileuuid": "KkQcrPHGEeuRzzW94YO+7w==",
+        "usermeta": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    {
+        "dataset": "ttbar_semilep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root",
+        "treename": "Events",
+        "entrystart": 930465,
+        "entrystop": 1033850,
+        "fileuuid": "KkQcrPHGEeuRzzW94YO+7w==",
+        "usermeta": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    {
+        "dataset": "ttbar_semilep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root",
+        "treename": "Events",
+        "entrystart": 1033850,
+        "entrystop": 1137235,
+        "fileuuid": "KkQcrPHGEeuRzzW94YO+7w==",
+        "usermeta": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    {
+        "dataset": "ttbar_semilep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root",
+        "treename": "Events",
+        "entrystart": 1137235,
+        "entrystop": 1240620,
+        "fileuuid": "KkQcrPHGEeuRzzW94YO+7w==",
+        "usermeta": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    {
+        "dataset": "ttbar_semilep__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root",
+        "treename": "Events",
+        "entrystart": 1240620,
+        "entrystop": 1344000,
+        "fileuuid": "KkQcrPHGEeuRzzW94YO+7w==",
+        "usermeta": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    {
+        "dataset": "signal__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/ZprimeToTT_M2000_W20_TuneCP2_PSweights_13TeV-madgraph-pythiaMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/45046F71-EB72-974D-BF4A-56A9C1B44524.root",
+        "treename": "Events",
+        "entrystart": 0,
+        "entrystop": 102300,
+        "fileuuid": "iX+JKusBEeuvpemAPAq+7w==",
+        "usermeta": {
+            "process": "signal",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "signal__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/ZprimeToTT_M2000_W20_TuneCP2_PSweights_13TeV-madgraph-pythiaMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/45046F71-EB72-974D-BF4A-56A9C1B44524.root",
+        "treename": "Events",
+        "entrystart": 102300,
+        "entrystop": 204600,
+        "fileuuid": "iX+JKusBEeuvpemAPAq+7w==",
+        "usermeta": {
+            "process": "signal",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "signal__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/ZprimeToTT_M2000_W20_TuneCP2_PSweights_13TeV-madgraph-pythiaMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/45046F71-EB72-974D-BF4A-56A9C1B44524.root",
+        "treename": "Events",
+        "entrystart": 204600,
+        "entrystop": 306900,
+        "fileuuid": "iX+JKusBEeuvpemAPAq+7w==",
+        "usermeta": {
+            "process": "signal",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "signal__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/ZprimeToTT_M2000_W20_TuneCP2_PSweights_13TeV-madgraph-pythiaMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/45046F71-EB72-974D-BF4A-56A9C1B44524.root",
+        "treename": "Events",
+        "entrystart": 306900,
+        "entrystop": 409200,
+        "fileuuid": "iX+JKusBEeuvpemAPAq+7w==",
+        "usermeta": {
+            "process": "signal",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    {
+        "dataset": "signal__nominal",
+        "filename": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/ZprimeToTT_M2000_W20_TuneCP2_PSweights_13TeV-madgraph-pythiaMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/45046F71-EB72-974D-BF4A-56A9C1B44524.root",
+        "treename": "Events",
+        "entrystart": 409200,
+        "entrystop": 511498,
+        "fileuuid": "iX+JKusBEeuvpemAPAq+7w==",
+        "usermeta": {
+            "process": "signal",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    }
+]

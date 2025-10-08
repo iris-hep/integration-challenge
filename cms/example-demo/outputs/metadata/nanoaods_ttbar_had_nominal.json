@@ -1,0 +1,13 @@
+{
+    "ttbar_had": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0415B772-3CC8-A64E-9410-E622E18AF2E5.root",
+                    "nevts": 672000
+                }
+            ],
+            "nevts_total": 672000
+        }
+    }
+}

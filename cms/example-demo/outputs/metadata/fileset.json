@@ -1,0 +1,62 @@
+{
+    "signal__nominal": {
+        "files": {
+            "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/ZprimeToTT_M2000_W20_TuneCP2_PSweights_13TeV-madgraph-pythiaMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/45046F71-EB72-974D-BF4A-56A9C1B44524.root": "Events"
+        },
+        "metadata": {
+            "process": "signal",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    },
+    "ttbar_semilep__nominal": {
+        "files": {
+            "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0605BFCA-C65A-CA4C-8A6A-9148DC1B7B9A.root": "Events"
+        },
+        "metadata": {
+            "process": "ttbar_semilep",
+            "variation": "nominal",
+            "xsec": 364.31088
+        }
+    },
+    "ttbar_had__nominal": {
+        "files": {
+            "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0415B772-3CC8-A64E-9410-E622E18AF2E5.root": "Events"
+        },
+        "metadata": {
+            "process": "ttbar_had",
+            "variation": "nominal",
+            "xsec": 380.11432
+        }
+    },
+    "ttbar_lep__nominal": {
+        "files": {
+            "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/6293BAC8-2AB6-4A4A-BFEA-83E328B9C44F.root": "Events"
+        },
+        "metadata": {
+            "process": "ttbar_lep",
+            "variation": "nominal",
+            "xsec": 87.3348
+        }
+    },
+    "wjets__nominal": {
+        "files": {
+            "root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/06169F6B-C5AE-1646-87E4-F6613C6046C7.root": "Events"
+        },
+        "metadata": {
+            "process": "wjets",
+            "variation": "nominal",
+            "xsec": 61526.7
+        }
+    },
+    "data": {
+        "files": {
+            "root://eospublic.cern.ch//eos/opendata/cms/Run2016G/SingleMuon/NANOAOD/UL2016_MiniAODv2_NanoAODv9-v1/130000/0A4230E2-0C75-604D-890F-A4CE5E5C164E.root": "Events"
+        },
+        "metadata": {
+            "process": "data",
+            "variation": "nominal",
+            "xsec": 1.0
+        }
+    }
+}
