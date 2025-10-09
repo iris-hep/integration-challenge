@@ -356,16 +356,15 @@ class CoffeaMetadataExtractor:
 
         # Initialize the coffea processor Runner with an iterative executor
         # and the NanoAODSchema for parsing NanoAOD files.
-        if not dask[0]:
+        if None in dask:
             self.runner = processor.Runner(
-                executor=processor.FuturesExecutor(),
+                executor=processor.IterativeExecutor(),
                 schema=NanoAODSchema,
                 savemetrics=True,
                 # Use a small chunksize for demonstration/testing to simulate multiple chunks
                 chunksize=100_000,
             )
         else:
-            print("Running dask")
             self.runner = processor.Runner(
                 executor=processor.DaskExecutor(client=dask[0]),
                 schema=NanoAODSchema,
@@ -500,7 +499,6 @@ class NanoAODMetadataGenerator:
         self,
         identifiers: Optional[Union[int, List[int]]] = None,
         generate_metadata: bool = True,
-        processes_filter: Optional[List[str]] = None,
     ) -> None:
         """
         Generates or reads all metadata.

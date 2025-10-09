@@ -8,7 +8,6 @@ This module contains all skimming-related configuration including:
 """
 
 from coffea.analysis_tools import PackedSelection
-from .cuts import lumi_mask
 
 
 # ==============================================================================
@@ -22,8 +21,7 @@ datasets_config = [
         "cross_section": 1.0,
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight",
-        "redirector": "",
+        "weight_branch": "genWeight"
     },
     {
         "name": "ttbar_semilep",
@@ -31,8 +29,7 @@ datasets_config = [
         "cross_section": 831.76 * 0.438,  # 364.35
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight",
-        "redirector": "",
+        "weight_branch": "genWeight"
     },
     {
         "name": "ttbar_had",
@@ -40,8 +37,7 @@ datasets_config = [
         "cross_section": 831.76 * 0.457,  # 380.11
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight",
-        "redirector": "",
+        "weight_branch": "genWeight"
     },
     {
         "name": "ttbar_lep",
@@ -49,8 +45,7 @@ datasets_config = [
         "cross_section": 831.76 * 0.105,  # 87.33
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight",
-        "redirector": "",
+        "weight_branch": "genWeight"
     },
     {
         "name": "wjets",
@@ -58,8 +53,7 @@ datasets_config = [
         "cross_section": 61526.7,
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight",
-        "redirector": "",
+        "weight_branch": "genWeight"
     },
     {
         "name": "data",
@@ -106,8 +100,8 @@ def default_skim_selection(puppimet, hlt):
 
 
 skimming_config = {
-    "function": default_skim_selection,
-    "use": [("PuppiMET", None), ("HLT", None)],
+    "selection_function": default_skim_selection,
+    "selection_use": [("PuppiMET", None), ("HLT", None)],
     "chunk_size": 100_000,
     "tree_name": "Events",
 }
