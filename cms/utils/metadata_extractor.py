@@ -241,7 +241,7 @@ class CoffeaMetadataExtractor:
         The coffea processor runner configured for preprocessing.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, dask=(None, None)) -> None:
         """
         Initializes the CoffeaMetadataExtractor.
 
@@ -255,16 +255,26 @@ class CoffeaMetadataExtractor:
 
         # Initialize the coffea processor Runner with an iterative executor
         # and the NanoAODSchema for parsing NanoAOD files.
-        self.runner = processor.Runner(
-            executor=processor.IterativeExecutor(),
-            schema=NanoAODSchema,
-            savemetrics=True,
-            # Use a small chunksize for demonstration/testing to simulate multiple chunks
-            chunksize=100_000,
-        )
+        if None in dask:
+            self.runner = processor.Runner(
+                executor=processor.IterativeExecutor(),
+                schema=NanoAODSchema,
+                savemetrics=True,
+                # Use a small chunksize for demonstration/testing to simulate multiple chunks
+                chunksize=100_000,
+            )
+        else:
+            self.runner = processor.Runner(
+                executor=processor.DaskExecutor(client=dask[0]),
+                schema=NanoAODSchema,
+                savemetrics=True,
+                # Use a small chunksize for demonstration/testing to simulate multiple chunks
+                chunksize=100_000,
+            )
+            
 
     def extract_metadata(
-        self, fileset: Dict[str, Dict[str, str]]
+        self, fileset: Dict[str, Dict[str, str]],
     ) -> List[WorkItem]:
         """
         Extracts metadata from the given fileset using coffea.preprocess.
@@ -318,7 +328,8 @@ class NanoAODMetadataGenerator:
     def __init__(
         self,
         dataset_manager: ConfigurableDatasetManager,
-        output_manager
+        output_manager,
+        dask=(None,None)
     ):
         """
         Initializes the NanoAODMetadataGenerator.
@@ -338,7 +349,7 @@ class NanoAODMetadataGenerator:
 
         # Initialize modularized components for fileset building and metadata extraction
         self.fileset_builder = FilesetBuilder(self.dataset_manager, self.output_manager)
-        self.metadata_extractor = CoffeaMetadataExtractor()
+        self.metadata_extractor = CoffeaMetadataExtractor(dask=dask)
 
         # Attributes to store generated/read metadata.
         # These will be populated by the run() method.
@@ -378,7 +389,7 @@ class NanoAODMetadataGenerator:
     def run(
         self,
         identifiers: Optional[Union[int, List[int]]] = None,
-        generate_metadata: bool = True
+        generate_metadata: bool = True,
     ) -> None:
         """
         Generates or reads all metadata.
