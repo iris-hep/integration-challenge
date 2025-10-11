@@ -6,7 +6,6 @@ This module contains all skimming-related configuration including:
 - Skimming selection functions
 - Skimming configuration parameters
 """
-
 from coffea.analysis_tools import PackedSelection
 
 
@@ -14,54 +13,66 @@ from coffea.analysis_tools import PackedSelection
 #  Dataset Configuration
 # ==============================================================================
 
+REDIRECTOR="root://xcache/"
+
 datasets_config = [
     {
         "name": "signal",
-        "directory": "example-demo/datasets/signal/m2000_w20/",
-        "cross_section": 1.0,
+        "directories": ("example-demo/cms_datasets/2016/ZPrimeToTT_M2000_W200/", 
+                      "example-demo/cms_datasets/2017/ZPrimeToTT_M2000_W200/", 
+                      "example-demo/cms_datasets/2018/ZPrimeToTT_M2000_W200/"),
+        "cross_sections": (0.01895, 0.01895, 0.01895),
+        "keep_split": False,
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight"
+        "weight_branch": "genWeight",
+        "redirector": REDIRECTOR,
     },
+
     {
         "name": "ttbar_semilep",
-        "directory": "example-demo/datasets/ttbar_semilep/",
-        "cross_section": 831.76 * 0.438,  # 364.35
+        "directories": "example-demo/cms_datasets/2016/TTToSemiLeptonic/",
+        "cross_sections": 364.31,
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight"
+        "weight_branch": "genWeight",
+        "redirector": REDIRECTOR,
     },
     {
         "name": "ttbar_had",
-        "directory": "example-demo/datasets/ttbar_had/",
-        "cross_section": 831.76 * 0.457,  # 380.11
+        "directories": "example-demo/cms_datasets/2016/TTToHadronic/",
+        "cross_sections": 380.11,
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight"
+        "weight_branch": "genWeight",
+        "redirector": REDIRECTOR,
     },
     {
         "name": "ttbar_lep",
-        "directory": "example-demo/datasets/ttbar_lep/",
-        "cross_section": 831.76 * 0.105,  # 87.33
+        "directories": "example-demo/cms_datasets/2016/TTToHadronic/",
+        "cross_sections": 87.33,
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight"
+        "weight_branch": "genWeight",
+        "redirector": REDIRECTOR,
     },
     {
         "name": "wjets",
-        "directory": "example-demo/datasets/wjets/",
-        "cross_section": 61526.7,
+        "directories": "example-demo/cms_datasets/2016/WJetsToLNu_HT-*/",
+        "cross_sections": 61526.7, # for now
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight"
+        "weight_branch": "genWeight",
+        "redirector": REDIRECTOR,
     },
     {
         "name": "data",
-        "directory": "example-demo/datasets/data/",
-        "cross_section": 1.0,
+        "directories": "example-demo/cms_datasets/2016/SingleMuonRun*/",
+        "cross_sections": 1.0,
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": None
+        "weight_branch": None,
+        "redirector": REDIRECTOR,
     }
 ]
 
