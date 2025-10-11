@@ -51,6 +51,7 @@ def _parse_dataset(dataset_key: str) -> Tuple[str, str]:
 def get_root_file_paths(
     directory: Union[str, Path],
     identifiers: Optional[Union[int, List[int]]] = None,
+    redirector: str = None,
 ) -> List[str]:
     """
     Collects ROOT file paths from `.txt` listing files in a directory.
@@ -101,6 +102,8 @@ def get_root_file_paths(
         for line in txt_file.read_text().splitlines():
             path_str = line.strip()
             if path_str:
+                if redirector:
+                    path_str = f"{redirector}{path_str}"
                 root_paths.append(path_str)
 
     return root_paths
@@ -165,13 +168,14 @@ class FilesetBuilder:
             logger.info(f"Building fileset for process: {process_name}")
 
             # Get the directory where listing files are located for this process
-            listing_dir = self.dataset_manager.get_dataset_directory(process_name)
+            listing_dirs = self.dataset_manager.get_dataset_directories(process_name)
             # Get the tree name (e.g., "Events") for ROOT files of this process
             tree_name = self.dataset_manager.get_tree_name(process_name)
 
             try:
+                redirector  = self.dataset_manager.get_redirector(process_name)
                 # Collect all ROOT file paths from the listing files
-                file_paths = get_root_file_paths(listing_dir, identifiers)[:max_files]
+                file_paths = get_root_file_paths(listing_dirs, identifiers, redirector)[:max_files]
 
                 # Define the dataset key for coffea (process__variation)
                 # For now, assuming a "nominal" variation if not explicitly specified
@@ -255,15 +259,16 @@ class CoffeaMetadataExtractor:
 
         # Initialize the coffea processor Runner with an iterative executor
         # and the NanoAODSchema for parsing NanoAOD files.
-        if None in dask:
+        if not dask[0]:
             self.runner = processor.Runner(
-                executor=processor.IterativeExecutor(),
+                executor=processor.FuturesExecutor(),
                 schema=NanoAODSchema,
                 savemetrics=True,
                 # Use a small chunksize for demonstration/testing to simulate multiple chunks
                 chunksize=100_000,
             )
         else:
+            print("Running dask")
             self.runner = processor.Runner(
                 executor=processor.DaskExecutor(client=dask[0]),
                 schema=NanoAODSchema,
@@ -349,6 +354,7 @@ class NanoAODMetadataGenerator:
 
         # Initialize modularized components for fileset building and metadata extraction
         self.fileset_builder = FilesetBuilder(self.dataset_manager, self.output_manager)
+        print(dask)
         self.metadata_extractor = CoffeaMetadataExtractor(dask=dask)
 
         # Attributes to store generated/read metadata.

@@ -235,9 +235,9 @@ class GeneralConfig(SubscriptableModel):
     @model_validator(mode="after")
     def validate_general(self) -> "GeneralConfig":
         """Validate the general configuration settings."""
-        if self.analysis not in ["diff", "nondiff", "both", "skip"]:
+        if self.analysis not in ["nondiff", "skip"]:
             raise ValueError(
-                f"Invalid analysis mode '{self.analysis}'. Must be 'diff', 'nondiff', 'both', or 'skip'."
+                f"Invalid analysis mode '{self.analysis}'. Must be 'nondiff' or 'skip'."
             )
 
         return self
@@ -249,15 +249,12 @@ class GeneralConfig(SubscriptableModel):
 class DatasetConfig(SubscriptableModel):
     """Configuration for individual dataset paths, cross-sections, and metadata"""
     name: Annotated[str, Field(description="Dataset name/identifier")]
-    directory: Annotated[str, Field(description="Directory containing dataset files")]
-    cross_section: Annotated[float, Field(description="Cross-section in picobarns")]
+    directories: Annotated[Union[str, tuple[str]], Field(description="Directories containing dataset files")]
+    cross_sections: Annotated[float, tuple[float]], Field(description="Cross-sections in picobarns")]
     file_pattern: Annotated[str, Field(default="*.root", description="File pattern for dataset files")]
     tree_name: Annotated[str, Field(default="Events", description="ROOT tree name")]
     weight_branch: Annotated[Optional[str], Field(default="genWeight", description="Branch name for event weights")]
-    remote_access: Annotated[
-        Optional[dict[str, str]],
-        Field(default=None, description="Configuration for remote access (EOS, XRootD, etc.)")
-    ]
+    redirector: Annotated[Optional[str], Field(default=None, description="redirector to prefix ROOT file-paths")]
 
 class DatasetManagerConfig(SubscriptableModel):
     """Top-level dataset management configuration"""
@@ -269,6 +266,19 @@ class DatasetManagerConfig(SubscriptableModel):
             description="Maximum number of files to process per dataset."
         ),
     ]
+
+    @model_validator(mode="after")
+    def validate_general(self) -> "DatasetManagerConfig":
+        """Validate the dataset manager configuration settings."""
+        # Check number of directories and number of cross-sections is the same
+        for dataset_config in self.datasets:
+            if isinstance(dirs := dataset_config.directory, tuple) and isinstance(xss := dataset_config.cross_section, tuple):
+                if len(dirs) != len(xss):
+                    raise ValueError("You must provide an equal number of directories and cross-sections if you are providing lists of both.")
+            if not isinstance(dirs := dataset_config.directory, tuple) and isinstance(xss := dataset_config.cross_section, tuple):
+                raise ValueError("If you are providing a list of cross-sections you must also provide a corresponding list of directories")
+        
+        return self
 
 # ------------------------
 # Skimming configuration

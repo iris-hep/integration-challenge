@@ -58,9 +58,12 @@ class ConfigurableDatasetManager:
         """
         if process not in self.datasets:
             raise KeyError(f"Process '{process}' not found in dataset configuration")
-        return self.datasets[process].cross_section
+        if isinstance(self.datasets[process].cross_sections, float):
+            return (self.datasets[process].cross_sections,)
+        else:
+            return (xs for xs in self.datasets[process].cross_sections)
 
-    def get_dataset_directory(self, process: str) -> Path:
+    def get_dataset_directories(self, process: str) -> Path:
         """
         Get dataset directory containing text files with file lists.
 
@@ -76,7 +79,10 @@ class ConfigurableDatasetManager:
         """
         if process not in self.datasets:
             raise KeyError(f"Process '{process}' not found in dataset configuration")
-        return Path(self.datasets[process].directory)
+        if isinstance(self.datasets[process].directories, str):
+            return (Path(self.datasets[process].directories),)
+        else:
+            return (Path(directory) for directory in self.datasets[process].directories)
 
     def get_tree_name(self, process: str) -> str:
         """
@@ -95,33 +101,25 @@ class ConfigurableDatasetManager:
         if process not in self.datasets:
             raise KeyError(f"Process '{process}' not found in dataset configuration")
         return self.datasets[process].tree_name
-
-    def get_cross_section_map(self) -> Dict[str, float]:
+    
+    def get_redirector(self, process: str) -> str:
         """
-        Get a dictionary mapping all process names to their cross-sections.
-
-        This provides backward compatibility with code expecting a cross-section map.
+        Get ROOT file redirector (prefix)
+        
+        Parameters
+        ----------
+        process : str
+            Process name
 
         Returns
         -------
-        dict
-            Mapping of process names to cross-sections
+        str
+            ROOT file redirector (prefix)
         """
-        return {name: ds.cross_section for name, ds in self.datasets.items()}
-
-    def get_dataset_directories_map(self) -> Dict[str, Path]:
-        """
-        Get a dictionary mapping all process names to their directories.
-
-        This provides backward compatibility with code expecting a directory map.
-
-        Returns
-        -------
-        dict
-            Mapping of process names to directory paths containing .txt files
-        """
-        return {name: Path(ds.directory) for name, ds in self.datasets.items()}
-
+        if process not in self.datasets:
+            raise KeyError(f"Process '{process}' not found in dataset configuration")
+        return self.datasets[process].redirector
+        
     def list_processes(self) -> List[str]:
         """
         Get list of all configured process names.
