@@ -222,9 +222,8 @@ class FilesetBuilder:
 
             logger.info(f"Building fileset for process: {process_name}")
 
-            # Get the directories and cross-sections for this process (always as lists)
+            # Get the directory where listing files are located for this process
             listing_dirs = self.dataset_manager.get_dataset_directories(process_name)
-            cross_sections = self.dataset_manager.get_cross_section(process_name)
             # Get the tree name (e.g., "Events") for ROOT files of this process
             tree_name = self.dataset_manager.get_tree_name(process_name)
 
@@ -234,7 +233,9 @@ class FilesetBuilder:
                 continue
 
             try:
-                redirector = self.dataset_manager.get_redirector(process_name)
+                redirector  = self.dataset_manager.get_redirector(process_name)
+                # Collect all ROOT file paths from the listing files
+                file_paths = get_root_file_paths(listing_dirs, identifiers, redirector)[:max_files]
 
                 # Collect fileset keys for this Dataset object
                 fileset_keys = []
@@ -356,15 +357,16 @@ class CoffeaMetadataExtractor:
 
         # Initialize the coffea processor Runner with an iterative executor
         # and the NanoAODSchema for parsing NanoAOD files.
-        if None in dask:
+        if not dask[0]:
             self.runner = processor.Runner(
-                executor=processor.IterativeExecutor(),
+                executor=processor.FuturesExecutor(),
                 schema=NanoAODSchema,
                 savemetrics=True,
                 # Use a small chunksize for demonstration/testing to simulate multiple chunks
                 chunksize=100_000,
             )
         else:
+            print("Running dask")
             self.runner = processor.Runner(
                 executor=processor.DaskExecutor(client=dask[0]),
                 schema=NanoAODSchema,
@@ -457,6 +459,7 @@ class NanoAODMetadataGenerator:
 
         # Initialize modularized components for fileset building and metadata extraction
         self.fileset_builder = FilesetBuilder(self.dataset_manager, self.output_manager)
+        print(dask)
         self.metadata_extractor = CoffeaMetadataExtractor(dask=dask)
 
         # Attributes to store generated/read metadata.
