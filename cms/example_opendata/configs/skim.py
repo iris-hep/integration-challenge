@@ -18,8 +18,8 @@ from .cuts import lumi_mask
 datasets_config = [
     {
         "name": "signal",
-        "directory": "example-demo/datasets/signal/m2000_w20/",
-        "cross_section": 1.0,
+        "directories": "example-demo/datasets/signal/m2000_w20/",
+        "cross_sections": 1.0,
         "file_pattern": "*.txt",
         "tree_name": "Events",
         "weight_branch": "genWeight",
@@ -27,8 +27,8 @@ datasets_config = [
     },
     {
         "name": "ttbar_semilep",
-        "directory": "example-demo/datasets/ttbar_semilep/",
-        "cross_section": 831.76 * 0.438,  # 364.35
+        "directories": "example-demo/datasets/ttbar_semilep/",
+        "cross_sections": 831.76 * 0.438,  # 364.35
         "file_pattern": "*.txt",
         "tree_name": "Events",
         "weight_branch": "genWeight",
@@ -36,8 +36,8 @@ datasets_config = [
     },
     {
         "name": "ttbar_had",
-        "directory": "example-demo/datasets/ttbar_had/",
-        "cross_section": 831.76 * 0.457,  # 380.11
+        "directories": "example-demo/datasets/ttbar_had/",
+        "cross_sections": 831.76 * 0.457,  # 380.11
         "file_pattern": "*.txt",
         "tree_name": "Events",
         "weight_branch": "genWeight",
@@ -45,8 +45,8 @@ datasets_config = [
     },
     {
         "name": "ttbar_lep",
-        "directory": "example-demo/datasets/ttbar_lep/",
-        "cross_section": 831.76 * 0.105,  # 87.33
+        "directories": "example-demo/datasets/ttbar_lep/",
+        "cross_sections": 831.76 * 0.105,  # 87.33
         "file_pattern": "*.txt",
         "tree_name": "Events",
         "weight_branch": "genWeight",
@@ -54,8 +54,8 @@ datasets_config = [
     },
     {
         "name": "wjets",
-        "directory": "example-demo/datasets/wjets/",
-        "cross_section": 61526.7,
+        "directories": "example-demo/datasets/wjets/",
+        "cross_sections": 61526.7,
         "file_pattern": "*.txt",
         "tree_name": "Events",
         "weight_branch": "genWeight",
@@ -63,11 +63,12 @@ datasets_config = [
     },
     {
         "name": "data",
-        "directory": "example-demo/datasets/data/",
-        "cross_section": 1.0,
+        "directories": "example-demo/datasets/data/",
+        "cross_sections": 1.0,
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": None
+        "weight_branch": None,
+        "redirector": "",
     }
 ]
 

@@ -211,9 +211,10 @@ class FilesetBuilder:
         # Iterate over each process configured in the dataset manager
         for process_name in self.dataset_manager.list_processes():
             # Check if processes filter is configured
-            if processes_filter and process_name not in processes_filter:
-                logger.info(f"Skipping {process_name} (not in processes filter)")
-                continue
+            if hasattr(self.config.general, 'processes') and self.config.general.processes:
+                if process_name not in self.config.general.processes:
+                    logger.info(f"Skipping {process_name} (not in processes filter)")
+                    continue
 
             logger.info(f"Building fileset for process: {process_name}")
 

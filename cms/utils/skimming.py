@@ -1296,11 +1296,7 @@ def process_and_load_events(
             logger.info(f"Filtered {len(workitems)} workitems to {len(workitems_to_process)} based on processes filter")
 
         logger.info("Running skimming")
-        results = skimming_manager.process_workitems(
-            workitems_to_process,
-            config,
-            datasets,
-        )
+        results = skimming_manager.process_workitems(workitems_to_process, config)
         logger.info(f"Skimming complete: {results['processed_events']:,} events")
 
     # Create a mapping from fileset_key to Dataset for quick lookup
