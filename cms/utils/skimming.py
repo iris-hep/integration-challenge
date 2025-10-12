@@ -78,15 +78,239 @@ def get_dataset_config_by_name(dataset_name: str, configuration: Any):
     dataset_manager = getattr(configuration, "datasets", None)
     dataset_configs = getattr(dataset_manager, "datasets", []) if dataset_manager else []
 
-    for dataset_config in dataset_configs:
-        if dataset_config.name == dataset_name:
-            return dataset_config
-    return None
+    try:
+        # Extract workitem metadata
+        filename = workitem.filename
+        treename = workitem.treename
+        entry_start = workitem.entrystart
+        entry_stop = workitem.entrystop
+        dataset = workitem.dataset
+
+        # Load events using NanoEventsFactory
+        events = NanoEventsFactory.from_root(
+            {filename: treename},
+            entry_start=entry_start,
+            entry_stop=entry_stop,
+            schemaclass=NanoAODSchema,
+        ).events()
+
+        total_events = len(events)
+
+        # Apply skimming selection using the provided function
+        selection_func = config.selection_function
+        selection_use = config.selection_use
+
+        # Get function arguments using existing utility
+        selection_args = get_function_arguments(
+            selection_use, events, function_name=selection_func.__name__
+        )
+        packed_selection = selection_func(*selection_args)
+
+        # Apply final selection mask
+        selection_names = packed_selection.names
+        if selection_names:
+            final_selection = selection_names[-1]
+            mask = packed_selection.all(final_selection)
+        else:
+            # No selection applied, keep all events
+            mask = slice(None)
+
+        filtered_events = events[mask]
+        processed_events = len(filtered_events)
+
+        # Fill dummy histogram with some dummy values for tracking
+        if processed_events > 0:
+            # Use a simple observable for the dummy histogram
+            dummy_values = [500.0] * min(processed_events, 100)
+            dummy_hist.fill(dummy_values)
+
+        output_files = []
+        if processed_events > 0:
+            output_file = _create_output_file_path(
+                workitem, output_manager, file_counters, part_counters
+            )
+            _save_workitem_output(
+                filtered_events, output_file, config, configuration, is_mc
+            )
+            output_files.append(str(output_file))
+
+        return {
+            "hist": dummy_hist,
+            "failed_items": set(),
+            "processed_events": processed_events,
+            "output_files": output_files,
+            "failure_info": None,
+        }
+
+    except Exception as e:
+        error_type = type(e).__name__
+        error_msg = str(e)
+        logger.error(f"Failed to process workitem {workitem.filename}: {error_type}: {error_msg}")
+        return {
+            "hist": default_histogram(),
+            "failed_items": {workitem},  # Track failure
+            "processed_events": 0,
+            "output_files": [],
+            "failure_info": {
+                "workitem": workitem,
+                "error_type": error_type,
+                "error_msg": error_msg,
+                "dataset": workitem.dataset,
+                "filename": workitem.filename,
+            }
+        }
 
 
-# =============================================================================
-# Branch and Column Management Helpers
-# =============================================================================
+def reduce_results(
+    result_a: Dict[str, Any], result_b: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Combine partial results from workitem processing.
+
+    It combines histograms, failed items, and other metrics from parallel
+    processing.
+
+    Parameters
+    ----------
+    result_a : Dict[str, Any]
+        First result dictionary
+    result_b : Dict[str, Any]
+        Second result dictionary
+
+    Returns
+    -------
+    Dict[str, Any]
+        Combined result dictionary
+    """
+    # Collect failure info from both results
+    failure_infos = []
+    if result_a.get("failure_info"):
+        failure_infos.append(result_a["failure_info"])
+    if result_b.get("failure_info"):
+        failure_infos.append(result_b["failure_info"])
+
+    # If we have multiple failures, accumulate them as a list
+    if "failure_infos" in result_a:
+        failure_infos.extend(result_a["failure_infos"])
+    if "failure_infos" in result_b:
+        failure_infos.extend(result_b["failure_infos"])
+
+    return {
+        "hist": result_a["hist"] + result_b["hist"],
+        "failed_items": result_a["failed_items"] | result_b["failed_items"],
+        "processed_events": result_a["processed_events"] + result_b["processed_events"],
+        "output_files": result_a["output_files"] + result_b["output_files"],
+        "failure_infos": failure_infos,
+    }
+
+
+def _create_output_file_path(
+    workitem: WorkItem,
+    output_manager,
+    file_counters: Dict[str, int],
+    part_counters: Dict[str, int],
+) -> Path:
+    """
+    Create output file path following the existing pattern with entry-range-based
+    counters.
+
+    Uses the same output structure as the current skimming code:
+    {skimmed_dir}/{dataset}/file__{file_idx}/part_{chunk}.root
+
+    Parameters
+    ----------
+    workitem : WorkItem
+        The workitem being processed
+    output_manager : OutputDirectoryManager
+        Centralized output directory manager
+    file_counters : Dict[str, int]
+        Pre-computed mapping of file keys to file numbers
+    part_counters : Dict[str, int]
+        Pre-computed mapping of part keys (including entry ranges) to part numbers
+
+    Returns
+    -------
+    Path
+        Full path to the output file
+    """
+    dataset = workitem.dataset
+
+    # Create keys that include entry ranges for proper differentiation
+    file_key = f"{dataset}::{workitem.filename}"
+    part_key = f"{file_key}::{workitem.entrystart}_{workitem.entrystop}"
+
+    # Get pre-computed file and part numbers
+    file_number = file_counters[file_key]
+    part_number = part_counters[part_key]
+
+    # Create output directory structure using output manager
+    skimmed_dir = output_manager.get_skimmed_dir()
+    dataset_dir = skimmed_dir / dataset / f"file__{file_number}"
+    dataset_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create output filename with entry-range-based part number
+    output_filename = f"part_{part_number}.root"
+    return dataset_dir / output_filename
+
+
+def _save_workitem_output(
+    events: Any,
+    output_file: Path,
+    config: SkimmingConfig,
+    configuration: Any,
+    is_mc: bool,
+) -> None:
+    """
+    Save filtered events to output ROOT file.
+
+    This function handles the actual I/O of saving skimmed events to disk,
+    using the same branch selection logic as the existing skimming code.
+
+    Parameters
+    ----------
+    events : Any
+        Filtered events to save
+    output_file : Path
+        Output file path
+    config : SkimmingConfig
+        Skimming configuration
+    configuration : Any
+        Main analysis configuration with branch selections
+    is_mc : bool
+        Whether this is Monte Carlo data
+    """
+    # Build branches to keep using existing logic
+    branches_to_keep = _build_branches_to_keep(configuration, is_mc)
+
+    # Create output file
+    with uproot.recreate(str(output_file)) as output_root:
+        # Prepare data for writing
+        output_data = {}
+
+        # Extract branches following the existing pattern
+        for obj, obj_branches in branches_to_keep.items():
+            if obj == "event":
+                # Event-level branches
+                for branch in obj_branches:
+                    if hasattr(events, branch):
+                        output_data[branch] = getattr(events, branch)
+            else:
+                # Object collection branches
+                if hasattr(events, obj):
+                    obj_collection = getattr(events, obj)
+                    for branch in obj_branches:
+                        if hasattr(obj_collection, branch):
+                            output_data[f"{obj}_{branch}"] = getattr(
+                                obj_collection, branch
+                            )
+
+        # Create and populate output tree
+        if output_data:
+            output_tree = output_root.mktree(
+                config.tree_name, {k: v.type for k, v in output_data.items()}
+            )
+            output_tree.extend(output_data)
+
 
 def _build_branches_to_keep(
     configuration: Any, is_mc: bool
@@ -742,8 +966,7 @@ class WorkitemSkimmingManager:
                 f"after {max_retries} attempts"
             )
             full_result["failed_items"] = set(remaining_workitems)
-            # Log final cumulative failure information
-            logger.warning(f"\n=== Final Failure Summary (All Attempts) ===")
+            # Log detailed failure information
             self._log_failure_summary(workitems, full_result["failure_infos"])
         else:
             logger.info("All workitems processed successfully")
