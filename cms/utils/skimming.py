@@ -400,7 +400,6 @@ class WorkitemSkimmingManager:
         workitems: List[WorkItem],
         configuration: Any,
         split_every: int = 4,
-        max_retries: int = 3,
     ) -> Dict[str, Any]:
         """
         Process a list of workitems using dask.bag with failure handling.
@@ -416,15 +415,14 @@ class WorkitemSkimmingManager:
             Main analysis configuration object
         split_every : int, default 4
             Split parameter for dask.bag.fold operation
-        max_retries : int, default 3
-            Maximum number of retry attempts for failed workitems
 
         Returns
         -------
         Dict[str, Any]
             Final combined results with histograms and processing statistics
         """
-        logger.info(f"Processing {len(workitems)} workitems")
+        max_retries = self.config.max_retries
+        logger.info(f"Processing {len(workitems)} workitems with max {max_retries} retries")
 
         # Pre-compute file and part counters for all workitems
         file_counters, part_counters = self._compute_counters(workitems)
@@ -491,6 +489,11 @@ class WorkitemSkimmingManager:
                 f"{successful_count} successful, {failed_count} failed"
             )
 
+            # Show detailed failure summary after each attempt if there are failures
+            if remaining_workitems and result.get("failure_infos"):
+                logger.warning(f"\n=== Failures in Attempt {retry_count + 1} ===")
+                self._log_failure_summary(workitems, result["failure_infos"])
+
             retry_count += 1
 
         # Final logging
@@ -500,7 +503,8 @@ class WorkitemSkimmingManager:
                 f"after {max_retries} attempts"
             )
             full_result["failed_items"] = set(remaining_workitems)
-            # Log detailed failure information
+            # Log final cumulative failure information
+            logger.warning(f"\n=== Final Failure Summary (All Attempts) ===")
             self._log_failure_summary(workitems, full_result["failure_infos"])
         else:
             logger.info("All workitems processed successfully")

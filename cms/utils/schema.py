@@ -322,6 +322,12 @@ class SkimmingConfig(SubscriptableModel):
         Field(default="Events", description="ROOT tree name for input and output files")
     ]
 
+    # Retry configuration
+    max_retries: Annotated[
+        int,
+        Field(default=3, description="Maximum number of retry attempts for failed workitems")
+    ]
+
 # ------------------------
 # Preprocessing configuration
 # ------------------------
