@@ -262,7 +262,7 @@ def _create_output_file_path(
     dataset_dir.mkdir(parents=True, exist_ok=True)
 
     # Create output filename with entry-range-based part number
-    output_filename = f"part_{part_number}.root"
+    output_filename = f"part_{part_number}.parquet"
     return dataset_dir / output_filename
 
 
@@ -274,7 +274,7 @@ def _save_workitem_output(
     is_mc: bool,
 ) -> None:
     """
-    Save filtered events to output ROOT file.
+    Save filtered events to output parquet file.
 
     This function handles the actual I/O of saving skimmed events to disk,
     using the same branch selection logic as the existing skimming code.
@@ -295,34 +295,30 @@ def _save_workitem_output(
     # Build branches to keep using existing logic
     branches_to_keep = _build_branches_to_keep(configuration, is_mc)
 
-    # Create output file
-    # with uproot.recreate(str(output_file)) as output_root:
-    #     # Prepare data for writing
-    #     output_data = {}
+    # Prepare data for writing
+    output_data = {}
 
-    #     # Extract branches following the existing pattern
-    #     for obj, obj_branches in branches_to_keep.items():
-    #         if obj == "event":
-    #             # Event-level branches
-    #             for branch in obj_branches:
-    #                 if hasattr(events, branch):
-    #                     output_data[branch] = getattr(events, branch)
-    #         else:
-    #             # Object collection branches
-    #             if hasattr(events, obj):
-    #                 obj_collection = getattr(events, obj)
-    #                 for branch in obj_branches:
-    #                     if hasattr(obj_collection, branch):
-    #                         output_data[f"{obj}_{branch}"] = getattr(
-    #                             obj_collection, branch
-    #                         )
+    # Extract branches following the existing pattern
+    for obj, obj_branches in branches_to_keep.items():
+        if obj == "event":
+            # Event-level branches
+            for branch in obj_branches:
+                if hasattr(events, branch):
+                    output_data[branch] = getattr(events, branch)
+        else:
+            # Object collection branches
+            if hasattr(events, obj):
+                obj_collection = getattr(events, obj)
+                for branch in obj_branches:
+                    if hasattr(obj_collection, branch):
+                        output_data[f"{obj}_{branch}"] = getattr(
+                            obj_collection, branch
+                        )
 
-    #     # Create and populate output tree
-    #     if output_data:
-    #         output_tree = output_root.mktree(
-    #             config.tree_name, {k: v.type for k, v in output_data.items()}
-    #         )
-    #         output_tree.extend(output_data)
+    # Write to parquet file
+    if output_data:
+        # Convert dict to awkward array for writing
+        ak.to_parquet(output_data, str(output_file), compression="zstd")
 
 
 def _build_branches_to_keep(
@@ -510,7 +506,7 @@ class WorkitemSkimmingManager:
             logger.info("All workitems processed successfully")
 
         # Create summary statistics by dataset
-        self._log_processing_summary(workitems, full_result["output_files"])
+        self._log_processing_summary(workitems, full_result["output_files"], full_result["processed_events"])
 
         return full_result
 
@@ -529,7 +525,7 @@ class WorkitemSkimmingManager:
         Returns
         -------
         List[str]
-            List of existing output file paths with tree names
+            List of existing output file paths
         """
         output_files = []
         dataset_counts = {}
@@ -543,9 +539,8 @@ class WorkitemSkimmingManager:
             )
 
             if expected_output.exists():
-                # Add tree name for compatibility with existing code
-                file_with_tree = f"{expected_output}:{self.config.tree_name}"
-                output_files.append(file_with_tree)
+                # Parquet files don't have tree names, just add the path
+                output_files.append(str(expected_output))
 
                 # Count files per dataset
                 dataset = workitem.dataset
@@ -565,7 +560,7 @@ class WorkitemSkimmingManager:
         return output_files
 
     def _log_processing_summary(
-        self, workitems: List[WorkItem], output_files: List[str]
+        self, workitems: List[WorkItem], output_files: List[str], total_events: int
     ) -> None:
         """
         Log a summary table of processing results by dataset.
@@ -576,60 +571,42 @@ class WorkitemSkimmingManager:
             Original list of workitems processed
         output_files : List[str]
             List of output files created
+        total_events : int
+            Total number of events processed
         """
         # Collect statistics by dataset
-        dataset_stats = defaultdict(
-            lambda: {"events_processed": 0, "files_written": 0}
-        )
+        dataset_stats = defaultdict(lambda: {"files_written": 0})
 
-        # Count events processed by reading from output files
+        # Count files written per dataset
         for output_file in output_files:
             try:
                 # Extract dataset from file path
-                # Path format: {output_dir}/{dataset}/file__{N}/part_{M}.root
+                # Path format: {output_dir}/{dataset}/file__{N}/part_{M}.parquet
                 path_parts = Path(output_file).parts
                 if len(path_parts) >= 3:
                     dataset = path_parts[-3]  # Get dataset from path
-
-                    # Read the file to count events
-                    with uproot.open(output_file) as f:
-                        if self.config.tree_name in f:
-                            tree = f[self.config.tree_name]
-                            num_events = tree.num_entries
-                            dataset_stats[dataset]["events_processed"] += num_events
-                            dataset_stats[dataset]["files_written"] += 1
-
-            except Exception as e:
-                # Still count the file even if we can't read events
-                try:
-                    path_parts = Path(output_file).parts
-                    if len(path_parts) >= 3:
-                        dataset = path_parts[-3]
-                        dataset_stats[dataset]["files_written"] += 1
-                except Exception:
-                    pass
+                    dataset_stats[dataset]["files_written"] += 1
+            except Exception:
+                pass
 
         # Create summary table
         if dataset_stats:
             table_data = []
-            total_events = 0
             total_files = 0
 
             for dataset, stats in sorted(dataset_stats.items()):
-                events = stats["events_processed"]
                 files = stats["files_written"]
-                table_data.append([dataset, f"{events:,}", files])
-                total_events += events
+                table_data.append([dataset, files])
                 total_files += files
 
             # Add totals row
-            table_data.append(["TOTAL", f"{total_events:,}", total_files])
+            table_data.append(["TOTAL", total_files])
 
             # Create and log table
-            headers = ["Dataset", "Events Saved", "Files Written"]
+            headers = ["Dataset", "Files Written"]
             table = tabulate(table_data, headers=headers, tablefmt="grid")
 
-            logger.info("Processing Summary:")
+            logger.info(f"Processing Summary: {total_events:,} total events saved")
             logger.info(f"\n{table}")
         else:
             logger.info("No output files were created during processing")
@@ -941,11 +918,8 @@ def process_workitems_with_skimming(
 
             for file_path in output_files:
                 try:
-                    # Load events using NanoEventsFactory
-                    events = NanoEventsFactory.from_root(
-                        file_path, schemaclass=NanoAODSchema, mode="eager"
-                    ).events()
-                    events = ak.materialize(events)
+                    # Load events from parquet file
+                    events = ak.from_parquet(file_path)
                     all_events.append(events)
                     total_events_loaded += len(events)
                 except Exception as e:
