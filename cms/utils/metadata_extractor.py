@@ -176,20 +176,15 @@ class FilesetBuilder:
         self.output_manager = output_manager
 
     def build_fileset(
-        self, identifiers: Optional[Union[int, List[int]]] = None,
-        processes_filter: Optional[List[str]] = None
+        self, identifiers: Optional[Union[int, List[int]]] = None
     ) -> Tuple[Dict[str, Dict[str, Any]], List[Dataset]]:
         """
-        Build coffea-compatible fileset and Dataset objects from configurations.
+        Builds a coffea-compatible fileset mapping and Dataset objects.
 
-        Iterates through configured processes, collects ROOT file paths from listing
-        files, and constructs both a fileset dict for coffea preprocessing and Dataset
-        objects for the analysis pipeline. Handles multi-directory datasets by creating
-        separate fileset entries with index suffixes (e.g., "signal_0__nominal").
-
-        Dataset key format:
-        - MC: "process__variation" or "process_N__variation" for multi-directory
-        - Data: "process" or "process_N" for multi-directory
+        Iterates through configured processes, collects ROOT file paths, and
+        constructs both:
+        1. A fileset dictionary for coffea preprocessing
+        2. Dataset objects for our own analysis pipeline
 
         Parameters
         ----------
@@ -201,9 +196,9 @@ class FilesetBuilder:
         Returns
         -------
         Tuple[Dict[str, Dict[str, Any]], List[Dataset]]
-            (fileset_dict, datasets_list) where fileset_dict maps dataset keys to
-            {"files": {path: treename}, "metadata": {...}} and datasets_list contains
-            Dataset objects with cross-sections and process metadata.
+            A tuple containing:
+            - The constructed fileset in coffea format
+            - A list of Dataset objects
         """
         fileset: Dict[str, Dict[str, Any]] = {}
         datasets: List[Dataset] = []
@@ -222,8 +217,9 @@ class FilesetBuilder:
 
             logger.info(f"Building fileset for process: {process_name}")
 
-            # Get the directory where listing files are located for this process
+            # Get the directories and cross-sections for this process (always as lists)
             listing_dirs = self.dataset_manager.get_dataset_directories(process_name)
+            cross_sections = self.dataset_manager.get_cross_section(process_name)
             # Get the tree name (e.g., "Events") for ROOT files of this process
             tree_name = self.dataset_manager.get_tree_name(process_name)
 
@@ -233,9 +229,7 @@ class FilesetBuilder:
                 continue
 
             try:
-                redirector  = self.dataset_manager.get_redirector(process_name)
-                # Collect all ROOT file paths from the listing files
-                file_paths = get_root_file_paths(listing_dirs, identifiers, redirector)[:max_files]
+                redirector = self.dataset_manager.get_redirector(process_name)
 
                 # Collect fileset keys for this Dataset object
                 fileset_keys = []
@@ -243,16 +237,12 @@ class FilesetBuilder:
 
                 # Process each directory-cross-section pair
                 # Always create separate entries when multiple directories exist
-                is_data = self.dataset_manager.is_data_dataset(process_name)
-
                 for idx, (listing_dir, xsec) in enumerate(zip(listing_dirs, cross_sections)):
                     # Collect ROOT file paths from this directory
                     file_paths = get_root_file_paths(listing_dir, identifiers, redirector)[:max_files]
 
-                    # Construct dataset key for coffea fileset
-                    # Multi-directory datasets (e.g., different run periods) get index suffix
-                    # to create distinct keys: signal_0__nominal, signal_1__nominal
-                    if not is_data:
+                    # Define the dataset key for coffea (process__variation)
+                    if process_name != "data":
                         # If multiple directories, append index to distinguish them
                         if len(listing_dirs) > 1:
                             dataset_key = f"{process_name}_{idx}__{variation_label}"
@@ -274,8 +264,7 @@ class FilesetBuilder:
                         "metadata": {
                             "process": process_name,
                             "variation": variation_label,
-                            "xsec": xsec,
-                            "is_data": is_data,
+                            "xsec": xsec
                         }
                     }
 
@@ -288,7 +277,6 @@ class FilesetBuilder:
                     process=process_name,
                     variation=variation_label,
                     cross_sections=cross_sections,
-                    is_data=is_data,
                     events=None  # Will be populated during skimming
                 )
                 datasets.append(dataset)
@@ -528,7 +516,7 @@ class NanoAODMetadataGenerator:
         if generate_metadata:
             logger.info("Starting metadata generation workflow...")
             # Step 1: Build and save the fileset and Dataset objects
-            self.fileset, self.datasets = self.fileset_builder.build_fileset(identifiers, processes_filter)
+            self.fileset, self.datasets = self.fileset_builder.build_fileset(identifiers)
             self.fileset_builder.save_fileset(self.fileset)
 
             # Step 2: Extract and save WorkItem metadata
@@ -788,24 +776,13 @@ class NanoAODMetadataGenerator:
                     raise ValueError(f"Fileset key '{key}' is missing 'metadata.xsec' field")
                 cross_sections.append(metadata["xsec"])
 
-            # Determine is_data flag
-            is_data = first_metadata.get("is_data")
-            if is_data is None:
-                try:
-                    is_data = self.dataset_manager.is_data_dataset(process)
-                except KeyError:
-                    logger.warning(
-                        f"Process '{process}' not found in dataset manager when reconstructing datasets"
-                    )
-                    is_data = False
-
+            # Create Dataset object
             dataset = Dataset(
                 name=process,
                 fileset_keys=fileset_keys,
                 process=process,
                 variation=variation,
                 cross_sections=cross_sections,
-                is_data=is_data,
                 events=None  # Will be populated during skimming
             )
             self.datasets.append(dataset)

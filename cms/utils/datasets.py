@@ -48,7 +48,6 @@ class Dataset:
     process: str
     variation: str
     cross_sections: List[float]
-    is_data: bool = False
     events: Optional[List[Tuple[Any, Dict]]] = field(default=None)
 
     def __repr__(self) -> str:
@@ -104,12 +103,28 @@ class ConfigurableDatasetManager:
         """
         if process not in self.datasets:
             raise KeyError(f"Process '{process}' not found in dataset configuration")
-        if isinstance(self.datasets[process].cross_sections, float):
-            return (self.datasets[process].cross_sections,)
-        else:
-            return (xs for xs in self.datasets[process].cross_sections)
 
-    def get_dataset_directories(self, process: str) -> Path:
+        xsecs = self.datasets[process].cross_sections
+        dirs = self.datasets[process].directories
+
+        # Normalize to lists
+        if isinstance(xsecs, float):
+            xsecs = [xsecs]
+        else:
+            xsecs = list(xsecs)
+
+        if isinstance(dirs, str):
+            num_dirs = 1
+        else:
+            num_dirs = len(dirs)
+
+        # If single xsec but multiple directories, replicate the xsec
+        if len(xsecs) == 1 and num_dirs > 1:
+            xsecs = xsecs * num_dirs
+
+        return xsecs
+
+    def get_dataset_directories(self, process: str) -> List[Path]:
         """
         Get dataset directory/directories containing text files with file lists.
 
@@ -126,10 +141,12 @@ class ConfigurableDatasetManager:
         """
         if process not in self.datasets:
             raise KeyError(f"Process '{process}' not found in dataset configuration")
-        if isinstance(self.datasets[process].directories, str):
-            return (Path(self.datasets[process].directories),)
+
+        dirs = self.datasets[process].directories
+        if isinstance(dirs, str):
+            return [Path(dirs)]
         else:
-            return (Path(directory) for directory in self.datasets[process].directories)
+            return [Path(directory) for directory in dirs]
 
     def get_tree_name(self, process: str) -> str:
         """
@@ -152,7 +169,7 @@ class ConfigurableDatasetManager:
     def get_redirector(self, process: str) -> str:
         """
         Get ROOT file redirector (prefix)
-        
+
         Parameters
         ----------
         process : str
@@ -166,7 +183,7 @@ class ConfigurableDatasetManager:
         if process not in self.datasets:
             raise KeyError(f"Process '{process}' not found in dataset configuration")
         return self.datasets[process].redirector
-        
+
     def list_processes(self) -> List[str]:
         """
         Get list of all configured process names.

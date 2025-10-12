@@ -69,7 +69,7 @@ def main():
     logger.info(f"Processing {len(workitems)} workitems across {len(datasets)} datasets")
 
     # Process workitems and populate Dataset objects with events
-    datasets = process_and_load_events(workitems, config, output_manager, datasets, generator.nanoaods_summary)
+    datasets = process_workitems_with_skimming(workitems, config, output_manager, datasets, generator.nanoaods_summary)
 
 
     analysis_mode = config.general.analysis

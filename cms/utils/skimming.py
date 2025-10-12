@@ -1125,34 +1125,21 @@ def process_and_load_events(
                 logger.error(f"Failed to get cross-section for {fileset_key}: {e}")
                 xsec = 1.0
 
-            dataset_config = get_dataset_config_by_name(dataset_obj.process, config)
-            lumi_mask_config = (
-                dataset_config.lumi_mask
-                if dataset_config and dataset_obj.is_data
-                else None
-            )
-
             # Create metadata
             metadata = {
                 "dataset": fileset_key,
                 "process": dataset_obj.process,
                 "variation": dataset_obj.variation,
                 "xsec": xsec,
-                "is_data": dataset_obj.is_data,
-                "lumi_mask_config": lumi_mask_config,
             }
 
             # Add nevts from NanoAODs summary if available
             # The analysis code expects 'nevts' field for normalization
             nevts = 0
             if nanoaods_summary:
-                # Extract dataset name from fileset_key (format: "datasetname__variation")
-                # This handles multi-directory datasets where dataset name includes
-                # directory index (e.g., signal_0, signal_1)
-                dataset_name_from_key = fileset_key.rsplit('__', 1)[0]  # Remove variation suffix
-                if dataset_name_from_key in nanoaods_summary:
-                    if dataset_obj.variation in nanoaods_summary[dataset_name_from_key]:
-                        nevts = nanoaods_summary[dataset_name_from_key][dataset_obj.variation].get(
+                if dataset_obj.process in nanoaods_summary:
+                    if dataset_obj.variation in nanoaods_summary[dataset_obj.process]:
+                        nevts = nanoaods_summary[dataset_obj.process][dataset_obj.variation].get(
                             'nevts_total', 0
                         )
 
@@ -1160,10 +1147,8 @@ def process_and_load_events(
             if nevts == 0:
                 logger.warning(f"No nevts found for {fileset_key}, using 0")
 
-            # Generate deterministic cache key from fileset and file list
-            # Cache key = MD5("{fileset_key}::{file1}::{file2}::...")
-            # Files are sorted to ensure same key regardless of discovery order.
-            # If any output file changes or is regenerated, cache is invalidated.
+            # Create cache key for the merged fileset_key
+            # Use sorted file paths to ensure consistent cache key
             sorted_files = sorted(output_files)
             cache_input = f"{fileset_key}::{':'.join(sorted_files)}"
             cache_key = hashlib.md5(cache_input.encode()).hexdigest()
