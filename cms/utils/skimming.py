@@ -152,15 +152,25 @@ def workitem_analysis(
             "failed_items": set(),
             "processed_events": processed_events,
             "output_files": output_files,
+            "failure_info": None,
         }
 
     except Exception as e:
-        logger.error(f"Failed to process workitem {workitem.filename}: {e}")
+        error_type = type(e).__name__
+        error_msg = str(e)
+        logger.error(f"Failed to process workitem {workitem.filename}: {error_type}: {error_msg}")
         return {
             "hist": default_histogram(),
             "failed_items": {workitem},  # Track failure
             "processed_events": 0,
             "output_files": [],
+            "failure_info": {
+                "workitem": workitem,
+                "error_type": error_type,
+                "error_msg": error_msg,
+                "dataset": workitem.dataset,
+                "filename": workitem.filename,
+            }
         }
 
 
@@ -185,11 +195,25 @@ def reduce_results(
     Dict[str, Any]
         Combined result dictionary
     """
+    # Collect failure info from both results
+    failure_infos = []
+    if result_a.get("failure_info"):
+        failure_infos.append(result_a["failure_info"])
+    if result_b.get("failure_info"):
+        failure_infos.append(result_b["failure_info"])
+
+    # If we have multiple failures, accumulate them as a list
+    if "failure_infos" in result_a:
+        failure_infos.extend(result_a["failure_infos"])
+    if "failure_infos" in result_b:
+        failure_infos.extend(result_b["failure_infos"])
+
     return {
         "hist": result_a["hist"] + result_b["hist"],
         "failed_items": result_a["failed_items"] | result_b["failed_items"],
         "processed_events": result_a["processed_events"] + result_b["processed_events"],
         "output_files": result_a["output_files"] + result_b["output_files"],
+        "failure_infos": failure_infos,
     }
 
 
@@ -411,6 +435,7 @@ class WorkitemSkimmingManager:
             "failed_items": set(),
             "processed_events": 0,
             "output_files": [],
+            "failure_infos": [],
         }
 
         # Process workitems with retry logic
@@ -454,6 +479,10 @@ class WorkitemSkimmingManager:
                 full_result["processed_events"] += result["processed_events"]
                 full_result["output_files"].extend(result["output_files"])
 
+            # Accumulate failure information
+            if result.get("failure_infos"):
+                full_result["failure_infos"].extend(result["failure_infos"])
+
             # Log progress
             failed_count = len(remaining_workitems)
             successful_count = len(workitems) - failed_count
@@ -471,6 +500,8 @@ class WorkitemSkimmingManager:
                 f"after {max_retries} attempts"
             )
             full_result["failed_items"] = set(remaining_workitems)
+            # Log detailed failure information
+            self._log_failure_summary(workitems, full_result["failure_infos"])
         else:
             logger.info("All workitems processed successfully")
 
@@ -598,6 +629,103 @@ class WorkitemSkimmingManager:
             logger.info(f"\n{table}")
         else:
             logger.info("No output files were created during processing")
+
+    def _log_failure_summary(
+        self, workitems: List[WorkItem], failure_infos: List[Dict[str, Any]]
+    ) -> None:
+        """
+        Log a detailed summary of failures by dataset, including percentages and error types.
+
+        Parameters
+        ----------
+        workitems : List[WorkItem]
+            Original list of workitems processed
+        failure_infos : List[Dict[str, Any]]
+            List of failure information dictionaries
+        """
+        if not failure_infos:
+            return
+
+        # Count total workitems per dataset
+        total_per_dataset = defaultdict(int)
+        for workitem in workitems:
+            total_per_dataset[workitem.dataset] += 1
+
+        # Organize failures by dataset
+        failures_by_dataset = defaultdict(list)
+        for failure in failure_infos:
+            dataset = failure["dataset"]
+            failures_by_dataset[dataset].append(failure)
+
+        # Count error types per dataset
+        error_types_by_dataset = defaultdict(lambda: defaultdict(int))
+        for failure in failure_infos:
+            dataset = failure["dataset"]
+            error_type = failure["error_type"]
+            error_types_by_dataset[dataset][error_type] += 1
+
+        # Count global error types for overall statistics
+        global_error_counts = defaultdict(int)
+        for failure in failure_infos:
+            global_error_counts[failure["error_type"]] += 1
+
+        # Create summary table
+        table_data = []
+        total_failed = 0
+        total_workitems = sum(total_per_dataset.values())
+
+        for dataset, failures in sorted(failures_by_dataset.items()):
+            failed_count = len(failures)
+            total_count = total_per_dataset[dataset]
+            percentage = (failed_count / total_count * 100) if total_count > 0 else 0
+
+            # Build error type breakdown string
+            error_counts = error_types_by_dataset[dataset]
+            error_breakdown = ", ".join([
+                f"{error_type}: {count} ({count/failed_count*100:.0f}%)"
+                for error_type, count in sorted(error_counts.items(), key=lambda x: -x[1])
+            ])
+
+            table_data.append([
+                dataset,
+                failed_count,
+                total_count,
+                f"{percentage:.1f}%",
+                error_breakdown
+            ])
+            total_failed += failed_count
+
+        # Add totals row with global error breakdown
+        total_percentage = (total_failed / total_workitems * 100) if total_workitems > 0 else 0
+        global_error_breakdown = ", ".join([
+            f"{error_type}: {count} ({count/total_failed*100:.0f}%)"
+            for error_type, count in sorted(global_error_counts.items(), key=lambda x: -x[1])
+        ])
+        table_data.append([
+            "TOTAL",
+            total_failed,
+            total_workitems,
+            f"{total_percentage:.1f}%",
+            global_error_breakdown
+        ])
+
+        # Create and log table
+        headers = ["Dataset", "Failed", "Total", "Failure %", "Error Types (count, %)"]
+        table = tabulate(table_data, headers=headers, tablefmt="grid")
+
+        logger.warning("Failure Summary:")
+        logger.warning(f"\n{table}")
+
+        # Log sample failures with file names for debugging
+        logger.warning("\nSample failures (first 5):")
+        for i, failure in enumerate(failure_infos[:5]):
+            logger.warning(
+                f"  {i+1}. [{failure['dataset']}] {failure['error_type']}: "
+                f"{failure['error_msg'][:100]}... (file: {Path(failure['filename']).name})"
+            )
+
+        if len(failure_infos) > 5:
+            logger.warning(f"  ... and {len(failure_infos) - 5} more failures")
 
     def _compute_counters(
         self, workitems: List[WorkItem]
