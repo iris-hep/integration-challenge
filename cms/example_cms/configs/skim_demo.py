@@ -202,12 +202,16 @@ datasets_config = [
         "weight_branch": "genWeight",
         "redirector": REDIRECTOR,
     },
-    # Data: Single muon
+    # Data: Single muon (different run periods per year)
     {
         "name": "data",
-        "directories": tuple(f"example-demo/cms_datasets/{year}/SingleMuonRun{run}/"
-                           for year in YEARS
-                           for run in ["B", "C", "D", "E", "F"]),
+        "directories": tuple(
+            f"example-demo/cms_datasets/{year}/SingleMuonRun{run}/"
+            for year, runs in [("2016", ["B", "C", "D", "E", "F"]),
+                              ("2017", ["B", "C", "D", "E", "F"]),
+                              ("2018", ["A", "B", "C", "D"])]
+            for run in runs
+        ),
         "cross_sections": 1.0,
         "file_pattern": "*.txt",
         "tree_name": "Events",
