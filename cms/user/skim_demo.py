@@ -6,68 +6,208 @@ This module contains all skimming-related configuration including:
 - Skimming selection functions
 - Skimming configuration parameters
 """
+import json
+from pathlib import Path
+from typing import List, Tuple
+
 from coffea.analysis_tools import PackedSelection
+
+
+def get_cross_sections_for_datasets(
+    years: List[str],
+    dataset_names: List[str],
+    base_path: str = "example-demo/cms_datasets"
+) -> Tuple[str, ...]:
+    """
+    Extract cross-sections for datasets across multiple years.
+
+    Parameters
+    ----------
+    years : List[str]
+        List of years (e.g., ["2016", "2017", "2018"])
+    dataset_names : List[str]
+        List of dataset names to look up (e.g., ["WJetsToLNu_HT-70To100"])
+    base_path : str
+        Base path to the cms_datasets directory
+
+    Returns
+    -------
+    Tuple[float, ...]
+        Tuple of cross-sections matching the order of years * dataset_names
+
+    Raises
+    ------
+    ValueError
+        If a dataset is not found in the xsecs.json file
+    """
+    cross_sections = []
+
+    for year in years:
+        xsecs_file = Path(base_path) / year / "xsecs.json"
+        with open(xsecs_file, "r") as f:
+            xsecs = json.load(f)
+
+        for dataset_name in dataset_names:
+            if dataset_name not in xsecs:
+                raise ValueError(f"Dataset '{dataset_name}' not found in {xsecs_file}")
+            cross_sections.append(xsecs[dataset_name])
+
+    return tuple(cross_sections)
 
 
 # ==============================================================================
 #  Dataset Configuration
 # ==============================================================================
 
-REDIRECTOR="root://xcache/"
+REDIRECTOR = "root://xcache/"
+YEARS = ["2016", "2017", "2018"]
+
+# WJets HT-binned samples
+WJETS_DATASETS = [
+    "WJetsToLNu_HT-70To100",
+    "WJetsToLNu_HT-100To200",
+    "WJetsToLNu_HT-200To400",
+    "WJetsToLNu_HT-400To600",
+    "WJetsToLNu_HT-600To800",
+    "WJetsToLNu_HT-800To1200",
+    "WJetsToLNu_HT-1200To2500",
+    "WJetsToLNu_HT-2500ToInf",
+]
+
+# DYJets HT-binned samples
+DYJETS_DATASETS = [
+    "DYJetsToLL_M-50_HT-70to100",
+    "DYJetsToLL_M-50_HT-100to200",
+    "DYJetsToLL_M-50_HT-200to400",
+    "DYJetsToLL_M-50_HT-400to600",
+    "DYJetsToLL_M-50_HT-600to800",
+    "DYJetsToLL_M-50_HT-800to1200",
+    "DYJetsToLL_M-50_HT-1200to2500",
+    "DYJetsToLL_M-50_HT-2500toInf",
+]
+
+# Single top samples
+SINGLETOP_DATASETS = [
+    "ST_s-channel_4f",
+    "ST_t-channel_top_4f",
+    "ST_t-channel_antitop_4f",
+    "ST_tW_top_5f",
+    "ST_tW_antitop_5f",
+]
+
+# QCD HT-binned samples
+QCD_DATASETS = [
+    "QCD_HT50to100",
+    "QCD_HT100to200",
+    "QCD_HT200to300",
+    "QCD_HT300to500",
+    "QCD_HT500to700",
+    "QCD_HT700to1000",
+    "QCD_HT1000to1500",
+    "QCD_HT1500to2000",
+    "QCD_HT2000toInf",
+]
+
+# Diboson samples
+DIBOSON_DATASETS = ["WW", "WZ", "ZZ"]
 
 datasets_config = [
+    # Signal: Z' -> ttbar (M=2000 GeV, W=200 GeV)
     {
         "name": "signal",
-        "directories": ("example-demo/cms_datasets/2016/ZPrimeToTT_M2000_W200/", 
-                      "example-demo/cms_datasets/2017/ZPrimeToTT_M2000_W200/", 
-                      "example-demo/cms_datasets/2018/ZPrimeToTT_M2000_W200/"),
-        "cross_sections": (0.01895, 0.01895, 0.01895),
-        "keep_split": False,
+        "directories": tuple(f"example-demo/cms_datasets/{year}/ZPrimeToTT_M2000_W200/" for year in YEARS),
+        "cross_sections": get_cross_sections_for_datasets(YEARS, ["ZPrimeToTT_M2000_W200"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
         "weight_branch": "genWeight",
         "redirector": REDIRECTOR,
     },
-
+    # TTbar semileptonic
     {
         "name": "ttbar_semilep",
-        "directories": "example-demo/cms_datasets/2016/TTToSemiLeptonic/",
-        "cross_sections": 364.31,
+        "directories": tuple(f"example-demo/cms_datasets/{year}/TTToSemiLeptonic/" for year in YEARS),
+        "cross_sections": get_cross_sections_for_datasets(YEARS, ["TTToSemiLeptonic"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
         "weight_branch": "genWeight",
         "redirector": REDIRECTOR,
     },
+    # TTbar hadronic
     {
         "name": "ttbar_had",
-        "directories": "example-demo/cms_datasets/2016/TTToHadronic/",
-        "cross_sections": 380.11,
+        "directories": tuple(f"example-demo/cms_datasets/{year}/TTToHadronic/" for year in YEARS),
+        "cross_sections": get_cross_sections_for_datasets(YEARS, ["TTToHadronic"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
         "weight_branch": "genWeight",
         "redirector": REDIRECTOR,
     },
+    # TTbar dileptonic
     {
         "name": "ttbar_lep",
-        "directories": "example-demo/cms_datasets/2016/TTToHadronic/",
-        "cross_sections": 87.33,
+        "directories": tuple(f"example-demo/cms_datasets/{year}/TTTo2L2Nu/" for year in YEARS),
+        "cross_sections": get_cross_sections_for_datasets(YEARS, ["TTTo2L2Nu"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
         "weight_branch": "genWeight",
         "redirector": REDIRECTOR,
     },
+    # W+jets (HT-binned, combined across years)
     {
         "name": "wjets",
-        "directories": "example-demo/cms_datasets/2016/WJetsToLNu_HT-*/",
-        "cross_sections": 61526.7, # for now
+        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in WJETS_DATASETS),
+        "cross_sections": get_cross_sections_for_datasets(YEARS, WJETS_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
         "weight_branch": "genWeight",
         "redirector": REDIRECTOR,
     },
+    # DY+jets (HT-binned, combined across years)
+    {
+        "name": "dyjets",
+        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in DYJETS_DATASETS),
+        "cross_sections": get_cross_sections_for_datasets(YEARS, DYJETS_DATASETS),
+        "file_pattern": "*.txt",
+        "tree_name": "Events",
+        "weight_branch": "genWeight",
+        "redirector": REDIRECTOR,
+    },
+    # Single top (all channels combined)
+    {
+        "name": "single_top",
+        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in SINGLETOP_DATASETS),
+        "cross_sections": get_cross_sections_for_datasets(YEARS, SINGLETOP_DATASETS),
+        "file_pattern": "*.txt",
+        "tree_name": "Events",
+        "weight_branch": "genWeight",
+        "redirector": REDIRECTOR,
+    },
+    # QCD multijet (HT-binned, combined across years)
+    {
+        "name": "qcd",
+        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in QCD_DATASETS),
+        "cross_sections": get_cross_sections_for_datasets(YEARS, QCD_DATASETS),
+        "file_pattern": "*.txt",
+        "tree_name": "Events",
+        "weight_branch": "genWeight",
+        "redirector": REDIRECTOR,
+    },
+    # Diboson (WW, WZ, ZZ combined)
+    {
+        "name": "diboson",
+        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in DIBOSON_DATASETS),
+        "cross_sections": get_cross_sections_for_datasets(YEARS, DIBOSON_DATASETS),
+        "file_pattern": "*.txt",
+        "tree_name": "Events",
+        "weight_branch": "genWeight",
+        "redirector": REDIRECTOR,
+    },
+    # Data: Single muon
     {
         "name": "data",
-        "directories": "example-demo/cms_datasets/2016/SingleMuonRun*/",
+        "directories": tuple(f"example-demo/cms_datasets/{year}/SingleMuonRun{run}/"
+                           for year in YEARS
+                           for run in ["B", "C", "D", "E", "F"]),
         "cross_sections": 1.0,
         "file_pattern": "*.txt",
         "tree_name": "Events",

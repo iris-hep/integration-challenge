@@ -668,9 +668,9 @@ def process_workitems_with_skimming(
     workitems: List[WorkItem],
     config: Any,
     output_manager,
-    fileset: Optional[Dict[str, Any]] = None,
+    datasets: List,
     nanoaods_summary: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+) -> List:
     """
     Process workitems using the workitem-based skimming approach with event
     merging and caching.
@@ -690,24 +690,23 @@ def process_workitems_with_skimming(
         Main analysis configuration object containing skimming and preprocessing settings
     output_manager : OutputDirectoryManager
         Centralized output directory manager
-    fileset : Optional[Dict[str, Any]], default None
-        Fileset containing metadata including cross-sections for normalization
+    datasets : List[Dataset]
+        List of Dataset objects to populate with events
     nanoaods_summary : Optional[Dict[str, Any]], default None
         NanoAODs summary containing event counts per dataset for nevts metadata
 
     Returns
     -------
-    Dict[str, List[Tuple[Any, Dict[str, Any]]]]
-        Dictionary mapping dataset names to lists containing a single (events, metadata) tuple.
-        Events are merged NanoEvents objects from all output files for the dataset.
-        Each metadata dictionary contains dataset, process, variation, and xsec information.
+    List[Dataset]
+        List of Dataset objects with populated events attribute.
+        Each Dataset.events contains List[Tuple[events, metadata]] for each fileset_key.
     """
     logger.info(f"Starting workitem preprocessing with {len(workitems)} workitems")
 
     # Create workitem skimming manager
     skimming_manager = WorkitemSkimmingManager(config.preprocess.skimming, output_manager)
 
-    # Group workitems by dataset
+    # Group workitems by dataset (fileset_key)
     workitems_by_dataset = {}
     for workitem in workitems:
         dataset = workitem.dataset
@@ -721,75 +720,87 @@ def process_workitems_with_skimming(
         results = skimming_manager.process_workitems(workitems, config)
         logger.info(f"Skimming complete: {results['processed_events']:,} events")
 
+    # Create a mapping from fileset_key to Dataset for quick lookup
+    fileset_key_to_dataset = {}
+    for dataset in datasets:
+        for fileset_key in dataset.fileset_keys:
+            fileset_key_to_dataset[fileset_key] = dataset
+
     # Always discover and read from saved files
     logger.info("Reading from saved files")
-    processed_datasets = {}
 
-    for dataset, dataset_workitems in workitems_by_dataset.items():
+    # Initialize events list for each Dataset
+    for dataset in datasets:
+        dataset.events = []
+
+    for fileset_key, dataset_workitems in workitems_by_dataset.items():
+        # Get the Dataset object this fileset_key belongs to
+        if fileset_key not in fileset_key_to_dataset:
+            logger.warning(f"Fileset key '{fileset_key}' not found in any Dataset object, skipping")
+            continue
+
+        dataset_obj = fileset_key_to_dataset[fileset_key]
+
         # Skip datasets not explicitly requested in config
         if hasattr(config.general, 'processes') and config.general.processes:
-            process_name = dataset.split('__')[0] if '__' in dataset else dataset
-            if process_name not in config.general.processes:
-                logger.info(f"Skipping {dataset} (not requested)")
+            if dataset_obj.process not in config.general.processes:
+                logger.info(f"Skipping {fileset_key} (process {dataset_obj.process} not requested)")
                 continue
 
-        # Discover output files for this dataset
+        # Discover output files for this fileset_key
         output_files = skimming_manager.discover_workitem_outputs(dataset_workitems)
 
         if output_files:
-            # Create metadata for compatibility with existing analysis code
-            metadata = {
-                "dataset": dataset,
-                "process": dataset.split('__')[0] if '__' in dataset else dataset,
-                "variation": dataset.split('__')[1] if '__' in dataset else "nominal",
-            }
+            # Get cross-section for this specific fileset_key
+            # Find the index of this fileset_key in the Dataset's fileset_keys list
+            try:
+                idx = dataset_obj.fileset_keys.index(fileset_key)
+                xsec = dataset_obj.cross_sections[idx]
+            except (ValueError, IndexError) as e:
+                logger.error(f"Failed to get cross-section for {fileset_key}: {e}")
+                xsec = 1.0
 
-            # Add cross-section metadata from fileset if available
-            if fileset and dataset in fileset:
-                xsec = fileset[dataset].get('metadata', {}).get('xsec', 1.0)
-                metadata['xsec'] = xsec
-            else:
-                metadata['xsec'] = 1.0
-                if fileset:
-                    logger.warning(f"No cross-section for {dataset}, using 1.0")
+            # Create metadata
+            metadata = {
+                "dataset": fileset_key,
+                "process": dataset_obj.process,
+                "variation": dataset_obj.variation,
+                "xsec": xsec,
+            }
 
             # Add nevts from NanoAODs summary if available
             # The analysis code expects 'nevts' field for normalization
             nevts = 0
             if nanoaods_summary:
-                # Parse dataset to get process and variation
-                process_name = dataset.split('__')[0] if '__' in dataset else dataset
-                variation = dataset.split('__')[1] if '__' in dataset else "nominal"
-
-                if process_name in nanoaods_summary:
-                    if variation in nanoaods_summary[process_name]:
-                        nevts = nanoaods_summary[process_name][variation].get(
+                if dataset_obj.process in nanoaods_summary:
+                    if dataset_obj.variation in nanoaods_summary[dataset_obj.process]:
+                        nevts = nanoaods_summary[dataset_obj.process][dataset_obj.variation].get(
                             'nevts_total', 0
                         )
 
             metadata['nevts'] = nevts
             if nevts == 0:
-                logger.warning(f"No nevts found for {dataset}, using 0")
+                logger.warning(f"No nevts found for {fileset_key}, using 0")
 
-            # Create cache key for the merged dataset
+            # Create cache key for the merged fileset_key
             # Use sorted file paths to ensure consistent cache key
             sorted_files = sorted(output_files)
-            cache_input = f"{dataset}::{':'.join(sorted_files)}"
+            cache_input = f"{fileset_key}::{':'.join(sorted_files)}"
             cache_key = hashlib.md5(cache_input.encode()).hexdigest()
             cache_dir = output_manager.get_cache_dir()
-            cache_file = cache_dir / f"{dataset}__{cache_key}.pkl"
+            cache_file = cache_dir / f"{fileset_key}__{cache_key}.pkl"
 
             # Check if we should read from cache
             if config.general.read_from_cache and os.path.exists(cache_file):
-                logger.info(f"Loading cached events for {dataset}")
+                logger.info(f"Loading cached events for {fileset_key}")
                 try:
                     with open(cache_file, "rb") as f:
                         merged_events = cloudpickle.load(f)
                     logger.info(f"Loaded {len(merged_events)} cached events")
-                    processed_datasets[dataset] = [(merged_events, metadata.copy())]
-                    continue  # Skip to next dataset
+                    dataset_obj.events.append((merged_events, metadata.copy()))
+                    continue  # Skip to next fileset_key
                 except Exception as e:
-                    logger.error(f"Failed to load cached events for {dataset}: {e}")
+                    logger.error(f"Failed to load cached events for {fileset_key}: {e}")
                     # Fall back to loading from files
 
             # Load and merge events from all discovered files
@@ -821,28 +832,25 @@ def process_workitems_with_skimming(
 
                     logger.info(
                         f"Merged {len(output_files)} files → "
-                        f"{len(merged_events)} events for {dataset}"
+                        f"{len(merged_events)} events for {fileset_key}"
                     )
 
                     # Cache the merged events
                     try:
                         with open(cache_file, "wb") as f:
                             cloudpickle.dump(merged_events, f)
-                        logger.info(f"Cached events for {dataset}")
+                        logger.info(f"Cached events for {fileset_key}")
                     except Exception as e:
-                        logger.warning(f"Failed to cache events for {dataset}: {e}")
+                        logger.warning(f"Failed to cache events for {fileset_key}: {e}")
 
-                    processed_datasets[dataset] = [(merged_events, metadata.copy())]
+                    dataset_obj.events.append((merged_events, metadata.copy()))
 
                 except Exception as e:
-                    logger.error(f"Failed to merge events for {dataset}: {e}")
+                    logger.error(f"Failed to merge events for {fileset_key}: {e}")
                     # Fallback to individual events if merging fails
-                    processed_events = []
                     for i, events in enumerate(all_events):
-                        processed_events.append((events, metadata.copy()))
-                    processed_datasets[dataset] = processed_events
+                        dataset_obj.events.append((events, metadata.copy()))
         else:
-            logger.warning(f"No output files found for {dataset}")
-            processed_datasets[dataset] = []
+            logger.warning(f"No output files found for {fileset_key}")
 
-    return processed_datasets
+    return datasets

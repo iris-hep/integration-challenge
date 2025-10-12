@@ -56,17 +56,20 @@ def main():
     # Generate metadata and fileset from NanoAODs
     generator = NanoAODMetadataGenerator(dataset_manager=dataset_manager, output_manager=output_manager)
     generator.run(generate_metadata=config.general.run_metadata_generation)
-    fileset = generator.fileset
+    datasets = generator.datasets
     workitems = generator.workitems
     if not workitems:
         logger.error("No workitems available. Please ensure metadata generation completed successfully.")
         sys.exit(1)
+    if not datasets:
+        logger.error("No datasets available. Please ensure metadata generation completed successfully.")
+        sys.exit(1)
 
     logger.info(log_banner("SKIMMING AND PROCESSING"))
-    logger.info(f"Processing {len(workitems)} workitems")
+    logger.info(f"Processing {len(workitems)} workitems across {len(datasets)} datasets")
 
-    # Process workitems with dask-awkward
-    processed_datasets = process_workitems_with_skimming(workitems, config, output_manager, fileset, generator.nanoaods_summary)
+    # Process workitems and populate Dataset objects with events
+    datasets = process_workitems_with_skimming(workitems, config, output_manager, datasets, generator.nanoaods_summary)
 
 
     analysis_mode = config.general.analysis
@@ -77,7 +80,7 @@ def main():
         return
     elif analysis_mode == "nondiff":
         logger.info(log_banner("Running Non-Differentiable Analysis"))
-        nondiff_analysis = NonDiffAnalysis(config, processed_datasets, output_manager)
+        nondiff_analysis = NonDiffAnalysis(config, datasets, output_manager)
         nondiff_analysis.run_analysis_chain()
 
 

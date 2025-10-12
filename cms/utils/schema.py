@@ -250,7 +250,7 @@ class DatasetConfig(SubscriptableModel):
     """Configuration for individual dataset paths, cross-sections, and metadata"""
     name: Annotated[str, Field(description="Dataset name/identifier")]
     directories: Annotated[Union[str, tuple[str]], Field(description="Directories containing dataset files")]
-    cross_sections: Annotated[float, tuple[float]], Field(description="Cross-sections in picobarns")]
+    cross_sections: Annotated[Union[float, tuple[float]], Field(description="Cross-sections in picobarns")]
     file_pattern: Annotated[str, Field(default="*.root", description="File pattern for dataset files")]
     tree_name: Annotated[str, Field(default="Events", description="ROOT tree name")]
     weight_branch: Annotated[Optional[str], Field(default="genWeight", description="Branch name for event weights")]
@@ -270,14 +270,27 @@ class DatasetManagerConfig(SubscriptableModel):
     @model_validator(mode="after")
     def validate_general(self) -> "DatasetManagerConfig":
         """Validate the dataset manager configuration settings."""
-        # Check number of directories and number of cross-sections is the same
+        # Check number of directories and number of cross-sections
         for dataset_config in self.datasets:
-            if isinstance(dirs := dataset_config.directory, tuple) and isinstance(xss := dataset_config.cross_section, tuple):
-                if len(dirs) != len(xss):
-                    raise ValueError("You must provide an equal number of directories and cross-sections if you are providing lists of both.")
-            if not isinstance(dirs := dataset_config.directory, tuple) and isinstance(xss := dataset_config.cross_section, tuple):
-                raise ValueError("If you are providing a list of cross-sections you must also provide a corresponding list of directories")
-        
+            dirs = dataset_config.directories
+            xss = dataset_config.cross_sections
+
+            # Get the count of directories
+            num_dirs = len(dirs) if isinstance(dirs, tuple) else 1
+            # Get the count of cross-sections
+            num_xss = len(xss) if isinstance(xss, tuple) else 1
+
+            # Valid cases:
+            # 1. Single dir, single xsec
+            # 2. Multiple dirs, single xsec (will be replicated)
+            # 3. Multiple dirs, matching number of xsecs
+            if num_xss > 1 and num_xss != num_dirs:
+                raise ValueError(
+                    f"Dataset '{dataset_config.name}': You must provide either a single cross-section "
+                    f"or an equal number of cross-sections ({num_dirs}) to match the number of directories. "
+                    f"Got {num_dirs} directories and {num_xss} cross-sections."
+                )
+
         return self
 
 # ------------------------

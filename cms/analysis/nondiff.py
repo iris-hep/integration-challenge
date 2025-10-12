@@ -39,21 +39,21 @@ logging.getLogger("jax._src.xla_bridge").setLevel(logging.ERROR)
 # -----------------------------
 class NonDiffAnalysis(Analysis):
 
-    def __init__(self, config: dict[str, Any], processed_datasets: Dict[str, List[Tuple[Any, Dict[str, Any]]]], output_manager: OutputDirectoryManager) -> None:
+    def __init__(self, config: dict[str, Any], datasets: List, output_manager: OutputDirectoryManager) -> None:
         """
-        Initialize ZprimeAnalysis with configuration and processed datasets.
+        Initialize NonDiffAnalysis with configuration and Dataset objects.
 
         Parameters
         ----------
         config : dict
             Configuration dictionary with 'systematics', 'corrections', 'channels',
             and 'general'.
-        processed_datasets : Dict[str, List[Tuple[Any, Dict[str, Any]]]]
-            Pre-processed datasets from skimming (required)
+        datasets : List[Dataset]
+            List of Dataset objects with populated events from skimming (required)
         output_manager : OutputDirectoryManager
             Centralized output directory manager (required)
         """
-        super().__init__(config, processed_datasets, output_manager)
+        super().__init__(config, datasets, output_manager)
         self.nD_hists_per_region = self._init_histograms()
 
 
@@ -363,27 +363,34 @@ class NonDiffAnalysis(Analysis):
 
     def run_analysis_chain(self):
         """
-        Run the complete non-differentiable analysis chain using pre-processed datasets.
+        Run the complete non-differentiable analysis chain using Dataset objects.
+
+        Each fileset_key is processed separately with its own xsec and nevts.
+        Histograms naturally accumulate across fileset_keys for the same process.
         """
         config = self.config
 
-        if not self.processed_datasets:
-            raise ValueError("No processed datasets provided to analysis")
+        if not self.datasets:
+            raise ValueError("No datasets provided to analysis")
 
-        # Loop over processed datasets
-        for dataset_name, events_list in self.processed_datasets.items():
+        # Loop over Dataset objects
+        for dataset in self.datasets:
             logger.info("========================================")
-            logger.info(f"🚀 Processing dataset: {dataset_name}")
+            logger.info(f"🚀 Processing dataset: {dataset.name}")
 
-            # Process each (events, metadata) tuple
+            if not dataset.events:
+                logger.warning(f"No events found for dataset {dataset.name}, skipping")
+                continue
+
+            # Process each fileset_key with its own metadata
             if config.general.run_histogramming:
-                for events, metadata in events_list:
-                    logger.info(f"📘 Processing events for {dataset_name}")
+                for events, metadata in dataset.events:
+                    logger.info(f"📘 Processing {metadata['dataset']} ({len(events)} events)")
                     logger.info("📈 Processing for non-differentiable analysis")
                     self.process(events, metadata)
                     logger.info("📈 Non-differentiable histogram-filling complete.")
 
-            logger.info(f"🏁 Finished dataset: {dataset_name}\n")
+            logger.info(f"🏁 Finished dataset: {dataset.name}\n")
 
         # Report end of processing
         logger.info("✅ All datasets processed.")
