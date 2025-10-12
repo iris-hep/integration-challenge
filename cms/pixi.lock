@@ -1622,8 +1622,6 @@ packages:
   - python
   license: BSD-3-Clause
   license_family: BSD
-  purls:
-  - pkg:pypi/awkward?source=hash-mapping
   size: 465034
   timestamp: 1758425222640
 - conda: https://conda.anaconda.org/conda-forge/linux-64/awkward-cpp-50-py312h1e80e48_0.conda
@@ -1639,8 +1637,6 @@ packages:
   - python_abi 3.12.* *_cp312
   license: BSD-3-Clause
   license_family: BSD
-  purls:
-  - pkg:pypi/awkward-cpp?source=hash-mapping
   size: 617254
   timestamp: 1758397716580
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/awkward-cpp-50-py312hd8c8125_0.conda
@@ -1657,8 +1653,6 @@ packages:
   - awkward-cpp-p-0
   license: BSD-3-Clause
   license_family: BSD
-  purls:
-  - pkg:pypi/awkward-cpp?source=hash-mapping
   size: 467892
   timestamp: 1758397726364
 - conda: https://conda.anaconda.org/conda-forge/linux-64/aws-c-auth-0.9.0-h92a005d_16.conda
@@ -2609,8 +2603,6 @@ packages:
   - python
   license: BSD-3-Clause
   license_family: BSD
-  purls:
-  - pkg:pypi/coffea?source=hash-mapping
   size: 197026
   timestamp: 1759784573618
 - conda: https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda
