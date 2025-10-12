@@ -283,33 +283,33 @@ def _save_workitem_output(
     branches_to_keep = _build_branches_to_keep(configuration, is_mc)
 
     # Create output file
-    with uproot.recreate(str(output_file)) as output_root:
-        # Prepare data for writing
-        output_data = {}
+    # with uproot.recreate(str(output_file)) as output_root:
+    #     # Prepare data for writing
+    #     output_data = {}
 
-        # Extract branches following the existing pattern
-        for obj, obj_branches in branches_to_keep.items():
-            if obj == "event":
-                # Event-level branches
-                for branch in obj_branches:
-                    if hasattr(events, branch):
-                        output_data[branch] = getattr(events, branch)
-            else:
-                # Object collection branches
-                if hasattr(events, obj):
-                    obj_collection = getattr(events, obj)
-                    for branch in obj_branches:
-                        if hasattr(obj_collection, branch):
-                            output_data[f"{obj}_{branch}"] = getattr(
-                                obj_collection, branch
-                            )
+    #     # Extract branches following the existing pattern
+    #     for obj, obj_branches in branches_to_keep.items():
+    #         if obj == "event":
+    #             # Event-level branches
+    #             for branch in obj_branches:
+    #                 if hasattr(events, branch):
+    #                     output_data[branch] = getattr(events, branch)
+    #         else:
+    #             # Object collection branches
+    #             if hasattr(events, obj):
+    #                 obj_collection = getattr(events, obj)
+    #                 for branch in obj_branches:
+    #                     if hasattr(obj_collection, branch):
+    #                         output_data[f"{obj}_{branch}"] = getattr(
+    #                             obj_collection, branch
+    #                         )
 
-        # Create and populate output tree
-        if output_data:
-            output_tree = output_root.mktree(
-                config.tree_name, {k: v.type for k, v in output_data.items()}
-            )
-            output_tree.extend(output_data)
+    #     # Create and populate output tree
+    #     if output_data:
+    #         output_tree = output_root.mktree(
+    #             config.tree_name, {k: v.type for k, v in output_data.items()}
+    #         )
+    #         output_tree.extend(output_data)
 
 
 def _build_branches_to_keep(
