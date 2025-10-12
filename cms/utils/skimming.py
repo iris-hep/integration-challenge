@@ -249,7 +249,7 @@ def _create_output_file_path(
     dataset_dir.mkdir(parents=True, exist_ok=True)
 
     # Create output filename with entry-range-based part number
-    output_filename = f"part_{part_number}.root"
+    output_filename = f"part_{part_number}.parquet"
     return dataset_dir / output_filename
 
 
@@ -261,7 +261,7 @@ def _save_workitem_output(
     is_mc: bool,
 ) -> None:
     """
-    Save filtered events to output ROOT file.
+    Save filtered events to output parquet file.
 
     This function handles the actual I/O of saving skimmed events to disk,
     using the same branch selection logic as the existing skimming code.
@@ -282,34 +282,30 @@ def _save_workitem_output(
     # Build branches to keep using existing logic
     branches_to_keep = _build_branches_to_keep(configuration, is_mc)
 
-    # Create output file
-    # with uproot.recreate(str(output_file)) as output_root:
-    #     # Prepare data for writing
-    #     output_data = {}
+    # Prepare data for writing
+    output_data = {}
 
-    #     # Extract branches following the existing pattern
-    #     for obj, obj_branches in branches_to_keep.items():
-    #         if obj == "event":
-    #             # Event-level branches
-    #             for branch in obj_branches:
-    #                 if hasattr(events, branch):
-    #                     output_data[branch] = getattr(events, branch)
-    #         else:
-    #             # Object collection branches
-    #             if hasattr(events, obj):
-    #                 obj_collection = getattr(events, obj)
-    #                 for branch in obj_branches:
-    #                     if hasattr(obj_collection, branch):
-    #                         output_data[f"{obj}_{branch}"] = getattr(
-    #                             obj_collection, branch
-    #                         )
+    # Extract branches following the existing pattern
+    for obj, obj_branches in branches_to_keep.items():
+        if obj == "event":
+            # Event-level branches
+            for branch in obj_branches:
+                if hasattr(events, branch):
+                    output_data[branch] = getattr(events, branch)
+        else:
+            # Object collection branches
+            if hasattr(events, obj):
+                obj_collection = getattr(events, obj)
+                for branch in obj_branches:
+                    if hasattr(obj_collection, branch):
+                        output_data[f"{obj}_{branch}"] = getattr(
+                            obj_collection, branch
+                        )
 
-    #     # Create and populate output tree
-    #     if output_data:
-    #         output_tree = output_root.mktree(
-    #             config.tree_name, {k: v.type for k, v in output_data.items()}
-    #         )
-    #         output_tree.extend(output_data)
+    # Write to parquet file
+    if output_data:
+        # Convert dict to awkward array for writing
+        ak.to_parquet(output_data, str(output_file), compression="zstd")
 
 
 def _build_branches_to_keep(
@@ -1011,15 +1007,13 @@ class WorkitemSkimmingManager:
                 part_counters,
             )
 
-            if like_local:
-                if Path(resolved_path).exists:
-                    output_files.append(resolved_path)
-            else:
-                # TODO:: consistent way to check existence for non-local paths
-                output_files.append(resolved_path)
-                
-            dataset = workitem.dataset
-            dataset_counts[dataset] = dataset_counts.get(dataset, 0) + 1
+            if expected_output.exists():
+                # Parquet files don't have tree names, just add the path
+                output_files.append(str(expected_output))
+
+                # Count files per dataset
+                dataset = workitem.dataset
+                dataset_counts[dataset] = dataset_counts.get(dataset, 0) + 1
 
         # Log with dataset breakdown
         if dataset_counts:
@@ -1055,13 +1049,11 @@ class WorkitemSkimmingManager:
         # Count files written per dataset
         for output_file in output_files:
             try:
-                # Extract dataset name from output path structure
-                # IMPORTANT: Assumes path format: .../output_dir/{dataset}/file_{N}/part_{M}.ext
-                # path_parts[-3] gets dataset from this fixed structure
-                # If _build_output_path() changes, this logic must be updated
+                # Extract dataset from file path
+                # Path format: {output_dir}/{dataset}/file__{N}/part_{M}.parquet
                 path_parts = Path(output_file).parts
                 if len(path_parts) >= 3:
-                    dataset = path_parts[-3]
+                    dataset = path_parts[-3]  # Get dataset from path
                     dataset_stats[dataset]["files_written"] += 1
             except Exception:
                 pass
@@ -1402,11 +1394,8 @@ def process_and_load_events(
             reader_kwargs = _resolve_lazy_values(skimming_config.output.from_kwargs or {})
             for file_path in output_files:
                 try:
-                    events = _load_skimmed_events(
-                        file_path,
-                        skimming_config,
-                        reader_kwargs,
-                    )
+                    # Load events from parquet file
+                    events = ak.from_parquet(file_path)
                     all_events.append(events)
                     total_events_loaded += len(events)
                 except Exception as e:
