@@ -825,8 +825,23 @@ def process_workitems_with_skimming(
 
     # Process workitems if skimming is enabled
     if config.general.run_skimming:
+        # Filter workitems by processes if configured
+        workitems_to_process = workitems
+        if hasattr(config.general, 'processes') and config.general.processes:
+            fileset_key_to_dataset_lookup = {}
+            for dataset in datasets:
+                for fileset_key in dataset.fileset_keys:
+                    fileset_key_to_dataset_lookup[fileset_key] = dataset
+
+            workitems_to_process = [
+                wi for wi in workitems
+                if wi.dataset in fileset_key_to_dataset_lookup and
+                fileset_key_to_dataset_lookup[wi.dataset].process in config.general.processes
+            ]
+            logger.info(f"Filtered {len(workitems)} workitems to {len(workitems_to_process)} based on processes filter")
+
         logger.info("Running skimming")
-        results = skimming_manager.process_workitems(workitems, config)
+        results = skimming_manager.process_workitems(workitems_to_process, config)
         logger.info(f"Skimming complete: {results['processed_events']:,} events")
 
     # Create a mapping from fileset_key to Dataset for quick lookup
