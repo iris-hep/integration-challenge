@@ -16,8 +16,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/antlr-python-runtime-4.9.3-pyhd8ed1ab_1.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/attrs-25.3.0-pyh71513ae_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/awkward-2.8.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/awkward-cpp-45-py312ha6dbfeb_100.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/awkward-2.8.9-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/awkward-cpp-50-py312h1e80e48_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/aws-c-auth-0.9.0-h92a005d_16.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/aws-c-cal-0.9.2-he7b75e1_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/aws-c-common-0.12.4-hb03c661_0.conda
@@ -51,7 +51,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/charset-normalizer-3.4.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.3.0-pyh707e725_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/cloudpickle-3.1.1-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/coffea-2025.7.3-pyhe01879c_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/coffea-2025.10.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/comm-0.2.3-pyhe01879c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/contourpy-1.3.3-py312hd9148b4_2.conda
@@ -279,8 +279,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/appnope-0.1.4-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/attrs-25.3.0-pyh71513ae_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/awkward-2.8.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/awkward-cpp-45-py312h5392f69_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/awkward-2.8.9-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/awkward-cpp-50-py312hd8c8125_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/aws-c-auth-0.9.0-hed7f23c_16.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/aws-c-cal-0.9.2-hd08b81e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/aws-c-common-0.12.4-h6caf38d_0.conda
@@ -314,7 +314,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/charset-normalizer-3.4.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.3.0-pyh707e725_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/cloudpickle-3.1.1-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/coffea-2025.7.3-pyhe01879c_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/coffea-2025.10.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/comm-0.2.3-pyhe01879c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/contourpy-1.3.3-py312ha0dd364_2.conda
@@ -545,8 +545,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/async-lru-2.0.5-pyh29332c3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/attrs-25.3.0-pyh71513ae_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/awkward-2.8.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/awkward-cpp-45-py312ha6dbfeb_100.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/awkward-2.8.9-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/awkward-cpp-50-py312h1e80e48_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/aws-c-auth-0.9.0-h92a005d_16.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/aws-c-cal-0.9.2-he7b75e1_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/aws-c-common-0.12.4-hb03c661_0.conda
@@ -586,7 +586,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/charset-normalizer-3.4.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.3.0-pyh707e725_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/cloudpickle-3.1.1-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/coffea-2025.7.3-pyhe01879c_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/coffea-2025.10.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/comm-0.2.3-pyhe01879c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/contourpy-1.3.3-py312hd9148b4_2.conda
@@ -860,8 +860,8 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/async-lru-2.0.5-pyh29332c3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/attrs-25.3.0-pyh71513ae_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/awkward-2.8.2-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/awkward-cpp-45-py312h5392f69_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/awkward-2.8.9-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/awkward-cpp-50-py312hd8c8125_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/aws-c-auth-0.9.0-hed7f23c_16.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/aws-c-cal-0.9.2-hd08b81e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/aws-c-common-0.12.4-h6caf38d_0.conda
@@ -901,7 +901,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/charset-normalizer-3.4.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.3.0-pyh707e725_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/cloudpickle-3.1.1-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/coffea-2025.7.3-pyhe01879c_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/coffea-2025.10.0-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/comm-0.2.3-pyhe01879c_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/contourpy-1.3.3-py312ha0dd364_2.conda
@@ -1412,56 +1412,53 @@ packages:
   - pkg:pypi/attrs?source=hash-mapping
   size: 57181
   timestamp: 1741918625732
-- conda: https://conda.anaconda.org/conda-forge/noarch/awkward-2.8.2-pyhd8ed1ab_0.conda
-  sha256: 537a2109a6308c8fe02c01f47a410cc51d2c9c2b0d6f5c1150fef744b61f796b
-  md5: f9ef0e6540454d6ac320b8c7d8d34b20
+- conda: https://conda.anaconda.org/conda-forge/noarch/awkward-2.8.9-pyhcf101f3_0.conda
+  sha256: 4399adbde0b672bbb700c9ccbf771242ff22e1f9b3d118bc2c08a208ed7ec0fe
+  md5: 542a5edd0954812e536b47a17d774586
   depends:
-  - awkward-cpp 45
-  - fsspec >=2022.11.0
+  - python >=3.10
+  - awkward-cpp ==50
   - importlib-metadata >=4.13.0
   - numpy >=1.18.0
   - packaging
-  - python >=3.9
   - typing_extensions >=4.1.0
+  - fsspec >=2022.11.0
+  - python
   license: BSD-3-Clause
   license_family: BSD
-  purls:
-  - pkg:pypi/awkward?source=hash-mapping
-  size: 433940
-  timestamp: 1746300742499
-- conda: https://conda.anaconda.org/conda-forge/linux-64/awkward-cpp-45-py312ha6dbfeb_100.conda
-  sha256: 02d68b96dcc02dba33cae121b3af80e827d62a50c45b976e313244ff216a23b6
-  md5: ebaa4383395340368dbfbdee358c65c2
+  size: 465034
+  timestamp: 1758425222640
+- conda: https://conda.anaconda.org/conda-forge/linux-64/awkward-cpp-50-py312h1e80e48_0.conda
+  sha256: 23e58127cd31f389a5d4416d37aa8b96ed7b9e9573a240076110440cc705aba8
+  md5: b665a96079a70d6aa453d101d383b55e
   depends:
+  - python
+  - numpy >=1.18.0
   - __glibc >=2.17,<3.0.a0
+  - libstdcxx >=14
+  - libgcc >=14
   - _x86_64-microarch-level >=1
-  - libgcc >=13
-  - libstdcxx >=13
-  - numpy >=1.18.0
-  - python >=3.12,<3.13.0a0
   - python_abi 3.12.* *_cp312
   license: BSD-3-Clause
   license_family: BSD
-  purls:
-  - pkg:pypi/awkward-cpp?source=hash-mapping
-  size: 531289
-  timestamp: 1742473663256
-- conda: https://conda.anaconda.org/conda-forge/osx-arm64/awkward-cpp-45-py312h5392f69_0.conda
-  sha256: 75ccaeeb2a293034c8870951f4d046d31ac3f3399445b876d181b74939659f43
-  md5: cde280a768e9907ca5219ec53b208d35
+  size: 617254
+  timestamp: 1758397716580
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/awkward-cpp-50-py312hd8c8125_0.conda
+  sha256: 9c40a712ccafa56e167241a60c7a87946a44a846cba129aba82f5eb8bbd85f3e
+  md5: 697c12a4f2c65b932e7e89f00cc54e9e
   depends:
-  - __osx >=11.0
-  - libcxx >=18
+  - python
   - numpy >=1.18.0
-  - python >=3.12,<3.13.0a0
-  - python >=3.12,<3.13.0a0 *_cpython
+  - python 3.12.* *_cpython
+  - libcxx >=19
+  - __osx >=11.0
   - python_abi 3.12.* *_cp312
+  track_features:
+  - awkward-cpp-p-0
   license: BSD-3-Clause
   license_family: BSD
-  purls:
-  - pkg:pypi/awkward-cpp?source=hash-mapping
-  size: 410268
-  timestamp: 1742473915362
+  size: 467892
+  timestamp: 1758397726364
 - conda: https://conda.anaconda.org/conda-forge/linux-64/aws-c-auth-0.9.0-h92a005d_16.conda
   sha256: 93f3cf66d042409a931cef62a06f4842c8132dd1f8c39649cbcc37ba2fe8bce8
   md5: 31c586a1415df0cd4354b18dd7510793
@@ -2332,19 +2329,19 @@ packages:
   - pkg:pypi/cloudpickle?source=hash-mapping
   size: 25870
   timestamp: 1736947650712
-- conda: https://conda.anaconda.org/conda-forge/noarch/coffea-2025.7.3-pyhe01879c_0.conda
-  sha256: a50dc13ddc5be38b166ff36ec4fc29b0b417e95d065b840aff820bce02927e00
-  md5: 7e856501b490d4e81f3a2071456d0acc
+- conda: https://conda.anaconda.org/conda-forge/noarch/coffea-2025.10.0-pyhcf101f3_0.conda
+  sha256: 145660288c23026046068356ad946670906a44ab68bf8a41bee9b6cc776b6d68
+  md5: 80e8bb75fab0783361a05a6d3fa0a24a
   depends:
-  - python >=3.9
-  - awkward >=2.8.2
+  - python >=3.10
+  - awkward >=2.8.9
   - uproot >=5.6.0
   - dask-core >=2024.3.0
-  - dask-awkward >=2025.5.0
+  - dask-awkward >=2025.9.0
   - dask-histogram >=2025.2.0
   - vector >=1.4.1,!=1.6.0
   - correctionlib >=2.6.0
-  - pyarrow >=6.0.0,<21.0.0
+  - pyarrow >=6.0.0
   - matplotlib-base >=3
   - numba >=0.58.1
   - numpy >=1.22
@@ -2360,13 +2357,12 @@ packages:
   - cachetools
   - requests
   - aiohttp
+  - fsspec
   - python
   license: BSD-3-Clause
   license_family: BSD
-  purls:
-  - pkg:pypi/coffea?source=hash-mapping
-  size: 191630
-  timestamp: 1753651485872
+  size: 197026
+  timestamp: 1759784573618
 - conda: https://conda.anaconda.org/conda-forge/noarch/colorama-0.4.6-pyhd8ed1ab_1.conda
   sha256: ab29d57dc70786c1269633ba3dff20288b81664d3ff8d21af995742e2bb03287
   md5: 962b9857ee8e7018c22f2776ffa0b2d7

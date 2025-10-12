@@ -317,8 +317,11 @@ def _save_workitem_output(
 
     # Write to parquet file
     if output_data:
-        # Convert dict to awkward array for writing
-        ak.to_parquet(output_data, str(output_file), compression="zstd")
+        ak.to_parquet(
+            ak.zip(output_data, depth_limit=1),
+            str(output_file),
+            compression="zstd"
+        )
 
 
 def _build_branches_to_keep(
@@ -933,8 +936,12 @@ def process_workitems_with_skimming(
 
             for file_path in output_files:
                 try:
-                    # Load events from parquet file
-                    events = ak.from_parquet(file_path)
+                    # Load events from parquet file with NanoAOD schema
+                    # Note: NanoEventsFactory.from_parquet requires string path, not Path object
+                    events = NanoEventsFactory.from_parquet(
+                        str(file_path), schemaclass=NanoAODSchema
+                    ).events()
+                    # Note: ak.materialize() causes errors with NanoEventsFactory parquet sources
                     all_events.append(events)
                     total_events_loaded += len(events)
                 except Exception as e:

@@ -7,11 +7,10 @@ version = "0.1.0"
 [tasks]
 
 [dependencies]
-# v2.8.6 is the last release to have JAX backend support
-awkward = "==2.8.2"
+awkward = ">=2.8.9"
 cabinetry = ">=0.6.0,<0.7"
 cloudpickle = ">=3.1.1,<4"
-coffea = ">=2025.7.3,<2026"
+coffea = ">=2025.10.0"
 correctionlib = ">=2.7.0,<3"
 dask-awkward = ">=2025.5.0,<2026"
 hist = ">=2.8.1,<3"

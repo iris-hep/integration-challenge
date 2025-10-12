@@ -135,7 +135,8 @@ class FilesetBuilder:
         self.output_manager = output_manager
 
     def build_fileset(
-        self, identifiers: Optional[Union[int, List[int]]] = None
+        self, identifiers: Optional[Union[int, List[int]]] = None,
+        processes_filter: Optional[List[str]] = None
     ) -> Tuple[Dict[str, Dict[str, Any]], List[Dataset]]:
         """
         Builds a coffea-compatible fileset mapping and Dataset objects.
@@ -150,6 +151,8 @@ class FilesetBuilder:
         identifiers : Optional[Union[int, List[int]]], optional
             Specific listing file IDs (without `.txt`) to process. If `None`, all
             `.txt` files in the process's listing directory are used.
+        processes_filter : Optional[List[str]], optional
+            If provided, only build fileset for processes in this list.
 
         Returns
         -------
@@ -169,10 +172,9 @@ class FilesetBuilder:
         # Iterate over each process configured in the dataset manager
         for process_name in self.dataset_manager.list_processes():
             # Check if processes filter is configured
-            if hasattr(self.config.general, 'processes') and self.config.general.processes:
-                if process_name not in self.config.general.processes:
-                    logger.info(f"Skipping {process_name} (not in processes filter)")
-                    continue
+            if processes_filter and process_name not in processes_filter:
+                logger.info(f"Skipping {process_name} (not in processes filter)")
+                continue
 
             logger.info(f"Building fileset for process: {process_name}")
 
@@ -444,6 +446,7 @@ class NanoAODMetadataGenerator:
         self,
         identifiers: Optional[Union[int, List[int]]] = None,
         generate_metadata: bool = True,
+        processes_filter: Optional[List[str]] = None,
     ) -> None:
         """
         Generates or reads all metadata.
@@ -459,6 +462,8 @@ class NanoAODMetadataGenerator:
         generate_metadata : bool, optional
             If True, generate new metadata. If False, read existing metadata.
             Defaults to True.
+        processes_filter : Optional[List[str]], optional
+            If provided, only generate metadata for processes in this list.
 
         Raises
         ------
@@ -468,7 +473,7 @@ class NanoAODMetadataGenerator:
         if generate_metadata:
             logger.info("Starting metadata generation workflow...")
             # Step 1: Build and save the fileset and Dataset objects
-            self.fileset, self.datasets = self.fileset_builder.build_fileset(identifiers)
+            self.fileset, self.datasets = self.fileset_builder.build_fileset(identifiers, processes_filter)
             self.fileset_builder.save_fileset(self.fileset)
 
             # Step 2: Extract and save WorkItem metadata
