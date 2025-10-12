@@ -412,13 +412,6 @@ class SkimmingConfig(FunctorConfig):
         int,
         Field(default=3, description="Maximum number of retry attempts for failed workitems")
     ]
-    output: Annotated[
-        SkimOutputConfig,
-        Field(
-            default_factory=SkimOutputConfig,
-            description="Output format and destination for skimmed data",
-        ),
-    ]
 
 # ------------------------
 # Preprocessing configuration

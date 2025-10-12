@@ -958,6 +958,8 @@ class WorkitemSkimmingManager:
                 self._log_failure_summary(workitems, result["failure_infos"])
 
             retry_count += 1
+
+            retry_count += 1
         
         # Final logging
         if remaining_workitems:
@@ -966,7 +968,8 @@ class WorkitemSkimmingManager:
                 f"after {max_retries} attempts"
             )
             full_result["failed_items"] = set(remaining_workitems)
-            # Log detailed failure information
+            # Log final cumulative failure information
+            logger.warning(f"\n=== Final Failure Summary (All Attempts) ===")
             self._log_failure_summary(workitems, full_result["failure_infos"])
         else:
             logger.info("All workitems processed successfully")
