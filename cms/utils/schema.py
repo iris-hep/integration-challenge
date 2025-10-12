@@ -249,8 +249,8 @@ class GeneralConfig(SubscriptableModel):
 class DatasetConfig(SubscriptableModel):
     """Configuration for individual dataset paths, cross-sections, and metadata"""
     name: Annotated[str, Field(description="Dataset name/identifier")]
-    directories: Annotated[Union[str, tuple[str]], Field(description="Directories containing dataset files")]
-    cross_sections: Annotated[Union[float, tuple[float]], Field(description="Cross-sections in picobarns")]
+    directories: Annotated[Union[str, tuple[str, ...]], Field(description="Directories containing dataset files")]
+    cross_sections: Annotated[Union[float, tuple[float, ...]], Field(description="Cross-sections in picobarns")]
     file_pattern: Annotated[str, Field(default="*.root", description="File pattern for dataset files")]
     tree_name: Annotated[str, Field(default="Events", description="ROOT tree name")]
     weight_branch: Annotated[Optional[str], Field(default="genWeight", description="Branch name for event weights")]
