@@ -125,10 +125,12 @@ def get_dataset_config_by_name(dataset_name: str, configuration: Any):
             dummy_hist.fill(dummy_values)
 
         output_files = []
+        print(processed_events)
         if processed_events > 0:
             output_file = _create_output_file_path(
                 workitem, output_manager, file_counters, part_counters
             )
+            print("Saving...")
             _save_workitem_output(
                 filtered_events, output_file, config, configuration, is_mc
             )
