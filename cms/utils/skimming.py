@@ -899,9 +899,13 @@ def process_workitems_with_skimming(
             # The analysis code expects 'nevts' field for normalization
             nevts = 0
             if nanoaods_summary:
-                if dataset_obj.process in nanoaods_summary:
-                    if dataset_obj.variation in nanoaods_summary[dataset_obj.process]:
-                        nevts = nanoaods_summary[dataset_obj.process][dataset_obj.variation].get(
+                # Extract dataset name from fileset_key (format: "datasetname__variation")
+                # This handles multi-directory datasets where dataset name includes
+                # directory index (e.g., signal_0, signal_1)
+                dataset_name_from_key = fileset_key.rsplit('__', 1)[0]  # Remove variation suffix
+                if dataset_name_from_key in nanoaods_summary:
+                    if dataset_obj.variation in nanoaods_summary[dataset_name_from_key]:
+                        nevts = nanoaods_summary[dataset_name_from_key][dataset_obj.variation].get(
                             'nevts_total', 0
                         )
 
