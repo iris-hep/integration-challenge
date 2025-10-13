@@ -308,8 +308,15 @@ def _save_workitem_output(
     if output_data:
         ak.to_parquet(
             ak.zip(output_data, depth_limit=1),
-            str(output_file),
-            compression="zstd"
+            "s3://" + str(output_file),
+            compression="zstd",
+            storage_options={
+                "key": os.environ['AWS_ACCESS_KEY_ID'],
+                "secret": os.environ['AWS_SECRET_ACCESS_KEY'],
+                "client_kwargs": {
+                "endpoint_url": "http://rook-ceph-rgw-my-store.rook-ceph.svc/triton-116ed3e4-b173-48c1-aea0-affee451feda",
+                },
+            }
         )
 
 
