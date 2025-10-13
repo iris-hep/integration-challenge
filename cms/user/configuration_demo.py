@@ -64,7 +64,7 @@ preprocess_config = {
             "FatJet": ["particleNet_TvsQCD", "pt", "eta", "phi", "mass"],
             "Jet": ["btagDeepB", "jetId", "pt", "eta", "phi", "mass"],
             "PuppiMET": ["pt", "phi"],
-            "HLT": ["TkMu50"],
+            "HLT": ["Mu50"],
             "Pileup": ["nTrueInt"],
             "event": ["genWeight", "run", "luminosityBlock", "event"],
         },
