@@ -245,7 +245,7 @@ def default_skim_selection(puppimet, hlt):
     selection = PackedSelection()
 
     # Individual cuts
-    selection.add("trigger", hlt.TkMu50)
+    selection.add("trigger", hlt.Mu50)
     selection.add("met_cut", puppimet.pt > 50)
 
     # Combined skimming selection
