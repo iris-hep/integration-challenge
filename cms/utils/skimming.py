@@ -218,7 +218,56 @@ def reduce_results(
         "failure_infos": failure_infos,
     }
 
+def _get_output_file_path(
+    workitem: WorkItem,
+    output_manager,
+    file_counters: Dict[str, int],
+    part_counters: Dict[str, int],
+):
+    """
+    Get output file path following the existing pattern with entry-range-based
+    counters.
 
+    Uses the same output structure as the current skimming code:
+    {skimmed_dir}/{dataset}/file__{file_idx}/part_{chunk}.root
+
+    Parameters
+    ----------
+    workitem : WorkItem
+        The workitem being processed
+    output_manager : OutputDirectoryManager
+        Centralized output directory manager
+    file_counters : Dict[str, int]
+        Pre-computed mapping of file keys to file numbers
+    part_counters : Dict[str, int]
+        Pre-computed mapping of part keys (including entry ranges) to part numbers
+
+    Returns
+    -------
+    Path
+        Full path to the output file
+    """    
+    dataset = workitem.dataset
+
+    # Create keys that include entry ranges for proper differentiation
+    file_key = f"{dataset}::{workitem.filename}"
+    part_key = f"{file_key}::{workitem.entrystart}_{workitem.entrystop}"
+
+    # Get pre-computed file and part numbers
+    file_number = file_counters[file_key]
+    part_number = part_counters[part_key]
+
+    # Create output directory structure using output manager
+    skimmed_dir = output_manager.get_skimmed_dir()
+    dataset_dir = skimmed_dir / dataset / f"file__{file_number}"
+
+    # Create output filename with entry-range-based part number
+    output_filename = f"part_{part_number}.parquet"
+
+    path = dataset_dir / output_filename
+
+    return f"s3://{path.as_posix()}"
+    
 def _create_output_file_path(
     workitem: WorkItem,
     output_manager,
@@ -243,30 +292,16 @@ def _create_output_file_path(
     part_counters : Dict[str, int]
         Pre-computed mapping of part keys (including entry ranges) to part numbers
 
-    Returns
-    -------
-    Path
-        Full path to the output file
     """
-    dataset = workitem.dataset
+    path = _get_output_file_path(workitem, 
+                                 output_manager, 
+                                 file_counters, 
+                                 part_counters)
+    pathobj = Path(path)
+    pathobj.parents[0].mkdir(parents=True, exist_ok=True)
 
-    # Create keys that include entry ranges for proper differentiation
-    file_key = f"{dataset}::{workitem.filename}"
-    part_key = f"{file_key}::{workitem.entrystart}_{workitem.entrystop}"
-
-    # Get pre-computed file and part numbers
-    file_number = file_counters[file_key]
-    part_number = part_counters[part_key]
-
-    # Create output directory structure using output manager
-    skimmed_dir = output_manager.get_skimmed_dir()
-    dataset_dir = skimmed_dir / dataset / f"file__{file_number}"
-    dataset_dir.mkdir(parents=True, exist_ok=True)
-
-    # Create output filename with entry-range-based part number
-    output_filename = f"part_{part_number}.parquet"
-    return dataset_dir / output_filename
-
+    return path
+    
 
 def _save_workitem_output(
     events: Any,
@@ -319,6 +354,7 @@ def _save_workitem_output(
 
     # Write to parquet file
     if output_data:
+        print(str(output_file))
         ak.to_parquet(
             ak.zip(output_data, depth_limit=1),
             "s3://" + str(output_file),
@@ -327,7 +363,7 @@ def _save_workitem_output(
                 "key": os.environ['AWS_ACCESS_KEY_ID'],
                 "secret": os.environ['AWS_SECRET_ACCESS_KEY'],
                 "client_kwargs": {
-                "endpoint_url": "http://rook-ceph-rgw-my-store.rook-ceph.svc/triton-116ed3e4-b173-48c1-aea0-affee451feda",
+                "endpoint_url": "https://red-s3.unl.edu/cmsaf-test-oshadura",
                 },
             }
         )
@@ -539,6 +575,7 @@ class WorkitemSkimmingManager:
         List[str]
             List of existing output file paths
         """
+        from s3pathlib import S3Path
         output_files = []
         dataset_counts = {}
 
@@ -546,11 +583,12 @@ class WorkitemSkimmingManager:
         file_counters, part_counters = self._compute_counters(workitems)
 
         for workitem in workitems:
-            expected_output = _create_output_file_path(
+            expected_output = _get_output_file_path(
                 workitem, self.output_manager, file_counters, part_counters
             )
-
-            if expected_output.exists():
+            print("Exepected", expected_output,  os.path.exists(expected_output))
+            
+            if S3Path(expected_output).exists:
                 # Parquet files don't have tree names, just add the path
                 output_files.append(str(expected_output))
 
@@ -952,7 +990,14 @@ def process_workitems_with_skimming(
                     # Load events from parquet file with NanoAOD schema
                     # Note: NanoEventsFactory.from_parquet requires string path, not Path object
                     events = NanoEventsFactory.from_parquet(
-                        str(file_path), schemaclass=NanoAODSchema
+                        str(file_path), schemaclass=NanoAODSchema,            
+                        storage_options={
+                                            "key": os.environ['AWS_ACCESS_KEY_ID'],
+                                            "secret": os.environ['AWS_SECRET_ACCESS_KEY'],
+                                            "client_kwargs": {
+                                            "endpoint_url": "https://red-s3.unl.edu/cmsaf-test-oshadura",
+                                            },
+                                        },
                     ).events()
                     # Note: ak.materialize() causes errors with NanoEventsFactory parquet sources
                     all_events.append(events)
