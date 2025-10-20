@@ -1,16 +1,29 @@
 
-## EVENTS ACCEPTED with reco.yaml 
+## EVENTS ACCEPTED with current reco.yaml 
 ## Signal ZPrimettbar
+# 8 / 110 events
 
-
-PrimaryVertexSelectorAlg INFO    accepted 299000 out of 299000 events for filter VertexSelection (vertex selection)
-EventFlagSelectionAlg    INFO    accepted 298292 out of 299000 events for filter JetCleaning (selecting events passing: DFCommonJets_eventClean_LooseBad,as_char)
-TrigEventSelectionAlg    INFO    accepted 113495 out of 298292 events for filter TriggerEventSelection (trigger event selection)
+PrimaryVertexSelectorAlg INFO    accepted 110 out of 110 events for filter VertexSelection (vertex selection)
+EventFlagSelectionAlg    INFO    accepted 110 out of 110 events for filter JetCleaning (selecting events passing: DFCommonJets_eventClean_LooseBad,as_char)
+TrigEventSelectionAlg    INFO    accepted 46 out of 110 events for filter TriggerEventSelection (trigger event selection)
+TrigEventSelectionAlgDecoINFO    accepted 46 out of 46 events for filter TriggerEventSelection (trigger event selection)
 CutBookkeeperAlgANALYSIS INFO    CutBookkeeper information will be stored in CutBookkeeper_301333_284500_NOSYS
-TrigGlobalSFAlg_emu      INFO    Events passing selection for at least one systematic: 42227 / 113495 for global trigger matching
-TrigGlobalSFAlg_emu      INFO    Events passing selection for at nominal: 42017 / 113495 for global trigger matching
-TrigGlobalSFAlg_emu      INFO    Events passing selection for all systematics: 41830 / 113495 for global trigger matching
+TrigGlobalSFAlg_emu      INFO    Events passing selection for at least one systematic: 19 / 46 for global trigger matching
+TrigGlobalSFAlg_emu      INFO    Events passing selection for at nominal: 19 / 46 for global trigger matching
+TrigGlobalSFAlg_emu      INFO    Events passing selection for all systematics: 19 / 46 for global trigger matching
+SUBcommon_SAVE           INFO    Events passing selection for at least one systematic: 19 / 19 for events passing < SUBcommon >
+SUBcommon_SAVE           INFO    Events passing selection for at nominal: 19 / 19 for events passing < SUBcommon >
+SUBcommon_SAVE           INFO    Events passing selection for all systematics: 19 / 19 for events passing < SUBcommon >
+fourjetoneb_el_SAVE      INFO    Events passing selection for at least one systematic: 19 / 19 for events passing < fourjetoneb_el >
+fourjetoneb_el_SAVE      INFO    Events passing selection for at nominal: 19 / 19 for events passing < fourjetoneb_el >
+fourjetoneb_el_SAVE      INFO    Events passing selection for all systematics: 19 / 19 for events passing < fourjetoneb_el >
+fourjetoneb_mu_SAVE      INFO    Events passing selection for at least one systematic: 19 / 19 for events passing < fourjetoneb_mu >
+fourjetoneb_mu_SAVE      INFO    Events passing selection for at nominal: 19 / 19 for events passing < fourjetoneb_mu >
+fourjetoneb_mu_SAVE      INFO    Events passing selection for all systematics: 19 / 19 for events passing < fourjetoneb_mu >
+EventSelectionMergerpa...INFO    Events passing selection for at least one systematic: 9 / 19 for events passing at least one EventSelection algorithm
+EventSelectionMergerpa...INFO    Events passing selection for at nominal: 9 / 19 for events passing at least one EventSelection algorithm
+EventSelectionMergerpa...INFO    Events passing selection for all systematics: 8 / 19 for events passing at least one EventSelection algorithm
 LeakCheckModule          INFO    Memory increase/change during the job:
-LeakCheckModule          INFO      - resident: -0.14899 kB/event (-44548 kB total)
-LeakCheckModule          INFO      - virtual : 2.1149 kB/event (632352 kB total)
+LeakCheckModule          INFO      - resident: 1200.7 kB/event (130876 kB total)
+LeakCheckModule          INFO      - virtual : 6917.28 kB/event (753984 kB total)
 
