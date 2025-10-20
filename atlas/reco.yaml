@@ -132,6 +132,15 @@ Trigger:
     '2018':
       - 'HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e140_lhloose_nod0'
       - 'HLT_mu26_ivarmedium || HLT_mu50'
+    #Run3 recomendations: https://twiki.cern.ch/twiki/bin/view/Atlas/TrigEgammaRecommendationsRun3
+    '2022':
+      - 'HLT_e26_lhtight_ivarloose_L1EM22VHI || HLT_e60_lhmedium_L1EM22VHI || HLT_e140_lhloose_L1EM22VHI'
+      - 'HLT_mu24_ivarmedium_L1MU14FCH || HLT_mu50_L1MU14FCH'
+
+    '2023':
+      - 'HLT_e26_lhtight_ivarloose_L1eEM26M || HLT_e60_lhmedium_L1eEM26M || HLT_e140_lhloose_L1eEM26M'
+      - 'HLT_mu24_ivarmedium_L1MU14FCH || HLT_mu50_L1MU14FCH'
+
   #To do: tight or loose?
   noFilter: False
   postfix: '_emu'
