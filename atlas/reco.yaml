@@ -155,32 +155,31 @@ Trigger:
 
 
 
-#Removing all cuts from TCT
-#Cutflow to be made in Coffea
-#EventSelection: #To do: re-check all selection cuts for ojbect definitions
-#  - electrons: 'AnaElectrons.loose'
-#    muons: 'AnaMuons.loose'
-#    jets: 'AnaJets.baselineJvt'
-#    met: 'AnaMET'
-#    btagDecoration: 'ftag_select_DL1dv01_FixedCutBEff_77'
-#    noFilter: False
-#    cutFlowHistograms: True
-#    selectionCutsDict:
-#      'SUBcommon': |
-#        GLOBALTRIGMATCH _emu
-#        JET_N 25000 >= 2
-#        JET_N_BTAG >= 1
-#        SAVE
-#      'fourjetoneb_el': |
-#        IMPORT SUBcommon
-#        EL_N 27000 >= 1
-#        JET_N 25000 >= 4
-#        SAVE
-      #'fourjetoneb_mu': |
-      #  IMPORT SUBcommon
-      #  MU_N 27000 >= 1
-      #  JET_N 25000 >= 4
-      #  SAVE
+#Loose preselection
+EventSelection:
+  - electrons: 'AnaElectrons.loose'
+    muons: 'AnaMuons.loose'
+    jets: 'AnaJets.baselineJvt'
+    met: 'AnaMET'
+    btagDecoration: 'ftag_select_DL1dv01_FixedCutBEff_77'
+    noFilter: False
+    cutFlowHistograms: True
+    selectionCutsDict:
+      'SUBcommon': |
+        GLOBALTRIGMATCH _emu
+        JET_N 25000 >= 2
+        JET_N_BTAG >= 1
+        SAVE
+      'fourjetoneb_el': |
+        IMPORT SUBcommon
+        EL_N 27000 >= 1
+        JET_N 25000 >= 4
+        SAVE
+      'fourjetoneb_mu': |
+        IMPORT SUBcommon
+        MU_N 27000 >= 1
+        JET_N 25000 >= 4
+        SAVE
 
 # After configuring each container, many variables will be saved automatically.
 Output:
