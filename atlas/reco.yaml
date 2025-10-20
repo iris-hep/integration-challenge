@@ -13,6 +13,9 @@ PileupReweighting: {}
 
 EventCleaning:
     runEventCleaning: True
+    userGRLFiles:
+      - 'GoodRunsLists/data22_13p6TeV/20250321/data22_13p6TeV.periodAllYear_DetStatus-v134-pro28-09_MERGED_PHYS_StandardGRL_All_Good_25ns.xml'
+
 
 GeneratorLevelAnalysis: {}
 
@@ -24,7 +27,7 @@ Jets:
     runGhostMuonAssociation: True
     systematicsModelJES: 'Category'
     systematicsModelJER: 'Full'
-    JVT: {} # To do : JVT > 0.59 for the jets with pT < 60 GeV and eta < 24
+    JVT: {} 
     PtEtaSelection:
         minPt: 15000.0
         maxEta: 2.8
@@ -93,7 +96,7 @@ MissingET:
     setMuonJetEMScale: False
 
 # containerName and postfix must be defined in their respective blocks
-OverlapRemoval: # To do: two steps ATL-COM-PHYS-2016-103 (manual implementation required?) tight or loose?
+OverlapRemoval:
   inputLabel: 'preselectOR'
   outputLabel: 'passesOR'
   # Format should follow Object: '<containerName>.<postfix>'
@@ -141,13 +144,13 @@ Trigger:
       - 'HLT_e26_lhtight_ivarloose_L1eEM26M || HLT_e60_lhmedium_L1eEM26M || HLT_e140_lhloose_L1eEM26M'
       - 'HLT_mu24_ivarmedium_L1MU14FCH || HLT_mu50_L1MU14FCH'
 
-  #To do: tight or loose?
+  
   noFilter: False
   postfix: '_emu'
-  electrons: 'AnaElectrons.tight'
+  electrons: 'AnaElectrons.loose'
   electronID: 'Tight'
   electronIsol: 'Tight_VarRad'
-  muons: 'AnaMuons.tight'
+  muons: 'AnaMuons.loose'
   muonID: 'Medium'
 
 
