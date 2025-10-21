@@ -27,3 +27,30 @@ LeakCheckModule          INFO    Memory increase/change during the job:
 LeakCheckModule          INFO      - resident: 1200.7 kB/event (130876 kB total)
 LeakCheckModule          INFO      - virtual : 6917.28 kB/event (753984 kB total)
 
+
+## TTBar bakground (nonallhad)
+# 160/1000 events 
+
+PrimaryVertexSelectorAlg INFO    accepted 1000 out of 1000 events for filter VertexSelection (vertex selection)
+EventFlagSelectionAlg    INFO    accepted 991 out of 1000 events for filter JetCleaning (selecting events passing: DFCommonJets_eventClean_LooseBad,as_char)
+TrigEventSelectionAlg    INFO    accepted 486 out of 991 events for filter TriggerEventSelection (trigger event selection)
+TrigEventSelectionAlgDecoINFO    accepted 486 out of 486 events for filter TriggerEventSelection (trigger event selection)
+TrigGlobalSFAlg_emu      INFO    Events passing selection for at least one systematic: 376 / 486 for global trigger matching
+TrigGlobalSFAlg_emu      INFO    Events passing selection for at nominal: 375 / 486 for global trigger matching
+TrigGlobalSFAlg_emu      INFO    Events passing selection for all systematics: 372 / 486 for global trigger matching
+SUBcommon_SAVE           INFO    Events passing selection for at least one systematic: 376 / 376 for events passing < SUBcommon >
+SUBcommon_SAVE           INFO    Events passing selection for at nominal: 376 / 376 for events passing < SUBcommon >
+SUBcommon_SAVE           INFO    Events passing selection for all systematics: 376 / 376 for events passing < SUBcommon >
+fourjetoneb_el_SAVE      INFO    Events passing selection for at least one systematic: 376 / 376 for events passing < fourjetoneb_el >
+fourjetoneb_el_SAVE      INFO    Events passing selection for at nominal: 376 / 376 for events passing < fourjetoneb_el >
+fourjetoneb_el_SAVE      INFO    Events passing selection for all systematics: 376 / 376 for events passing < fourjetoneb_el >
+fourjetoneb_mu_SAVE      INFO    Events passing selection for at least one systematic: 376 / 376 for events passing < fourjetoneb_mu >
+fourjetoneb_mu_SAVE      INFO    Events passing selection for at nominal: 376 / 376 for events passing < fourjetoneb_mu >
+fourjetoneb_mu_SAVE      INFO    Events passing selection for all systematics: 376 / 376 for events passing < fourjetoneb_mu >
+EventSelectionMergerpa...INFO    Events passing selection for at least one systematic: 206 / 376 for events passing at least one EventSelection algorithm
+EventSelectionMergerpa...INFO    Events passing selection for at nominal: 186 / 376 for events passing at least one EventSelection algorithm
+EventSelectionMergerpa...INFO    Events passing selection for all systematics: 162 / 376 for events passing at least one EventSelection algorithm
+LeakCheckModule          INFO    Memory increase/change during the job:
+LeakCheckModule          INFO      - resident: 82.3664 kB/event (82284 kB total)
+LeakCheckModule          INFO      - virtual : -31.7878 kB/event (-31756 kB total)
+
