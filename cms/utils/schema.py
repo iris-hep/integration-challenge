@@ -107,12 +107,6 @@ class GeneralConfig(SubscriptableModel):
     weight_branch: Annotated[
         str, Field(description="Branch name for event weight")
     ]
-    lumifile: Annotated[
-        str,
-        Field(
-            description="Path to JSON file with good luminosity sections",
-        ),
-    ]
     analysis: Annotated[
         Optional[str],
         Field(default="nondiff",

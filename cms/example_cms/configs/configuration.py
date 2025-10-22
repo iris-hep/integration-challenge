@@ -52,8 +52,6 @@ general_config = {
         "run_metadata_generation": False,
         "read_from_cache": True,
         "output_dir": "example_cms/outputs/",
-        "lumifile": "./example_cms/corrections/Cert_271036-284044_13TeV_Legacy2016_"\
-            "Collisions16_JSON.txt",
         "cache_dir": "/tmp/integration/",
         # Optional: specify existing metadata/skimmed directories
         # "metadata_dir": "path/to/existing/metadata/",
