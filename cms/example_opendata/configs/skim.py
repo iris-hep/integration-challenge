@@ -8,6 +8,7 @@ This module contains all skimming-related configuration including:
 """
 
 from coffea.analysis_tools import PackedSelection
+from .cuts import lumi_mask
 
 
 # ==============================================================================
@@ -17,7 +18,7 @@ from coffea.analysis_tools import PackedSelection
 datasets_config = [
     {
         "name": "signal",
-        "directories": "example-demo/datasets/signal/m2000_w20/",
+        "directories": "example_opendata/datasets/signal/m2000_w20/",
         "cross_sections": 1.0,
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -26,7 +27,7 @@ datasets_config = [
     },
     {
         "name": "ttbar_semilep",
-        "directories": "example-demo/datasets/ttbar_semilep/",
+        "directories": "example_opendata/datasets/ttbar_semilep/",
         "cross_sections": 831.76 * 0.438,  # 364.35
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -35,7 +36,7 @@ datasets_config = [
     },
     {
         "name": "ttbar_had",
-        "directories": "example-demo/datasets/ttbar_had/",
+        "directories": "example_opendata/datasets/ttbar_had/",
         "cross_sections": 831.76 * 0.457,  # 380.11
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -44,7 +45,7 @@ datasets_config = [
     },
     {
         "name": "ttbar_lep",
-        "directories": "example-demo/datasets/ttbar_lep/",
+        "directories": "example_opendata/datasets/ttbar_lep/",
         "cross_sections": 831.76 * 0.105,  # 87.33
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -53,7 +54,7 @@ datasets_config = [
     },
     {
         "name": "wjets",
-        "directories": "example-demo/datasets/wjets/",
+        "directories": "example_opendata/datasets/wjets/",
         "cross_sections": 61526.7,
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -62,12 +63,18 @@ datasets_config = [
     },
     {
         "name": "data",
-        "directories": "example-demo/datasets/data/",
+        "directories": "example_opendata/datasets/data/",
         "cross_sections": 1.0,
         "file_pattern": "*.txt",
         "tree_name": "Events",
         "weight_branch": None,
         "redirector": "",
+        "is_data": True,
+        "lumi_mask": {
+            "function": lumi_mask,
+            "use": [("event", "run"), ("event", "luminosityBlock")],
+            "static_kwargs": {"lumifile": "./corrections/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt"},
+        },
     }
 ]
 
@@ -106,8 +113,8 @@ def default_skim_selection(puppimet, hlt):
 
 
 skimming_config = {
-    "selection_function": default_skim_selection,
-    "selection_use": [("PuppiMET", None), ("HLT", None)],
+    "function": default_skim_selection,
+    "use": [("PuppiMET", None), ("HLT", None)],
     "chunk_size": 100_000,
     "tree_name": "Events",
 }

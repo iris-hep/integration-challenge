@@ -161,13 +161,16 @@ class Analysis:
         """
         good_objects = {}
         for mask_config in masks:
-            mask_args = get_function_arguments(
+            mask_args, mask_static_kwargs = get_function_arguments(
                 mask_config.use,
                 object_copies,
                 function_name=mask_config.function.__name__,
+                static_kwargs=mask_config.get("static_kwargs"),
             )
 
-            selection_mask = mask_config.function(*mask_args)
+            selection_mask = mask_config.function(
+                *mask_args, **mask_static_kwargs
+            )
             if not isinstance(selection_mask, ak.Array):
                 raise TypeError(
                     f"Mask must be an awkward array. Got {type(selection_mask)}"
@@ -299,6 +302,7 @@ class Analysis:
         syst_name: str,
         syst_function: Callable[..., ak.Array],
         function_args: List[ak.Array],
+        static_kwargs: Optional[Dict[str, Any]] = None,
         affected_arrays: Union[ak.Array, List[ak.Array]],
         operation: str,
     ) -> Union[ak.Array, List[ak.Array]]:
@@ -312,7 +316,9 @@ class Analysis:
         syst_function : Callable[..., ak.Array]
             Variation function
         function_args : List[ak.Array]
-            Function arguments
+            Positional arguments for the variation function
+        static_kwargs : Optional[Dict[str, Any]]
+            Static keyword arguments for the variation function
         affected_arrays : Union[ak.Array, List[ak.Array]]
             Array(s) to modify
         operation : str
@@ -324,7 +330,8 @@ class Analysis:
             Modified array(s)
         """
         logger.debug("Applying function-based systematic: %s", syst_name)
-        variation = syst_function(*function_args)
+        kwargs = static_kwargs or {}
+        variation = syst_function(*function_args, **kwargs)
 
         if isinstance(affected_arrays, list):
             return [
@@ -459,10 +466,11 @@ class Analysis:
                 continue
 
             # Prepare arguments and targets
-            args = get_function_arguments(
+            corr_args, corr_static_kwargs = get_function_arguments(
                 correction.use,
                 object_copies,
                 function_name=f"correction::{correction.name}",
+                static_kwargs=correction.get("static_kwargs"),
             )
             targets = self._get_target_arrays(
                 correction.target,
@@ -487,7 +495,7 @@ class Analysis:
                     correction_name=correction.name,
                     correction_key=key,
                     direction=corr_direction,
-                    correction_args=args,
+                    correction_args=corr_args,
                     target=targets,
                     operation=operation,
                     transform=transform,
@@ -498,7 +506,8 @@ class Analysis:
                     corrected_values = self.apply_syst_function(
                         syst_name=correction.name,
                         syst_function=syst_func,
-                        function_args=args,
+                        function_args=corr_args,
+                        static_kwargs=corr_static_kwargs,
                         affected_arrays=targets,
                         operation=operation,
                     )
@@ -542,10 +551,11 @@ class Analysis:
             return weights
 
         # Prepare arguments
-        args = get_function_arguments(
+        weight_args, weight_static_kwargs = get_function_arguments(
             systematic.use,
             object_copies,
             function_name=f"systematic::{systematic.name}",
+            static_kwargs=systematic.get("static_kwargs"),
         )
         operation = systematic.op
         key = systematic.key
@@ -559,7 +569,7 @@ class Analysis:
                 correction_name=systematic.name,
                 correction_key=key,
                 direction=corr_direction,
-                correction_args=args,
+                correction_args=weight_args,
                 target=weights,
                 operation=operation,
                 transform=transform,
@@ -570,7 +580,8 @@ class Analysis:
                 return self.apply_syst_function(
                     syst_name=systematic.name,
                     syst_function=syst_func,
-                    function_args=args,
+                    function_args=weight_args,
+                    static_kwargs=weight_static_kwargs,
                     affected_arrays=weights,
                     operation=operation,
                 )
@@ -596,10 +607,11 @@ class Analysis:
         for ghost in self.config.ghost_observables:
 
             logger.debug("Computing ghost observables: %s", ghost.names)
-            args = get_function_arguments(
-                ghost.use, object_copies, function_name=ghost.function.__name__
+            ghost_args, ghost_static_kwargs = get_function_arguments(
+                ghost.use, object_copies, function_name=ghost.function.__name__,
+                static_kwargs=ghost.get("static_kwargs")
             )
-            outputs = ghost.function(*args)
+            outputs = ghost.function(*ghost_args, **ghost_static_kwargs)
 
             # Normalize outputs to list
             if not isinstance(outputs, (list, tuple)):

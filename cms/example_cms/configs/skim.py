@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import List, Tuple
 
 from coffea.analysis_tools import PackedSelection
+from cuts import lumi_mask
 
 
 def get_cross_sections_for_datasets(
@@ -217,6 +218,12 @@ datasets_config = [
         "tree_name": "Events",
         "weight_branch": None,
         "redirector": REDIRECTOR,
+        "is_data": True,
+        "lumi_mask": {
+            "function": lumi_mask,
+            "use": [("event", "run"), ("event", "luminosityBlock")],
+            "static_kwargs": {"lumifile": "./corrections/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt"},
+        },
     }
 ]
 
@@ -255,8 +262,8 @@ def default_skim_selection(puppimet, hlt):
 
 
 skimming_config = {
-    "selection_function": default_skim_selection,
-    "selection_use": [("PuppiMET", None), ("HLT", None)],
+    "function": default_skim_selection,
+    "use": [("PuppiMET", None), ("HLT", None)],
     "chunk_size": 100_000,
     "tree_name": "Events",
 }

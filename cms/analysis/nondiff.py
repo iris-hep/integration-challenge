@@ -12,7 +12,6 @@ import vector
 from coffea.analysis_tools import PackedSelection
 
 from analysis.base import Analysis
-from example_opendata.configs.cuts import lumi_mask
 from utils.output_files import (
     save_histograms_to_pickle,
     save_histograms_to_root,
@@ -113,6 +112,7 @@ class NonDiffAnalysis(Analysis):
         variation: str,
         xsec_weight: float,
         analysis: str,
+        is_data: bool = False,
         event_syst: Optional[dict[str, Any]] = None,
         direction: Literal["up", "down", "nominal"] = "nominal",
     ) -> Optional[ak.Array]:
@@ -143,7 +143,7 @@ class NonDiffAnalysis(Analysis):
         dict
             Updated histogram dictionary.
         """
-        if process == "data" and variation != "nominal":
+        if is_data and variation != "nominal":
             return
 
         for channel in self.channels:
@@ -155,25 +155,21 @@ class NonDiffAnalysis(Analysis):
                          f"with variation {variation}")
             mask = 1
             if (selection_funciton := channel.selection.function) is not None:
-                selection_args = get_function_arguments(
+                selection_args, selection_static_kwargs = get_function_arguments(
                     channel.selection.use,
                     object_copies,
                     function_name=channel.selection.function.__name__,
+                    static_kwargs=channel.selection.get("static_kwargs"),
                 )
-                packed_selection = selection_funciton(*selection_args)
+                packed_selection = selection_funciton(
+                    *selection_args, **selection_static_kwargs
+                )
                 if not isinstance(packed_selection, PackedSelection):
                     raise ValueError(
                         f"PackedSelection expected, got {type(packed_selection)}"
                     )
                 mask = ak.Array(
                     packed_selection.all(packed_selection.names[-1])
-                )
-
-            if process == "data":
-                mask = mask & lumi_mask(
-                    self.config.general.lumifile,
-                    object_copies["run"],
-                    object_copies["luminosityBlock"],
                 )
 
             if ak.sum(mask) == 0:
@@ -188,7 +184,7 @@ class NonDiffAnalysis(Analysis):
                 for collection, variable in object_copies.items()
             }
 
-            if process != "data":
+            if not is_data:
                 weights = (
                     events[mask][self.config.general.weight_branch]
                     * xsec_weight
@@ -197,7 +193,7 @@ class NonDiffAnalysis(Analysis):
             else:
                 weights = np.ones(ak.sum(mask))
 
-            if event_syst and process != "data":
+            if event_syst and not is_data:
                 weights = self.apply_event_weight_correction(
                     weights, event_syst, direction, object_copies_channel
                 )
@@ -211,12 +207,15 @@ class NonDiffAnalysis(Analysis):
             for observable in channel.observables:
                 observable_name = observable.name
                 logger.info(f"Computing observable {observable_name}")
-                observable_args = get_function_arguments(
+                observable_args, observable_static_kwargs = get_function_arguments(
                     observable.use,
                     object_copies_channel,
                     function_name=observable.function.__name__,
+                    static_kwargs=observable.get("static_kwargs"),
                 )
-                observable_vals = observable.function(*observable_args)
+                observable_vals = observable.function(
+                    *observable_args, **observable_static_kwargs
+                )
                 self.nD_hists_per_region[channel_name][observable_name].fill(
                     observable=observable_vals,
                     process=process,
@@ -248,12 +247,13 @@ class NonDiffAnalysis(Analysis):
 
         process = metadata["process"]
         variation = metadata.get("variation", "nominal")
+        is_data = metadata.get("is_data", False)
         logger.debug(f"Processing {process} with variation {variation}")
         xsec = metadata["xsec"]
         n_gen = metadata["nevts"]
 
         lumi = self.config.general.lumi
-        xsec_weight = (xsec * lumi / n_gen) if process != "data" else 1.0
+        xsec_weight = 1.0 if is_data else (xsec * lumi / n_gen)
 
         # Nominal processing
         obj_copies = self.get_object_copies(events)
@@ -261,20 +261,38 @@ class NonDiffAnalysis(Analysis):
         obj_copies = self.apply_object_masks(obj_copies)
 
         # Apply baseline selection
-        baseline_args = get_function_arguments(
+        baseline_args, baseline_static_kwargs = get_function_arguments(
             self.config.baseline_selection.use,
             obj_copies,
             function_name=self.config.baseline_selection.function.__name__,
+            static_kwargs=self.config.baseline_selection.get("static_kwargs"),
         )
 
         packed_selection = self.config.baseline_selection.function(
-            *baseline_args
+            *baseline_args, **baseline_static_kwargs
         )
         mask = ak.Array(packed_selection.all(packed_selection.names[-1]))
         obj_copies = {
             collection: variable[mask]
             for collection, variable in obj_copies.items()
         }
+
+        # Apply lumi_mask for data if configured
+        if is_data and (lumi_mask_config := metadata.get("lumi_mask_config")):
+            lumi_args, lumi_static_kwargs = get_function_arguments(
+                lumi_mask_config.use,
+                obj_copies,
+                function_name=lumi_mask_config.function.__name__,
+                static_kwargs=lumi_mask_config.get("static_kwargs"),
+            )
+            lumi_mask_result = lumi_mask_config.function(
+                *lumi_args, **lumi_static_kwargs
+            )
+            obj_copies = {
+                collection: variable[lumi_mask_result]
+                for collection, variable in obj_copies.items()
+            }
+
         # apply ghost observables
         obj_copies = self.compute_ghost_observables(
             obj_copies,
@@ -294,6 +312,7 @@ class NonDiffAnalysis(Analysis):
             "nominal",
             xsec_weight,
             analysis,
+            is_data=is_data,
         )
 
         if self.config.general.run_systematics:
@@ -317,6 +336,7 @@ class NonDiffAnalysis(Analysis):
                         varname,
                         xsec_weight,
                         analysis,
+                        is_data=is_data,
                         event_syst=syst,
                         direction=direction,
                     )

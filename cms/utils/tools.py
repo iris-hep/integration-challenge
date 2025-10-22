@@ -75,26 +75,29 @@ def recursive_to_backend(data_structure: Any, backend: str = "jax") -> Any:
 
 
 def get_function_arguments(
-    arg_spec: List[Tuple[str, Optional[str]]],
+    arg_spec: Optional[List[Tuple[str, Optional[str]]]],
     objects: Dict[str, ak.Array],
-    function_name: Optional[str] = "generic_function"
-) -> List[ak.Array]:
+    function_name: Optional[str] = "generic_function",
+    static_kwargs: Optional[Dict[str, Any]] = None,
+) -> Tuple[List[ak.Array], Dict[str, Any]]:
     """
-    Prepare function arguments from object dictionary.
+    Prepare function arguments from object dictionary with optional static kwargs.
 
     Parameters
     ----------
-    arg_spec : List[Tuple[str, Optional[str]]]
-        List of (object, field) specifications
+    arg_spec : Optional[List[Tuple[str, Optional[str]]]]
+        Optional list of (object, field) specifications for dynamic arguments
     objects : Dict[str, ak.Array]
         Object dictionary
     function_name : Optional[str]
         Name of function for error reporting
+    static_kwargs : Optional[Dict[str, Any]]
+        Optional static keyword arguments to append when invoking the function.
 
     Returns
     -------
-    List[ak.Array]
-        Prepared arguments
+    Tuple[List[ak.Array], Dict]
+        Tuple of (prepared positional arguments, static keyword arguments)
     """
     def raise_error(field_name: str) -> None:
         """
@@ -111,8 +114,8 @@ def get_function_arguments(
         )
         raise KeyError(f"Missing field: {field_name}, function: {function_name}")
 
-    args = []
-    for obj_name, field_name in arg_spec:
+    args: List[ak.Array] = []
+    for obj_name, field_name in arg_spec or []:
         if field_name:
             try:
                 args.append(objects[obj_name][field_name])
@@ -124,4 +127,11 @@ def get_function_arguments(
             except KeyError:
                 raise_error(obj_name)
 
-    return args
+    if static_kwargs is not None and not isinstance(static_kwargs, dict):
+        raise TypeError(
+            f"static_kwargs for {function_name} must be a dictionary of keyword "
+            f"arguments, got {type(static_kwargs)}"
+        )
+
+    final_static_kwargs = dict(static_kwargs) if static_kwargs is not None else {}
+    return args, final_static_kwargs

@@ -6,14 +6,14 @@ This example assumes you are running from the `cms/` directory.
 
 import numpy as np
 
-from cuts import (
+from .cuts import (
     Zprime_hardcuts,
     Zprime_hardcuts_no_fj,
     Zprime_workshop_cuts,
 )
-from observables import get_mtt, get_mva_vars
-from systematics import jet_pt_resolution, jet_pt_scale
-from skim import dataset_manager_config, skimming_config
+from .observables import get_mtt, get_mva_vars
+from .systematics import jet_pt_resolution, jet_pt_scale
+from .skim import dataset_manager_config, skimming_config
 
 
 # ==============================================================================
@@ -52,7 +52,7 @@ general_config = {
         "run_metadata_generation": False,
         "read_from_cache": True,
         "output_dir": "example/outputs/",
-        "lumifile": "./corrections/Cert_271036-284044_13TeV_Legacy2016_"\
+        "lumifile": "./example_opendata/corrections/Cert_271036-284044_13TeV_Legacy2016_"\
             "Collisions16_JSON.txt",
         "cache_dir": "/tmp/integration/",
         # Optional: specify existing metadata/skimmed directories
@@ -277,7 +277,7 @@ ghost_observables_config = [
 corrections_config = [
     {
         "name": "pu_weight",
-        "file": "corrections/puWeights.json.gz",
+        "file": "./example_opendata/corrections/puWeights.json.gz",
         "type": "event",  # event or object
         "use": [("Pileup", "nTrueInt")],
         "op": "mult",  # or add or subtract
@@ -286,7 +286,7 @@ corrections_config = [
     },
     {
         "name": "muon_id_sf",
-        "file": "corrections/muon_Z.json.gz",
+        "file": "./example_opendata/corrections/muon_Z.json.gz",
         "use": [("Muon", "eta"), ("Muon", "pt")],
         "transform": lambda eta, pt: (np.abs(eta)[:, 0], pt[:, 0]),
         "type": "event",

@@ -48,6 +48,31 @@ def default_histogram() -> hist.Hist:
     return hist.Hist.new.Regular(10, 0, 1000).Weight()
 
 
+def get_dataset_config_by_name(dataset_name: str, configuration: Any):
+    """
+    Retrieve the dataset configuration matching the provided dataset name.
+
+    Parameters
+    ----------
+    dataset_name : str
+        Dataset identifier.
+    configuration : Any
+        Full analysis configuration containing dataset definitions.
+
+    Returns
+    -------
+    DatasetConfig or None
+        Matching dataset configuration if found, else None.
+    """
+    dataset_manager = getattr(configuration, "datasets", None)
+    dataset_configs = getattr(dataset_manager, "datasets", []) if dataset_manager else []
+
+    for dataset_config in dataset_configs:
+        if dataset_config.name == dataset_name:
+            return dataset_config
+    return None
+
+
 def workitem_analysis(
     workitem: WorkItem,
     config: SkimmingConfig,
@@ -110,14 +135,19 @@ def workitem_analysis(
         total_events = len(events)
 
         # Apply skimming selection using the provided function
-        selection_func = config.selection_function
-        selection_use = config.selection_use
+        selection_func = config.function
+        selection_use = config.use
 
         # Get function arguments using existing utility
-        selection_args = get_function_arguments(
-            selection_use, events, function_name=selection_func.__name__
+        selection_args, selection_static_kwargs = get_function_arguments(
+            selection_use,
+            events,
+            function_name=selection_func.__name__,
+            static_kwargs=config.get("static_kwargs"),
         )
-        packed_selection = selection_func(*selection_args)
+        packed_selection = selection_func(
+            *selection_args, **selection_static_kwargs
+        )
 
         # Apply final selection mask
         selection_names = packed_selection.names
@@ -138,12 +168,10 @@ def workitem_analysis(
             dummy_hist.fill(dummy_values)
 
         output_files = []
-        print(processed_events)
         if processed_events > 0:
             output_file = _create_output_file_path(
                 workitem, output_manager, file_counters, part_counters
             )
-            print("Saving...")
             _save_workitem_output(
                 filtered_events, output_file, config, configuration, is_mc
             )
@@ -246,7 +274,7 @@ def _get_output_file_path(
     -------
     Path
         Full path to the output file
-    """    
+    """
     dataset = workitem.dataset
 
     # Create keys that include entry ranges for proper differentiation
@@ -267,7 +295,7 @@ def _get_output_file_path(
     path = dataset_dir / output_filename
 
     return f"s3://{path.as_posix()}"
-    
+
 def _create_output_file_path(
     workitem: WorkItem,
     output_manager,
@@ -293,15 +321,15 @@ def _create_output_file_path(
         Pre-computed mapping of part keys (including entry ranges) to part numbers
 
     """
-    path = _get_output_file_path(workitem, 
-                                 output_manager, 
-                                 file_counters, 
+    path = _get_output_file_path(workitem,
+                                 output_manager,
+                                 file_counters,
                                  part_counters)
     pathobj = Path(path)
     pathobj.parents[0].mkdir(parents=True, exist_ok=True)
 
     return path
-    
+
 
 def _save_workitem_output(
     events: Any,
@@ -443,6 +471,7 @@ class WorkitemSkimmingManager:
         self,
         workitems: List[WorkItem],
         configuration: Any,
+        datasets: List,
         split_every: int = 4,
     ) -> Dict[str, Any]:
         """
@@ -457,6 +486,8 @@ class WorkitemSkimmingManager:
             List of workitems to process
         configuration : Any
             Main analysis configuration object
+        datasets : List
+            Dataset objects with metadata (including is_data flag)
         split_every : int, default 4
             Split parameter for dask.bag.fold operation
 
@@ -470,6 +501,11 @@ class WorkitemSkimmingManager:
 
         # Pre-compute file and part counters for all workitems
         file_counters, part_counters = self._compute_counters(workitems)
+
+        dataset_lookup: Dict[str, Any] = {}
+        for dataset in datasets or []:
+            for fileset_key in dataset.fileset_keys:
+                dataset_lookup[fileset_key] = dataset
 
         # Initialize accumulator for successful results
         full_result = {
@@ -502,7 +538,10 @@ class WorkitemSkimmingManager:
                     self.output_manager,
                     file_counters,
                     part_counters,
-                    is_mc=self._is_monte_carlo(wi.dataset),
+                    is_mc=not (
+                        (dataset := dataset_lookup.get(wi.dataset))
+                        and dataset.is_data
+                    ),
                 )
             )
 
@@ -587,7 +626,7 @@ class WorkitemSkimmingManager:
                 workitem, self.output_manager, file_counters, part_counters
             )
             print("Exepected", expected_output,  os.path.exists(expected_output))
-            
+
             if S3Path(expected_output).exists:
                 # Parquet files don't have tree names, just add the path
                 output_files.append(str(expected_output))
@@ -805,24 +844,6 @@ class WorkitemSkimmingManager:
 
         return file_counters, part_counters
 
-    def _is_monte_carlo(self, dataset: str) -> bool:
-        """
-        Determine if a dataset represents Monte Carlo data.
-
-        Parameters
-        ----------
-        dataset : str
-            Dataset name
-
-        Returns
-        -------
-        bool
-            True if dataset is Monte Carlo, False if it's data
-        """
-        # Simple heuristic: data datasets typically contain "data" in the name
-        return "data" not in dataset.lower()
-
-
 def process_workitems_with_skimming(
     workitems: List[WorkItem],
     config: Any,
@@ -891,7 +912,11 @@ def process_workitems_with_skimming(
             logger.info(f"Filtered {len(workitems)} workitems to {len(workitems_to_process)} based on processes filter")
 
         logger.info("Running skimming")
-        results = skimming_manager.process_workitems(workitems_to_process, config)
+        results = skimming_manager.process_workitems(
+            workitems_to_process,
+            config,
+            datasets,
+        )
         logger.info(f"Skimming complete: {results['processed_events']:,} events")
 
     # Create a mapping from fileset_key to Dataset for quick lookup
@@ -934,12 +959,21 @@ def process_workitems_with_skimming(
                 logger.error(f"Failed to get cross-section for {fileset_key}: {e}")
                 xsec = 1.0
 
+            dataset_config = get_dataset_config_by_name(dataset_obj.process, config)
+            lumi_mask_config = (
+                dataset_config.lumi_mask
+                if dataset_config and dataset_obj.is_data
+                else None
+            )
+
             # Create metadata
             metadata = {
                 "dataset": fileset_key,
                 "process": dataset_obj.process,
                 "variation": dataset_obj.variation,
                 "xsec": xsec,
+                "is_data": dataset_obj.is_data,
+                "lumi_mask_config": lumi_mask_config,
             }
 
             # Add nevts from NanoAODs summary if available
@@ -990,7 +1024,7 @@ def process_workitems_with_skimming(
                     # Load events from parquet file with NanoAOD schema
                     # Note: NanoEventsFactory.from_parquet requires string path, not Path object
                     events = NanoEventsFactory.from_parquet(
-                        str(file_path), schemaclass=NanoAODSchema,            
+                        str(file_path), schemaclass=NanoAODSchema,
                         storage_options={
                                             "key": os.environ['AWS_ACCESS_KEY_ID'],
                                             "secret": os.environ['AWS_SECRET_ACCESS_KEY'],

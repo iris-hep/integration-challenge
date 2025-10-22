@@ -198,12 +198,14 @@ class FilesetBuilder:
 
                 # Process each directory-cross-section pair
                 # Always create separate entries when multiple directories exist
+                is_data = self.dataset_manager.is_data_dataset(process_name)
+
                 for idx, (listing_dir, xsec) in enumerate(zip(listing_dirs, cross_sections)):
                     # Collect ROOT file paths from this directory
                     file_paths = get_root_file_paths(listing_dir, identifiers, redirector)[:max_files]
 
                     # Define the dataset key for coffea (process__variation)
-                    if process_name != "data":
+                    if not is_data:
                         # If multiple directories, append index to distinguish them
                         if len(listing_dirs) > 1:
                             dataset_key = f"{process_name}_{idx}__{variation_label}"
@@ -225,7 +227,8 @@ class FilesetBuilder:
                         "metadata": {
                             "process": process_name,
                             "variation": variation_label,
-                            "xsec": xsec
+                            "xsec": xsec,
+                            "is_data": is_data,
                         }
                     }
 
@@ -238,6 +241,7 @@ class FilesetBuilder:
                     process=process_name,
                     variation=variation_label,
                     cross_sections=cross_sections,
+                    is_data=is_data,
                     events=None  # Will be populated during skimming
                 )
                 datasets.append(dataset)
@@ -721,13 +725,24 @@ class NanoAODMetadataGenerator:
                     raise ValueError(f"Fileset key '{key}' is missing 'metadata.xsec' field")
                 cross_sections.append(metadata["xsec"])
 
-            # Create Dataset object
+            # Determine is_data flag
+            is_data = first_metadata.get("is_data")
+            if is_data is None:
+                try:
+                    is_data = self.dataset_manager.is_data_dataset(process)
+                except KeyError:
+                    logger.warning(
+                        f"Process '{process}' not found in dataset manager when reconstructing datasets"
+                    )
+                    is_data = False
+
             dataset = Dataset(
                 name=process,
                 fileset_keys=fileset_keys,
                 process=process,
                 variation=variation,
                 cross_sections=cross_sections,
+                is_data=is_data,
                 events=None  # Will be populated during skimming
             )
             self.datasets.append(dataset)

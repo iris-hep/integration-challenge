@@ -10,7 +10,7 @@ invalid configurations.
 
 import copy
 from enum import Enum
-from typing import Annotated, Callable, List, Literal, Optional, Tuple, Union
+from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 
 from omegaconf import OmegaConf, DictConfig
 from pydantic import BaseModel, Field, model_validator
@@ -53,28 +53,24 @@ class FunctorConfig(SubscriptableModel):
             "the inputs for the function.",
         ),
     ]
+    static_kwargs: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            default=None,
+            description=(
+                "Optional static keyword arguments appended when invoking the "
+                "function. These values do not depend on event data."
+            ),
+        ),
+    ]
 
 
-class GoodObjectMasksConfig(SubscriptableModel):
+class GoodObjectMasksConfig(FunctorConfig):
     object: Annotated[
         str,
         Field(
             description="The object collection to which this mask applies "
             "(e.g. 'Jet')."
-        ),
-    ]
-    function: Annotated[
-        Callable,
-        Field(
-            description="A callable that takes object collections and "
-            "returns a boolean mask."
-        ),
-    ]
-    use: Annotated[
-        List[ObjVar],
-        Field(
-            description="A list of (object variable) tuples specifying "
-            "the inputs for the mask function."
         ),
     ]
 
@@ -255,6 +251,14 @@ class DatasetConfig(SubscriptableModel):
     tree_name: Annotated[str, Field(default="Events", description="ROOT tree name")]
     weight_branch: Annotated[Optional[str], Field(default="genWeight", description="Branch name for event weights")]
     redirector: Annotated[Optional[str], Field(default=None, description="redirector to prefix ROOT file-paths")]
+    is_data: Annotated[bool, Field(default=False, description="Flag indicating whether dataset represents real data")]
+    lumi_mask: Annotated[
+        Optional[FunctorConfig],
+        Field(
+            default=None,
+            description="Optional lumi mask configuration applied to data datasets",
+        ),
+    ]
 
 class DatasetManagerConfig(SubscriptableModel):
     """Top-level dataset management configuration"""
@@ -296,21 +300,8 @@ class DatasetManagerConfig(SubscriptableModel):
 # ------------------------
 # Skimming configuration
 # ------------------------
-class SkimmingConfig(SubscriptableModel):
+class SkimmingConfig(FunctorConfig):
     """Configuration for workitem-based skimming selections and output"""
-
-    # Selection function - required for workitem-based skimming
-    selection_function: Annotated[
-        Callable,
-        Field(description="Selection function that returns a PackedSelection object")
-    ]
-
-    # Selection inputs - required to specify what the function needs
-    selection_use: Annotated[
-        List[ObjVar],
-        Field(description="List of (object, variable) tuples specifying inputs for the selection function")
-    ]
-
 
     # File handling configuration
     chunk_size: Annotated[
@@ -408,27 +399,13 @@ class StatisticalConfig(SubscriptableModel):
 # ------------------------
 # Observable configuration
 # ------------------------
-class ObservableConfig(SubscriptableModel):
+class ObservableConfig(FunctorConfig):
     name: Annotated[str, Field(description="Name of the observable")]
     binning: Annotated[
         Union[str, List[float]],
         Field(
             description="Histogram binning, specified as a 'low,high,nbins' string "
             + "or a list of explicit bin edges."
-        ),
-    ]
-    function: Annotated[
-        Callable,
-        Field(
-            description="A callable that computes the "
-            + "observable values from event data."
-        ),
-    ]
-    use: Annotated[
-        List[ObjVar],
-        Field(
-            description="A list of (object, variable) tuples specifying the inputs \
-                for the function.",
         ),
     ]
     label: Annotated[
@@ -483,7 +460,7 @@ class ObservableConfig(SubscriptableModel):
 # ------------------------
 # Ghost observable configuration
 # ------------------------
-class GhostObservable(SubscriptableModel):
+class GhostObservable(FunctorConfig):
     """Represents a derived quantity computed once and attached to the event record."""
 
     names: Annotated[
@@ -495,17 +472,6 @@ class GhostObservable(SubscriptableModel):
         Field(
             description="The collection(s) to which the "
             + "new observable(s) should be attached."
-        ),
-    ]
-    function: Annotated[
-        Callable,
-        Field(description="A callable that computes the ghost observables."),
-    ]
-    use: Annotated[
-        List[ObjVar],
-        Field(
-            description="A list of (object, variable) tuples "
-            + "specifying the inputs for the function."
         ),
     ]
 
@@ -772,29 +738,13 @@ class LayerConfig(SubscriptableModel):
 # ========
 # Features to train the MVA on
 # ========
-class FeatureConfig(SubscriptableModel):
+class FeatureConfig(FunctorConfig):
     name: Annotated[str, Field(..., description="Feature name")]
     label: Annotated[
         Optional[str],
         Field(
             default=None,
             description="Optional label for plots (e.g. LaTeX string)",
-        ),
-    ]
-    function: Annotated[
-        Callable,
-        Field(
-            ...,
-            description="Callable extracting the raw feature \
-                (e.g. lambda mva: mva.n_jet)",
-        ),
-    ]
-    use: Annotated[
-        List[ObjVar],
-        Field(
-            ...,
-            description="(object, variable) pairs to pass into function, \
-                e.g. [('mva', None)]",
         ),
     ]
     scale: Annotated[
@@ -1108,7 +1058,7 @@ class Config(SubscriptableModel):
         if self.general.run_skimming and (not self.preprocess.skimming):
             raise ValueError(
                 "Skimming is enabled but no skimming configuration provided. "
-                "Please provide a SkimmingConfig with selection_function and selection_use."
+                "Please provide a SkimmingConfig with function and use definitions."
             )
 
         if self.statistics is not None:
