@@ -45,9 +45,6 @@ if __name__ == "__main__":
             total_nevts += nevts
             output_info[container] = {"nfiles": nfiles, "size_TB": size, "nevts": nevts}
 
-            break
-        break
-
     print("\n=== total")
     print("  nfiles", total_nfiles)
     print("  size", total_size_TB, unit)
