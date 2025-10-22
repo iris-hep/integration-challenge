@@ -17,7 +17,7 @@ from cuts import lumi_mask
 def get_cross_sections_for_datasets(
     years: List[str],
     dataset_names: List[str],
-    base_path: str = "example-demo/cms_datasets"
+    base_path: str = "example_cms/cms_datasets"
 ) -> Tuple[str, ...]:
     """
     Extract cross-sections for datasets across multiple years.
@@ -116,7 +116,7 @@ datasets_config = [
     # Signal: Z' -> ttbar (M=2000 GeV, W=200 GeV)
     {
         "name": "signal",
-        "directories": tuple(f"example-demo/cms_datasets/{year}/ZPrimeToTT_M2000_W200/" for year in YEARS),
+        "directories": tuple(f"example_cms/cms_datasets/{year}/ZPrimeToTT_M2000_W200/" for year in YEARS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, ["ZPrimeToTT_M2000_W200"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -126,7 +126,7 @@ datasets_config = [
     # TTbar semileptonic
     {
         "name": "ttbar_semilep",
-        "directories": tuple(f"example-demo/cms_datasets/{year}/TTToSemiLeptonic/" for year in YEARS),
+        "directories": tuple(f"example_cms/cms_datasets/{year}/TTToSemiLeptonic/" for year in YEARS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, ["TTToSemiLeptonic"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -136,7 +136,7 @@ datasets_config = [
     # TTbar hadronic
     {
         "name": "ttbar_had",
-        "directories": tuple(f"example-demo/cms_datasets/{year}/TTToHadronic/" for year in YEARS),
+        "directories": tuple(f"example_cms/cms_datasets/{year}/TTToHadronic/" for year in YEARS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, ["TTToHadronic"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -146,7 +146,7 @@ datasets_config = [
     # TTbar dileptonic
     {
         "name": "ttbar_lep",
-        "directories": tuple(f"example-demo/cms_datasets/{year}/TTTo2L2Nu/" for year in YEARS),
+        "directories": tuple(f"example_cms/cms_datasets/{year}/TTTo2L2Nu/" for year in YEARS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, ["TTTo2L2Nu"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -156,7 +156,7 @@ datasets_config = [
     # W+jets (HT-binned, combined across years)
     {
         "name": "wjets",
-        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in WJETS_DATASETS),
+        "directories": tuple(f"example_cms/cms_datasets/{year}/{ds}/" for year in YEARS for ds in WJETS_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, WJETS_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -166,7 +166,7 @@ datasets_config = [
     # DY+jets (HT-binned, combined across years)
     {
         "name": "dyjets",
-        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in DYJETS_DATASETS),
+        "directories": tuple(f"example_cms/cms_datasets/{year}/{ds}/" for year in YEARS for ds in DYJETS_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, DYJETS_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -176,7 +176,7 @@ datasets_config = [
     # Single top (all channels combined)
     {
         "name": "single_top",
-        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in SINGLETOP_DATASETS),
+        "directories": tuple(f"example_cms/cms_datasets/{year}/{ds}/" for year in YEARS for ds in SINGLETOP_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, SINGLETOP_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -186,7 +186,7 @@ datasets_config = [
     # QCD multijet (HT-binned, combined across years)
     {
         "name": "qcd",
-        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in QCD_DATASETS),
+        "directories": tuple(f"example_cms/cms_datasets/{year}/{ds}/" for year in YEARS for ds in QCD_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, QCD_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -196,7 +196,7 @@ datasets_config = [
     # Diboson (WW, WZ, ZZ combined)
     {
         "name": "diboson",
-        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in DIBOSON_DATASETS),
+        "directories": tuple(f"example_cms/cms_datasets/{year}/{ds}/" for year in YEARS for ds in DIBOSON_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, DIBOSON_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -207,7 +207,7 @@ datasets_config = [
     {
         "name": "data",
         "directories": tuple(
-            f"example-demo/cms_datasets/{year}/SingleMuonRun{run}/"
+            f"example_cms/cms_datasets/{year}/SingleMuonRun{run}/"
             for year, runs in [("2016", ["B", "C", "D", "E", "F"]),
                               ("2017", ["B", "C", "D", "E", "F"]),
                               ("2018", ["A", "B", "C", "D"])]
@@ -222,7 +222,7 @@ datasets_config = [
         "lumi_mask": {
             "function": lumi_mask,
             "use": [("event", "run"), ("event", "luminosityBlock")],
-            "static_kwargs": {"lumifile": "./corrections/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt"},
+            "static_kwargs": {"lumifile": "./example_cms/corrections/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt"},
         },
     }
 ]

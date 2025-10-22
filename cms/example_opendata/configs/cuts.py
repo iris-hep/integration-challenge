@@ -14,7 +14,7 @@ def lumi_mask(
 
     This function compares the `(run, lumiBlock)` pairs in the dataset to the
     certified good luminosity sections provided in a JSON file (e.g., from
-    CMS Golden JSON). It supports both CPU and JAX backends.
+    CMS Golden JSON).
 
     Parameters
     ----------
@@ -26,8 +26,6 @@ def lumi_mask(
         Luminosity block numbers for each event in the dataset.
     verbose : bool, optional
         If True, prints additional debug information.
-    jax : bool, optional
-        If True, converts result to JAX backend after masking.
 
     Returns
     -------
@@ -138,7 +136,7 @@ def Zprime_hardcuts(
     muons: ak.Array, jets: ak.Array, fatjets: ak.Array
 ) -> PackedSelection:
     """
-    Define non-optimizable kinematic cuts (used in JAX analysis)
+    Define non-optimizable kinematic cuts.
     These hard cuts + baseline cuts ensure observable calculations
     can work without errors.
 
@@ -181,7 +179,7 @@ def Zprime_hardcuts_no_fj(
     jets: ak.Array,
 ) -> PackedSelection:
     """
-    Define non-optimizable kinematic cuts (used in JAX analysis)
+    Define non-optimizable kinematic cuts.
     These hard cuts + baseline cuts ensure observable calculations
     can work without errors.
 
