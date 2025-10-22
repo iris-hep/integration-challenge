@@ -18,14 +18,12 @@ def lumi_mask(
 
     Parameters
     ----------
-    lumifile : str
-        Path to the JSON file defining the certified good lumi sections.
     run : ak.Array
         Run numbers for each event in the dataset.
     lumiBlock : ak.Array
         Luminosity block numbers for each event in the dataset.
-    verbose : bool, optional
-        If True, prints additional debug information.
+    lumifile : str
+        Path to the JSON file defining the certified good lumi sections.
 
     Returns
     -------
