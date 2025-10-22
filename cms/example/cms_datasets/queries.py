@@ -202,7 +202,7 @@ data_queries = lambda era: {
             for run in era_run_mapping[era]
         }
         if era in (16, 17)
-        else 
+        else
         # era=18
         {
             ProcessInfo(f"EGammaRun{run}", None): QData("EGamma*", era, run)
@@ -275,6 +275,208 @@ def validate_and_resolve_queries(
             progress.advance(task)
     return out
 
+def extract_dataset_sizes_by_process(
+    rucio_client,
+    base_path: str | Path,
+) -> dict[str, dict]:
+    """
+    Extract dataset sizes per process using Rucio.
+
+    This function calculates the total size of datasets grouped by physics process,
+    reading from resolved query files and querying Rucio for actual sizes.
+
+    Parameters
+    ----------
+    rucio_client
+        Rucio client instance for querying dataset sizes
+    base_path : str or Path
+        Base path to the directory containing year folders (2016, 2017, 2018)
+
+    Returns
+    -------
+    dict[str, dict]
+        Dictionary with process names as keys, each containing:
+        - 'datasets': list of individual dataset names
+        - 'total_size_gb': total size in GB across all years
+        - 'sizes_per_year': dict mapping year to size in GB
+        - 'sizes_per_dataset': dict mapping dataset name to total size in GB
+    """
+    from pathlib import Path
+    import json
+
+    base = Path(base_path)
+
+    # Define process groupings
+    process_mapping = {
+        "signal": ["ZPrimeToTT_M2000_W200"],
+        "ttbar_semilep": ["TTToSemiLeptonic"],
+        "ttbar_had": ["TTToHadronic"],
+        "ttbar_lep": ["TTTo2L2Nu"],
+        "wjets": [
+            "WJetsToLNu_HT-70To100",
+            "WJetsToLNu_HT-100To200",
+            "WJetsToLNu_HT-200To400",
+            "WJetsToLNu_HT-400To600",
+            "WJetsToLNu_HT-600To800",
+            "WJetsToLNu_HT-800To1200",
+            "WJetsToLNu_HT-1200To2500",
+            "WJetsToLNu_HT-2500ToInf",
+        ],
+        "dyjets": [
+            "DYJetsToLL_M-50_HT-70to100",
+            "DYJetsToLL_M-50_HT-100to200",
+            "DYJetsToLL_M-50_HT-200to400",
+            "DYJetsToLL_M-50_HT-400to600",
+            "DYJetsToLL_M-50_HT-600to800",
+            "DYJetsToLL_M-50_HT-800to1200",
+            "DYJetsToLL_M-50_HT-1200to2500",
+            "DYJetsToLL_M-50_HT-2500toInf",
+        ],
+        "single_top": [
+            "ST_s-channel_4f",
+            "ST_t-channel_top_4f",
+            "ST_t-channel_antitop_4f",
+            "ST_tW_top_5f",
+            "ST_tW_antitop_5f",
+        ],
+        "qcd": [
+            "QCD_HT50to100",
+            "QCD_HT100to200",
+            "QCD_HT200to300",
+            "QCD_HT300to500",
+            "QCD_HT500to700",
+            "QCD_HT700to1000",
+            "QCD_HT1000to1500",
+            "QCD_HT1500to2000",
+            "QCD_HT2000toInf",
+        ],
+        "diboson": ["WW", "WZ", "ZZ"],
+        "data": [f"SingleMuonRun{run}" for run in ["B", "C", "D", "E", "F"]] + [f"SingleElectronRun{run}" for run in ["B", "C", "D", "E", "F"] ],
+    }
+
+    years = ["2016", "2017", "2018"]
+    summary = {}
+
+    # Count total datasets for progress tracking
+    total_datasets = sum(len(datasets) for datasets in process_mapping.values()) * len(years)
+
+    with Progress(console=console) as progress:
+        task = progress.add_task(
+            "[cyan]Extracting dataset sizes...", total=total_datasets
+        )
+
+        for process, dataset_names in process_mapping.items():
+            summary[process] = {
+                "datasets": dataset_names,
+                "total_size_gb": 0.0,
+                "sizes_per_year": {},
+                "sizes_per_dataset": {},
+            }
+
+            for year in years:
+                year_size = 0.0
+                resolved_file = base / year / "resolved_nanoaod_queries.json"
+
+                if not resolved_file.exists():
+                    console.print(
+                        f"[yellow]Warning: {resolved_file} does not exist, skipping {year}[/yellow]"
+                    )
+                    progress.advance(task, len(dataset_names))
+                    continue
+
+                with open(resolved_file) as f:
+                    resolved_queries = json.load(f)
+
+                for dataset_name in dataset_names:
+                    if dataset_name not in resolved_queries:
+                        progress.advance(task)
+                        continue
+
+                    actual_datasets = resolved_queries[dataset_name]
+                    dataset_size = 0.0
+
+                    for actual_dataset in actual_datasets:
+                        try:
+                            files = list(rucio_client.list_files(scope="cms", name=actual_dataset))
+                            size_bytes = sum(f.get("bytes", 0) for f in files)
+                            dataset_size += size_bytes / (1024**3)
+                        except Exception as e:
+                            console.print(
+                                f"[red]Error querying {actual_dataset}: {e}[/red]"
+                            )
+
+                    year_size += dataset_size
+
+                    if dataset_name not in summary[process]["sizes_per_dataset"]:
+                        summary[process]["sizes_per_dataset"][dataset_name] = 0.0
+                    summary[process]["sizes_per_dataset"][dataset_name] += dataset_size
+
+                    progress.advance(task)
+
+                summary[process]["sizes_per_year"][year] = year_size
+                summary[process]["total_size_gb"] += year_size
+
+    return summary
+
+
+def print_dataset_summary(summary: dict[str, dict]) -> None:
+    """
+    Pretty-print the dataset size summary.
+
+    Parameters
+    ----------
+    summary : dict[str, dict]
+        Output from summarize_dataset_sizes()
+    """
+    from rich.table import Table
+
+    # Overall summary table
+    table = Table(title="Dataset Size Summary by Process")
+    table.add_column("Process", style="cyan", no_wrap=True)
+    table.add_column("# Datasets", justify="right", style="magenta")
+    table.add_column("2016 (GB)", justify="right", style="green")
+    table.add_column("2017 (GB)", justify="right", style="green")
+    table.add_column("2018 (GB)", justify="right", style="green")
+    table.add_column("Total (GB)", justify="right", style="bold green")
+
+    total_overall = 0.0
+    for process, info in sorted(summary.items()):
+        table.add_row(
+            process,
+            str(len(info["datasets"])),
+            f"{info['sizes_per_year'].get('2016', 0):.1f}",
+            f"{info['sizes_per_year'].get('2017', 0):.1f}",
+            f"{info['sizes_per_year'].get('2018', 0):.1f}",
+            f"{info['total_size_gb']:.1f}",
+        )
+        total_overall += info["total_size_gb"]
+
+    table.add_row(
+        "[bold]TOTAL[/bold]",
+        "",
+        "",
+        "",
+        "",
+        f"[bold]{total_overall:.1f}[/bold]",
+    )
+
+    console.print(table)
+
+    # Detailed per-dataset table for multi-dataset processes
+    console.print("\n[bold cyan]Detailed breakdown for combined processes:[/bold cyan]\n")
+
+    for process, info in sorted(summary.items()):
+        if len(info["datasets"]) > 1:
+            detail_table = Table(title=f"{process.upper()} - Individual Datasets")
+            detail_table.add_column("Dataset", style="cyan")
+            detail_table.add_column("Total Size (GB)", justify="right", style="green")
+
+            for dataset_name, size in sorted(info["sizes_per_dataset"].items()):
+                detail_table.add_row(dataset_name, f"{size:.1f}")
+
+            console.print(detail_table)
+            console.print()
+
 
 if __name__ == "__main__":
     # Before running this make sure you have an active voms-proxy, on coffea-casa use:
@@ -329,7 +531,7 @@ if __name__ == "__main__":
             name_to_xsec[name] = pinfo.xsec
 
         # if all good, write to disk
-        base = Path(__file__).parent / f"20{era}"
+        base = Path(__file__).parent / "test" /f"20{era}"
         os.makedirs(base, exist_ok=True)
         # resolved queries
         with open(base / "resolved_nanoaod_queries.json", "w") as f:
@@ -358,3 +560,20 @@ if __name__ == "__main__":
                     with open(ds_path / f"{i}.txt", "w") as f:
                         f.write("\n".join(lfns))
                 progress.advance(task)
+
+    # Extract dataset sizes by process
+    console.print("\n[bold cyan]Extracting dataset sizes by process...[/bold cyan]\n")
+    summary = extract_dataset_sizes_by_process(
+        rucio_client=rucio_client,
+        base_path=Path(__file__).parent / "test",
+    )
+
+    # Save summary to JSON
+    output_path = Path(__file__).parent / "test" / "dataset_sizes_summary.json"
+    with open(output_path, "w") as f:
+        json.dump(summary, f, indent=2)
+    console.print(f"\n[bold green]Summary saved to {output_path}[/bold green]\n")
+
+    # Print summary table
+    print_dataset_summary(summary)
+
