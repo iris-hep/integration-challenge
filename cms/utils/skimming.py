@@ -11,7 +11,7 @@ import hashlib
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
 from collections import defaultdict
 
 import awkward as ak
@@ -24,7 +24,7 @@ from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from coffea.processor.executor import WorkItem
 from tabulate import tabulate
 
-from utils.schema import SkimmingConfig
+from utils.schema import SkimmingConfig, SkimOutputConfig
 from utils.tools import get_function_arguments
 from utils.logging import setup_logging
 
@@ -117,6 +117,7 @@ def workitem_analysis(
     dummy_hist = default_histogram()
 
     try:
+        output_files: List[str] = []
         # Extract workitem metadata
         filename = workitem.filename
         treename = workitem.treename
@@ -167,15 +168,19 @@ def workitem_analysis(
             dummy_values = [500.0] * min(processed_events, 100)
             dummy_hist.fill(dummy_values)
 
-        output_files = []
-        if processed_events > 0:
-            output_file = _create_output_file_path(
-                workitem, output_manager, file_counters, part_counters
-            )
-            _save_workitem_output(
-                filtered_events, output_file, config, configuration, is_mc
-            )
-            output_files.append(str(output_file))
+        output_path, is_local = _resolve_output_path(
+            workitem,
+            config.output,
+            output_manager,
+            file_counters,
+            part_counters,
+        )
+        if is_local:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+        _save_workitem_output(
+            filtered_events, output_path, config, configuration, is_mc
+        )
+        output_files.append(str(output_path))
 
         return {
             "hist": dummy_hist,
@@ -246,132 +251,18 @@ def reduce_results(
         "failure_infos": failure_infos,
     }
 
-def _get_output_file_path(
-    workitem: WorkItem,
-    output_manager,
-    file_counters: Dict[str, int],
-    part_counters: Dict[str, int],
-):
-    """
-    Get output file path following the existing pattern with entry-range-based
-    counters.
-
-    Uses the same output structure as the current skimming code:
-    {skimmed_dir}/{dataset}/file__{file_idx}/part_{chunk}.root
-
-    Parameters
-    ----------
-    workitem : WorkItem
-        The workitem being processed
-    output_manager : OutputDirectoryManager
-        Centralized output directory manager
-    file_counters : Dict[str, int]
-        Pre-computed mapping of file keys to file numbers
-    part_counters : Dict[str, int]
-        Pre-computed mapping of part keys (including entry ranges) to part numbers
-
-    Returns
-    -------
-    Path
-        Full path to the output file
-    """
-    dataset = workitem.dataset
-
-    # Create keys that include entry ranges for proper differentiation
-    file_key = f"{dataset}::{workitem.filename}"
-    part_key = f"{file_key}::{workitem.entrystart}_{workitem.entrystop}"
-
-    # Get pre-computed file and part numbers
-    file_number = file_counters[file_key]
-    part_number = part_counters[part_key]
-
-    # Create output directory structure using output manager
-    skimmed_dir = output_manager.get_skimmed_dir()
-    dataset_dir = skimmed_dir / dataset / f"file__{file_number}"
-
-    # Create output filename with entry-range-based part number
-    output_filename = f"part_{part_number}.parquet"
-
-    path = dataset_dir / output_filename
-
-    return f"s3://{path.as_posix()}"
-
-def _create_output_file_path(
-    workitem: WorkItem,
-    output_manager,
-    file_counters: Dict[str, int],
-    part_counters: Dict[str, int],
-) -> Path:
-    """
-    Create output file path following the existing pattern with entry-range-based
-    counters.
-
-    Uses the same output structure as the current skimming code:
-    {skimmed_dir}/{dataset}/file__{file_idx}/part_{chunk}.root
-
-    Parameters
-    ----------
-    workitem : WorkItem
-        The workitem being processed
-    output_manager : OutputDirectoryManager
-        Centralized output directory manager
-    file_counters : Dict[str, int]
-        Pre-computed mapping of file keys to file numbers
-    part_counters : Dict[str, int]
-        Pre-computed mapping of part keys (including entry ranges) to part numbers
-
-    """
-    path = _get_output_file_path(workitem,
-                                 output_manager,
-                                 file_counters,
-                                 part_counters)
-    pathobj = Path(path)
-    pathobj.parents[0].mkdir(parents=True, exist_ok=True)
-
-    return path
-
-
-def _save_workitem_output(
+def _extract_output_columns(
     events: Any,
-    output_file: Path,
-    config: SkimmingConfig,
-    configuration: Any,
-    is_mc: bool,
-) -> None:
-    """
-    Save filtered events to output parquet file.
-
-    This function handles the actual I/O of saving skimmed events to disk,
-    using the same branch selection logic as the existing skimming code.
-
-    Parameters
-    ----------
-    events : Any
-        Filtered events to save
-    output_file : Path
-        Output file path
-    config : SkimmingConfig
-        Skimming configuration
-    configuration : Any
-        Main analysis configuration with branch selections
-    is_mc : bool
-        Whether this is Monte Carlo data
-    """
-    # Build branches to keep using existing logic
-    branches_to_keep = _build_branches_to_keep(configuration, is_mc)
-
-    # Prepare data for writing
-    output_data = {}
-
-    # Extract branches following the existing pattern
+    branches_to_keep: Dict[str, List[str]],
+) -> Dict[str, Any]:
+    """Extract the branch data that should be persisted."""
+    output_data: Dict[str, Any] = {}
     for obj, obj_branches in branches_to_keep.items():
         if obj == "event":
-            # Event-level branches
             for branch in obj_branches:
                 if hasattr(events, branch):
                     output_data[branch] = getattr(events, branch)
         else:
-            # Object collection branches
             if hasattr(events, obj):
                 obj_collection = getattr(events, obj)
                 for branch in obj_branches:
@@ -380,21 +271,90 @@ def _save_workitem_output(
                             obj_collection, branch
                         )
 
-    # Write to parquet file
-    if output_data:
-        print(str(output_file))
-        ak.to_parquet(
-            ak.zip(output_data, depth_limit=1),
-            "s3://" + str(output_file),
-            compression="zstd",
-            storage_options={
-                "key": os.environ['AWS_ACCESS_KEY_ID'],
-                "secret": os.environ['AWS_SECRET_ACCESS_KEY'],
-                "client_kwargs": {
-                "endpoint_url": "https://red-s3.unl.edu/cmsaf-test-oshadura",
-                },
-            }
+    return output_data
+
+
+def _build_parquet_payload(
+    output_columns: Dict[str, Any]
+) -> Optional[ak.Array]:
+    """Construct the awkward payload used for parquet serialization."""
+    if not output_columns:
+        return None
+
+    return ak.zip(output_columns, depth_limit=1)
+
+
+def _resolve_output_path(
+    workitem: WorkItem,
+    output_cfg: SkimOutputConfig,
+    output_manager,
+    file_counters: Dict[str, int],
+    part_counters: Dict[str, int],
+) -> Tuple[Union[Path, str], bool]:
+    """Resolve the destination path/URI for a skimmed output file."""
+    dataset = workitem.dataset
+    file_key = f"{dataset}::{workitem.filename}"
+    file_index = file_counters[file_key]
+    part_key = f"{file_key}::{workitem.entrystart}_{workitem.entrystop}"
+    part_index = part_counters[part_key]
+
+    suffix = _build_output_suffix(dataset, file_index, part_index, output_cfg.format)
+
+    if output_cfg.protocol == "local":
+        base_dir = Path(output_manager.get_skimmed_dir())
+        return base_dir / suffix, True
+
+    base_uri = (output_cfg.base_uri or "").rstrip("/")
+    if not base_uri:
+        raise ValueError(
+            f"Skim output protocol '{output_cfg.protocol}' requires a base_uri"
         )
+    return f"{base_uri}/{suffix}", output_cfg.protocol == "local"
+
+
+def _save_workitem_output(
+    events: Any,
+    output_file: Union[Path, str],
+    config: SkimmingConfig,
+    configuration: Any,
+    is_mc: bool,
+) -> None:
+    """
+    Persist filtered events according to the configured skim output.
+
+    Parameters
+    ----------
+    events : Any
+        Filtered events to save.
+    output_file : Path or str
+        Destination path URI.
+    config : SkimmingConfig
+        Skimming configuration.
+    configuration : Any
+        Main analysis configuration with branch selections.
+    is_mc : bool
+        Whether this dataset represents Monte Carlo data.
+    """
+    output_cfg = config.output
+    path_str = str(output_file)
+    writer_kwargs = output_cfg.to_kwargs or {}
+    branches_to_keep = _build_branches_to_keep(configuration, is_mc)
+    output_columns = _extract_output_columns(events, branches_to_keep)
+
+    if output_cfg.format == "parquet":
+        payload = _build_parquet_payload(output_columns)
+        if payload is None:
+            logger.warning("No branches extracted for parquet output; skipping write.")
+            return
+        ak.to_parquet(payload, path_str, **writer_kwargs)
+    elif output_cfg.format == "root_ttree":
+        raise NotImplementedError("ROOT TTree output is not yet implemented.")
+    elif output_cfg.format == "rntuple":
+        raise NotImplementedError("RNTuple output is not yet implemented.")
+    elif output_cfg.format == "safetensors":
+        raise NotImplementedError("safetensors output is not yet implemented.")
+    else:
+        raise ValueError(f"Unsupported skim output format: {output_cfg.format}")
 
 
 def _build_branches_to_keep(
@@ -434,6 +394,27 @@ def _build_branches_to_keep(
             filtered[obj] = obj_branches
 
     return filtered
+
+
+def _build_output_suffix(
+    dataset: str,
+    file_index: int,
+    part_index: int,
+    fmt: str,
+) -> str:
+    """Construct the relative output path for a skimmed chunk."""
+    extension_map = {
+        "parquet": ".parquet",
+        "root_ttree": ".root",
+        "rntuple": ".ntuple",
+        "safetensors": ".safetensors",
+    }
+    try:
+        extension = extension_map[fmt]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported output format '{fmt}'.") from exc
+
+    return f"{dataset}/file_{file_index}/part_{part_index}{extension}"
 
 
 class WorkitemSkimmingManager:
@@ -614,7 +595,6 @@ class WorkitemSkimmingManager:
         List[str]
             List of existing output file paths
         """
-        from s3pathlib import S3Path
         output_files = []
         dataset_counts = {}
 
@@ -622,16 +602,21 @@ class WorkitemSkimmingManager:
         file_counters, part_counters = self._compute_counters(workitems)
 
         for workitem in workitems:
-            expected_output = _get_output_file_path(
-                workitem, self.output_manager, file_counters, part_counters
+            resolved_path, is_local = _resolve_output_path(
+                workitem,
+                self.config.output,
+                self.output_manager,
+                file_counters,
+                part_counters,
             )
-            print("Exepected", expected_output,  os.path.exists(expected_output))
 
-            if S3Path(expected_output).exists:
-                # Parquet files don't have tree names, just add the path
-                output_files.append(str(expected_output))
+            if not is_local:
+                continue
 
-                # Count files per dataset
+            path_obj = Path(resolved_path)
+            if path_obj.exists():
+                output_files.append(str(path_obj))
+
                 dataset = workitem.dataset
                 dataset_counts[dataset] = dataset_counts.get(dataset, 0) + 1
 
@@ -884,7 +869,8 @@ def process_workitems_with_skimming(
     logger.info(f"Starting workitem preprocessing with {len(workitems)} workitems")
 
     # Create workitem skimming manager
-    skimming_manager = WorkitemSkimmingManager(config.preprocess.skimming, output_manager)
+    skimming_config = config.preprocess.skimming
+    skimming_manager = WorkitemSkimmingManager(skimming_config, output_manager)
 
     # Group workitems by dataset (fileset_key)
     workitems_by_dataset = {}
@@ -1019,20 +1005,21 @@ def process_workitems_with_skimming(
             all_events = []
             total_events_loaded = 0
 
+            if skimming_config.output.format != "parquet":
+                raise NotImplementedError(
+                    f"Reading skim output format '{skimming_config.output.format}' "
+                    "is not implemented."
+                )
+
+            load_kwargs = dict(skimming_config.output.from_kwargs or {})
+            load_kwargs.setdefault("schemaclass", NanoAODSchema)
+
             for file_path in output_files:
                 try:
-                    # Load events from parquet file with NanoAOD schema
-                    # Note: NanoEventsFactory.from_parquet requires string path, not Path object
-                    events = NanoEventsFactory.from_parquet(
-                        str(file_path), schemaclass=NanoAODSchema,
-                        storage_options={
-                                            "key": os.environ['AWS_ACCESS_KEY_ID'],
-                                            "secret": os.environ['AWS_SECRET_ACCESS_KEY'],
-                                            "client_kwargs": {
-                                            "endpoint_url": "https://red-s3.unl.edu/cmsaf-test-oshadura",
-                                            },
-                                        },
-                    ).events()
+                    reader = NanoEventsFactory.from_parquet(
+                        str(file_path), **load_kwargs
+                    )
+                    events = reader.events()
                     # Note: ak.materialize() causes errors with NanoEventsFactory parquet sources
                     all_events.append(events)
                     total_events_loaded += len(events)

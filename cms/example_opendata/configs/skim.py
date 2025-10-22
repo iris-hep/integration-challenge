@@ -73,7 +73,7 @@ datasets_config = [
         "lumi_mask": {
             "function": lumi_mask,
             "use": [("event", "run"), ("event", "luminosityBlock")],
-            "static_kwargs": {"lumifile": "./corrections/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt"},
+            "static_kwargs": {"lumifile": "./example_opendata/corrections/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.json"},
         },
     }
 ]

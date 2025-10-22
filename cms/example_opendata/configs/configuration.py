@@ -51,7 +51,7 @@ general_config = {
         "run_mva_training": False,
         "run_metadata_generation": False,
         "read_from_cache": True,
-        "output_dir": "example/outputs/",
+        "output_dir": "example_opendata/outputs/",
         "lumifile": "./example_opendata/corrections/Cert_271036-284044_13TeV_Legacy2016_"\
             "Collisions16_JSON.txt",
         "cache_dir": "/tmp/integration/",

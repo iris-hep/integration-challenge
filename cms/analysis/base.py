@@ -302,9 +302,9 @@ class Analysis:
         syst_name: str,
         syst_function: Callable[..., ak.Array],
         function_args: List[ak.Array],
-        static_kwargs: Optional[Dict[str, Any]] = None,
         affected_arrays: Union[ak.Array, List[ak.Array]],
         operation: str,
+        static_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Union[ak.Array, List[ak.Array]]:
         """
         Apply function-based systematic variation.
@@ -507,9 +507,9 @@ class Analysis:
                         syst_name=correction.name,
                         syst_function=syst_func,
                         function_args=corr_args,
-                        static_kwargs=corr_static_kwargs,
                         affected_arrays=targets,
                         operation=operation,
+                        static_kwargs=corr_static_kwargs,
                     )
                 else:
                     corrected_values = targets
@@ -581,9 +581,9 @@ class Analysis:
                     syst_name=systematic.name,
                     syst_function=syst_func,
                     function_args=weight_args,
-                    static_kwargs=weight_static_kwargs,
                     affected_arrays=weights,
                     operation=operation,
+                    static_kwargs=weight_static_kwargs,
                 )
             return weights
 
