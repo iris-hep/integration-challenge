@@ -1,0 +1,1912 @@
+{
+    "data15_13TeV:data15_13TeV.periodAllYear.physics_Main.PhysCont.DAOD_PHYSLITE.grp15_v01_p6697": {
+        "nevts": 1694555330,
+        "nfiles": 29757,
+        "size_TB": 10.507
+    },
+    "data16_13TeV:data16_13TeV.periodAllYear.physics_Main.PhysCont.DAOD_PHYSLITE.grp16_v01_p6697": {
+        "nevts": 5383448881,
+        "nfiles": 73570,
+        "size_TB": 39.898
+    },
+    "data17_13TeV:data17_13TeV.periodAllYear.physics_Main.PhysCont.DAOD_PHYSLITE.grp17_v01_p6697": {
+        "nevts": 5629238599,
+        "nfiles": 92724,
+        "size_TB": 45.701
+    },
+    "data18_13TeV:data18_13TeV.periodAllYear.physics_Main.PhysCont.DAOD_PHYSLITE.grp18_v01_p6697": {
+        "nevts": 6367686831,
+        "nfiles": 115188,
+        "size_TB": 53.135
+    },
+    "data22_13p6TeV:data22_13p6TeV.periodAllYear.physics_Main.PhysCont.DAOD_PHYSLITE.grp22_v02_p6700": {
+        "nevts": 3469785536,
+        "nfiles": 33064,
+        "size_TB": 23.263
+    },
+    "data23_13p6TeV:data23_13p6TeV.periodAllYear.physics_Main.PhysCont.DAOD_PHYSLITE.grp23_v01_p6700": {
+        "nevts": 2859125391,
+        "nfiles": 30164,
+        "size_TB": 21.134
+    },
+    "data24_13p6TeV:data24_13p6TeV.periodAllYear.physics_Main.PhysCont.DAOD_PHYSLITE.grp24_v01_p6700": {
+        "nevts": 13605714880,
+        "nfiles": 176481,
+        "size_TB": 114.801
+    },
+    "mc20_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_PHYSLITE.e6337_s3681_r13144_r13146_p6697": {
+        "nevts": 149677000,
+        "nfiles": 4313,
+        "size_TB": 2.328
+    },
+    "mc20_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_PHYSLITE.e6337_s3681_r13145_r13146_p6697": {
+        "nevts": 197708000,
+        "nfiles": 3285,
+        "size_TB": 3.137
+    },
+    "mc20_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_PHYSLITE.e6337_s3681_r13167_r13146_p6697": {
+        "nevts": 118733000,
+        "nfiles": 2278,
+        "size_TB": 1.719
+    },
+    "mc20_13TeV.410480.PhPy8EG_A14_ttbar_hdamp517p5_SingleLep.deriv.DAOD_PHYSLITE.e6454_a907_r14859_p6697": {
+        "nevts": 96464000,
+        "nfiles": 2798,
+        "size_TB": 1.417
+    },
+    "mc20_13TeV.410480.PhPy8EG_A14_ttbar_hdamp517p5_SingleLep.deriv.DAOD_PHYSLITE.e6454_a907_r14860_p6697": {
+        "nevts": 120400000,
+        "nfiles": 1546,
+        "size_TB": 1.882
+    },
+    "mc20_13TeV.410480.PhPy8EG_A14_ttbar_hdamp517p5_SingleLep.deriv.DAOD_PHYSLITE.e6454_a907_r14861_p6697": {
+        "nevts": 158486000,
+        "nfiles": 2908,
+        "size_TB": 2.538
+    },
+    "mc20_13TeV.410482.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e6454_a907_r14859_p6697": {
+        "nevts": 79958000,
+        "nfiles": 1107,
+        "size_TB": 1.115
+    },
+    "mc20_13TeV.410482.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e6454_a907_r14860_p6697": {
+        "nevts": 99668000,
+        "nfiles": 1751,
+        "size_TB": 1.491
+    },
+    "mc20_13TeV.410482.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e6454_a907_r14861_p6697": {
+        "nevts": 129242000,
+        "nfiles": 2148,
+        "size_TB": 1.985
+    },
+    "mc20_13TeV.410644.PowhegPythia8EvtGen_A14_singletop_schan_lept_top.deriv.DAOD_PHYSLITE.e6527_s3681_r13144_r13146_p6697": {
+        "nevts": 2508000,
+        "nfiles": 40,
+        "size_TB": 0.03141
+    },
+    "mc20_13TeV.410644.PowhegPythia8EvtGen_A14_singletop_schan_lept_top.deriv.DAOD_PHYSLITE.e6527_s3681_r13145_r13146_p6697": {
+        "nevts": 3295000,
+        "nfiles": 52,
+        "size_TB": 0.042345999999999995
+    },
+    "mc20_13TeV.410644.PowhegPythia8EvtGen_A14_singletop_schan_lept_top.deriv.DAOD_PHYSLITE.e6527_s3681_r13167_r13146_p6697": {
+        "nevts": 2000000,
+        "nfiles": 23,
+        "size_TB": 0.023013000000000002
+    },
+    "mc20_13TeV.410645.PowhegPythia8EvtGen_A14_singletop_schan_lept_antitop.deriv.DAOD_PHYSLITE.e6527_s3681_r13144_r13146_p6697": {
+        "nevts": 2510000,
+        "nfiles": 44,
+        "size_TB": 0.031324000000000005
+    },
+    "mc20_13TeV.410645.PowhegPythia8EvtGen_A14_singletop_schan_lept_antitop.deriv.DAOD_PHYSLITE.e6527_s3681_r13145_r13146_p6697": {
+        "nevts": 3317000,
+        "nfiles": 59,
+        "size_TB": 0.042506
+    },
+    "mc20_13TeV.410645.PowhegPythia8EvtGen_A14_singletop_schan_lept_antitop.deriv.DAOD_PHYSLITE.e6527_s3681_r13167_r13146_p6697": {
+        "nevts": 2000000,
+        "nfiles": 23,
+        "size_TB": 0.022928999999999998
+    },
+    "mc20_13TeV.410658.PhPy8EG_A14_tchan_BW50_lept_top.deriv.DAOD_PHYSLITE.e6671_s3681_r13144_r13146_p6697": {
+        "nevts": 31170000,
+        "nfiles": 904,
+        "size_TB": 0.383529
+    },
+    "mc20_13TeV.410658.PhPy8EG_A14_tchan_BW50_lept_top.deriv.DAOD_PHYSLITE.e6671_s3681_r13145_r13146_p6697": {
+        "nevts": 41601900,
+        "nfiles": 1138,
+        "size_TB": 0.526814
+    },
+    "mc20_13TeV.410658.PhPy8EG_A14_tchan_BW50_lept_top.deriv.DAOD_PHYSLITE.e6671_s3681_r13167_r13146_p6697": {
+        "nevts": 24934500,
+        "nfiles": 273,
+        "size_TB": 0.280885
+    },
+    "mc20_13TeV.410659.PhPy8EG_A14_tchan_BW50_lept_antitop.deriv.DAOD_PHYSLITE.e6671_s3681_r13144_r13146_p6697": {
+        "nevts": 31182000,
+        "nfiles": 390,
+        "size_TB": 0.383257
+    },
+    "mc20_13TeV.410659.PhPy8EG_A14_tchan_BW50_lept_antitop.deriv.DAOD_PHYSLITE.e6671_s3681_r13145_r13146_p6697": {
+        "nevts": 41584500,
+        "nfiles": 576,
+        "size_TB": 0.525562
+    },
+    "mc20_13TeV.410659.PhPy8EG_A14_tchan_BW50_lept_antitop.deriv.DAOD_PHYSLITE.e6671_s3681_r13167_r13146_p6697": {
+        "nevts": 24952500,
+        "nfiles": 306,
+        "size_TB": 0.282802
+    },
+    "mc20_13TeV.411233.PowhegHerwig7EvtGen_tt_hdamp258p75_713_SingleLep.deriv.DAOD_PHYSLITE.e7580_a907_r14859_p6697": {
+        "nevts": 98150000,
+        "nfiles": 1687,
+        "size_TB": 1.446
+    },
+    "mc20_13TeV.411233.PowhegHerwig7EvtGen_tt_hdamp258p75_713_SingleLep.deriv.DAOD_PHYSLITE.e7580_a907_r14860_p6697": {
+        "nevts": 125954000,
+        "nfiles": 1900,
+        "size_TB": 1.987
+    },
+    "mc20_13TeV.411233.PowhegHerwig7EvtGen_tt_hdamp258p75_713_SingleLep.deriv.DAOD_PHYSLITE.e7580_a907_r14861_p6697": {
+        "nevts": 166382000,
+        "nfiles": 3724,
+        "size_TB": 2.693
+    },
+    "mc20_13TeV.411234.PowhegHerwig7EvtGen_tt_hdamp258p75_713_dil.deriv.DAOD_PHYSLITE.e7580_a907_r14859_p6697": {
+        "nevts": 79268000,
+        "nfiles": 1291,
+        "size_TB": 1.106
+    },
+    "mc20_13TeV.411234.PowhegHerwig7EvtGen_tt_hdamp258p75_713_dil.deriv.DAOD_PHYSLITE.e7580_a907_r14860_p6697": {
+        "nevts": 98822000,
+        "nfiles": 1876,
+        "size_TB": 1.488
+    },
+    "mc20_13TeV.411234.PowhegHerwig7EvtGen_tt_hdamp258p75_713_dil.deriv.DAOD_PHYSLITE.e7580_a907_r14861_p6697": {
+        "nevts": 132040000,
+        "nfiles": 2319,
+        "size_TB": 2.038
+    },
+    "mc20_13TeV.504330.aMCPy8EG_NNPDF30NLO_A14N23LO_ttee.deriv.DAOD_PHYSLITE.e8255_s3797_r13144_p6697": {
+        "nevts": 1890000,
+        "nfiles": 40,
+        "size_TB": 0.035127000000000005
+    },
+    "mc20_13TeV.504330.aMCPy8EG_NNPDF30NLO_A14N23LO_ttee.deriv.DAOD_PHYSLITE.e8255_s3797_r13145_p6697": {
+        "nevts": 2479000,
+        "nfiles": 46,
+        "size_TB": 0.04715
+    },
+    "mc20_13TeV.504330.aMCPy8EG_NNPDF30NLO_A14N23LO_ttee.deriv.DAOD_PHYSLITE.e8255_s3797_r13167_p6697": {
+        "nevts": 1480000,
+        "nfiles": 30,
+        "size_TB": 0.025913
+    },
+    "mc20_13TeV.504334.aMCPy8EG_NNPDF30NLO_A14N23LO_ttmumu.deriv.DAOD_PHYSLITE.e8255_s3797_r13144_p6697": {
+        "nevts": 1870000,
+        "nfiles": 70,
+        "size_TB": 0.034668
+    },
+    "mc20_13TeV.504334.aMCPy8EG_NNPDF30NLO_A14N23LO_ttmumu.deriv.DAOD_PHYSLITE.e8255_s3797_r13145_p6697": {
+        "nevts": 2489000,
+        "nfiles": 48,
+        "size_TB": 0.046881
+    },
+    "mc20_13TeV.504334.aMCPy8EG_NNPDF30NLO_A14N23LO_ttmumu.deriv.DAOD_PHYSLITE.e8255_s3797_r13167_p6697": {
+        "nevts": 1499000,
+        "nfiles": 30,
+        "size_TB": 0.025978
+    },
+    "mc20_13TeV.504338.aMCPy8EG_NNPDF30NLO_A14N23LO_ttZqq.deriv.DAOD_PHYSLITE.e8255_s3797_r13144_p6697": {
+        "nevts": 3708000,
+        "nfiles": 172,
+        "size_TB": 0.07013
+    },
+    "mc20_13TeV.504338.aMCPy8EG_NNPDF30NLO_A14N23LO_ttZqq.deriv.DAOD_PHYSLITE.e8255_s3797_r13145_p6697": {
+        "nevts": 4920000,
+        "nfiles": 128,
+        "size_TB": 0.094258
+    },
+    "mc20_13TeV.504338.aMCPy8EG_NNPDF30NLO_A14N23LO_ttZqq.deriv.DAOD_PHYSLITE.e8255_s3797_r13167_p6697": {
+        "nevts": 2937000,
+        "nfiles": 97,
+        "size_TB": 0.05238
+    },
+    "mc20_13TeV.504342.aMCPy8EG_NNPDF30NLO_A14N23LO_tttautau.deriv.DAOD_PHYSLITE.e8255_s3797_r13144_p6697": {
+        "nevts": 1900000,
+        "nfiles": 53,
+        "size_TB": 0.034544
+    },
+    "mc20_13TeV.504342.aMCPy8EG_NNPDF30NLO_A14N23LO_tttautau.deriv.DAOD_PHYSLITE.e8255_s3797_r13145_p6697": {
+        "nevts": 2499000,
+        "nfiles": 121,
+        "size_TB": 0.046686
+    },
+    "mc20_13TeV.504342.aMCPy8EG_NNPDF30NLO_A14N23LO_tttautau.deriv.DAOD_PHYSLITE.e8255_s3797_r13167_p6697": {
+        "nevts": 1479000,
+        "nfiles": 30,
+        "size_TB": 0.025355
+    },
+    "mc20_13TeV.504346.aMCPy8EG_NNPDF30NLO_A14N23LO_ttZnunu.deriv.DAOD_PHYSLITE.e8255_s3797_r13144_p6697": {
+        "nevts": 1859000,
+        "nfiles": 36,
+        "size_TB": 0.031139
+    },
+    "mc20_13TeV.504346.aMCPy8EG_NNPDF30NLO_A14N23LO_ttZnunu.deriv.DAOD_PHYSLITE.e8255_s3797_r13145_p6697": {
+        "nevts": 2480000,
+        "nfiles": 48,
+        "size_TB": 0.042419
+    },
+    "mc20_13TeV.504346.aMCPy8EG_NNPDF30NLO_A14N23LO_ttZnunu.deriv.DAOD_PHYSLITE.e8255_s3797_r13167_p6697": {
+        "nevts": 1480000,
+        "nfiles": 49,
+        "size_TB": 0.023417999999999998
+    },
+    "mc20_13TeV.525955.aMCPy8EG_tWZ_Ztoll_DR1.deriv.DAOD_PHYSLITE.e8553_s4231_r13144_r13146_p6697": {
+        "nevts": 1498000,
+        "nfiles": 29,
+        "size_TB": 0.026428999999999998
+    },
+    "mc20_13TeV.525955.aMCPy8EG_tWZ_Ztoll_DR1.deriv.DAOD_PHYSLITE.e8553_s4231_r13145_r13146_p6697": {
+        "nevts": 1490000,
+        "nfiles": 27,
+        "size_TB": 0.026949999999999998
+    },
+    "mc20_13TeV.525955.aMCPy8EG_tWZ_Ztoll_DR1.deriv.DAOD_PHYSLITE.e8553_s4231_r13167_r13146_p6697": {
+        "nevts": 1485000,
+        "nfiles": 19,
+        "size_TB": 0.02462
+    },
+    "mc20_13TeV.545027.aMCPy8EG_tllq_4FS_HT6.deriv.DAOD_PHYSLITE.e8564_s3797_r13144_p6697": {
+        "nevts": 11196000,
+        "nfiles": 257,
+        "size_TB": 0.172648
+    },
+    "mc20_13TeV.545027.aMCPy8EG_tllq_4FS_HT6.deriv.DAOD_PHYSLITE.e8564_s3797_r13145_p6697": {
+        "nevts": 14698000,
+        "nfiles": 449,
+        "size_TB": 0.23353800000000002
+    },
+    "mc20_13TeV.545027.aMCPy8EG_tllq_4FS_HT6.deriv.DAOD_PHYSLITE.e8564_s3797_r13167_p6697": {
+        "nevts": 9067000,
+        "nfiles": 80,
+        "size_TB": 0.130138
+    },
+    "mc20_13TeV.545028.aMCPy8EG_tbarllq_4FS_HT6.deriv.DAOD_PHYSLITE.e8564_s3797_r13144_p6697": {
+        "nevts": 11195000,
+        "nfiles": 84,
+        "size_TB": 0.171602
+    },
+    "mc20_13TeV.545028.aMCPy8EG_tbarllq_4FS_HT6.deriv.DAOD_PHYSLITE.e8564_s3797_r13145_p6697": {
+        "nevts": 14687000,
+        "nfiles": 338,
+        "size_TB": 0.23178800000000002
+    },
+    "mc20_13TeV.545028.aMCPy8EG_tbarllq_4FS_HT6.deriv.DAOD_PHYSLITE.e8564_s3797_r13167_p6697": {
+        "nevts": 9078000,
+        "nfiles": 119,
+        "size_TB": 0.12976
+    },
+    "mc20_13TeV.601352.PhPy8EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8547_s4231_r13144_p6697": {
+        "nevts": 12495000,
+        "nfiles": 254,
+        "size_TB": 0.180264
+    },
+    "mc20_13TeV.601352.PhPy8EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8547_s4231_r13145_p6697": {
+        "nevts": 16598000,
+        "nfiles": 332,
+        "size_TB": 0.245208
+    },
+    "mc20_13TeV.601352.PhPy8EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8547_s4231_r13167_p6697": {
+        "nevts": 9985000,
+        "nfiles": 154,
+        "size_TB": 0.133822
+    },
+    "mc20_13TeV.601355.PhPy8EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8547_s4231_r13144_p6697": {
+        "nevts": 12486000,
+        "nfiles": 127,
+        "size_TB": 0.1797
+    },
+    "mc20_13TeV.601355.PhPy8EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8547_s4231_r13145_p6697": {
+        "nevts": 16573000,
+        "nfiles": 253,
+        "size_TB": 0.24441200000000002
+    },
+    "mc20_13TeV.601355.PhPy8EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8547_s4231_r13167_p6697": {
+        "nevts": 9976000,
+        "nfiles": 225,
+        "size_TB": 0.13396799999999998
+    },
+    "mc20_13TeV.601627.PhPy8EG_tW_DS_dyn_incl_antitop.deriv.DAOD_PHYSLITE.e8482_s3681_r13144_r13146_p6697": {
+        "nevts": 12474000,
+        "nfiles": 307,
+        "size_TB": 0.177404
+    },
+    "mc20_13TeV.601627.PhPy8EG_tW_DS_dyn_incl_antitop.deriv.DAOD_PHYSLITE.e8482_s3681_r13145_r13146_p6697": {
+        "nevts": 16567000,
+        "nfiles": 294,
+        "size_TB": 0.24098599999999998
+    },
+    "mc20_13TeV.601627.PhPy8EG_tW_DS_dyn_incl_antitop.deriv.DAOD_PHYSLITE.e8482_s3681_r13167_r13146_p6697": {
+        "nevts": 9971000,
+        "nfiles": 128,
+        "size_TB": 0.131594
+    },
+    "mc20_13TeV.601631.PhPy8EG_tW_DS_dyn_incl_top.deriv.DAOD_PHYSLITE.e8482_s3681_r13144_r13146_p6697": {
+        "nevts": 12474000,
+        "nfiles": 254,
+        "size_TB": 0.177398
+    },
+    "mc20_13TeV.601631.PhPy8EG_tW_DS_dyn_incl_top.deriv.DAOD_PHYSLITE.e8482_s3681_r13145_r13146_p6697": {
+        "nevts": 16552000,
+        "nfiles": 255,
+        "size_TB": 0.241081
+    },
+    "mc20_13TeV.601631.PhPy8EG_tW_DS_dyn_incl_top.deriv.DAOD_PHYSLITE.e8482_s3681_r13167_r13146_p6697": {
+        "nevts": 9928000,
+        "nfiles": 141,
+        "size_TB": 0.131261
+    },
+    "mc20_13TeV.602235.PhH7EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8547_a907_r14859_p6697": {
+        "nevts": 9956000,
+        "nfiles": 132,
+        "size_TB": 0.126869
+    },
+    "mc20_13TeV.602235.PhH7EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8547_a907_r14860_p6697": {
+        "nevts": 12496000,
+        "nfiles": 217,
+        "size_TB": 0.172403
+    },
+    "mc20_13TeV.602235.PhH7EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8547_a907_r14861_p6697": {
+        "nevts": 16570000,
+        "nfiles": 267,
+        "size_TB": 0.23475100000000002
+    },
+    "mc20_13TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8547_a907_r14859_p6697": {
+        "nevts": 9996000,
+        "nfiles": 253,
+        "size_TB": 0.128049
+    },
+    "mc20_13TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8547_a907_r14860_p6697": {
+        "nevts": 12496000,
+        "nfiles": 415,
+        "size_TB": 0.17274799999999998
+    },
+    "mc20_13TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8547_a907_r14861_p6697": {
+        "nevts": 16590000,
+        "nfiles": 333,
+        "size_TB": 0.234157
+    },
+    "mc20_13TeV.700320.Sh_2211_Zee_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 50084000,
+        "nfiles": 565,
+        "size_TB": 0.7363529999999999
+    },
+    "mc20_13TeV.700320.Sh_2211_Zee_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 94976600,
+        "nfiles": 1878,
+        "size_TB": 1.447
+    },
+    "mc20_13TeV.700320.Sh_2211_Zee_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 53342000,
+        "nfiles": 876,
+        "size_TB": 0.734783
+    },
+    "mc20_13TeV.700321.Sh_2211_Zee_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 120962000,
+        "nfiles": 2024,
+        "size_TB": 1.679
+    },
+    "mc20_13TeV.700321.Sh_2211_Zee_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 158435000,
+        "nfiles": 2937,
+        "size_TB": 2.266
+    },
+    "mc20_13TeV.700321.Sh_2211_Zee_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 93338000,
+        "nfiles": 1717,
+        "size_TB": 1.206
+    },
+    "mc20_13TeV.700322.Sh_2211_Zee_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 107967000,
+        "nfiles": 2126,
+        "size_TB": 1.358
+    },
+    "mc20_13TeV.700322.Sh_2211_Zee_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 140758000,
+        "nfiles": 2288,
+        "size_TB": 1.826
+    },
+    "mc20_13TeV.700322.Sh_2211_Zee_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 85403200,
+        "nfiles": 1244,
+        "size_TB": 0.9895170000000001
+    },
+    "mc20_13TeV.700323.Sh_2211_Zmumu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 68449000,
+        "nfiles": 1121,
+        "size_TB": 0.99399
+    },
+    "mc20_13TeV.700323.Sh_2211_Zmumu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 100675000,
+        "nfiles": 1610,
+        "size_TB": 1.499
+    },
+    "mc20_13TeV.700323.Sh_2211_Zmumu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 61960000,
+        "nfiles": 942,
+        "size_TB": 0.835052
+    },
+    "mc20_13TeV.700324.Sh_2211_Zmumu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 121102000,
+        "nfiles": 3370,
+        "size_TB": 1.668
+    },
+    "mc20_13TeV.700324.Sh_2211_Zmumu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 168580000,
+        "nfiles": 2813,
+        "size_TB": 2.369
+    },
+    "mc20_13TeV.700324.Sh_2211_Zmumu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 93547000,
+        "nfiles": 1325,
+        "size_TB": 1.185
+    },
+    "mc20_13TeV.700325.Sh_2211_Zmumu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 108053000,
+        "nfiles": 1505,
+        "size_TB": 1.347
+    },
+    "mc20_13TeV.700325.Sh_2211_Zmumu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 140737800,
+        "nfiles": 2044,
+        "size_TB": 1.799
+    },
+    "mc20_13TeV.700325.Sh_2211_Zmumu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 85443000,
+        "nfiles": 957,
+        "size_TB": 0.978015
+    },
+    "mc20_13TeV.700338.Sh_2211_Wenu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 69255000,
+        "nfiles": 1298,
+        "size_TB": 1.005
+    },
+    "mc20_13TeV.700338.Sh_2211_Wenu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 80676000,
+        "nfiles": 1609,
+        "size_TB": 1.2
+    },
+    "mc20_13TeV.700338.Sh_2211_Wenu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 17866000,
+        "nfiles": 447,
+        "size_TB": 0.242023
+    },
+    "mc20_13TeV.700339.Sh_2211_Wenu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 191952000,
+        "nfiles": 3301,
+        "size_TB": 2.457
+    },
+    "mc20_13TeV.700339.Sh_2211_Wenu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 260201000,
+        "nfiles": 4158,
+        "size_TB": 3.42
+    },
+    "mc20_13TeV.700339.Sh_2211_Wenu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 153833000,
+        "nfiles": 1995,
+        "size_TB": 1.822
+    },
+    "mc20_13TeV.700340.Sh_2211_Wenu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 197176000,
+        "nfiles": 2743,
+        "size_TB": 2.292
+    },
+    "mc20_13TeV.700340.Sh_2211_Wenu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 199780000,
+        "nfiles": 2592,
+        "size_TB": 2.395
+    },
+    "mc20_13TeV.700340.Sh_2211_Wenu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 177913000,
+        "nfiles": 2114,
+        "size_TB": 1.901
+    },
+    "mc20_13TeV.700341.Sh_2211_Wmunu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 69339000,
+        "nfiles": 1096,
+        "size_TB": 0.998096
+    },
+    "mc20_13TeV.700341.Sh_2211_Wmunu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 83780450,
+        "nfiles": 1791,
+        "size_TB": 1.239
+    },
+    "mc20_13TeV.700341.Sh_2211_Wmunu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 53596000,
+        "nfiles": 858,
+        "size_TB": 0.716467
+    },
+    "mc20_13TeV.700342.Sh_2211_Wmunu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 191353000,
+        "nfiles": 2833,
+        "size_TB": 2.424
+    },
+    "mc20_13TeV.700342.Sh_2211_Wmunu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 259312000,
+        "nfiles": 4008,
+        "size_TB": 3.369
+    },
+    "mc20_13TeV.700342.Sh_2211_Wmunu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 133998000,
+        "nfiles": 1684,
+        "size_TB": 1.567
+    },
+    "mc20_13TeV.700343.Sh_2211_Wmunu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 197217000,
+        "nfiles": 2833,
+        "size_TB": 2.277
+    },
+    "mc20_13TeV.700343.Sh_2211_Wmunu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 259450000,
+        "nfiles": 3121,
+        "size_TB": 3.078
+    },
+    "mc20_13TeV.700343.Sh_2211_Wmunu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 157662000,
+        "nfiles": 1550,
+        "size_TB": 1.669
+    },
+    "mc20_13TeV.700344.Sh_2211_Wtaunu_L_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 17517000,
+        "nfiles": 358,
+        "size_TB": 0.254329
+    },
+    "mc20_13TeV.700344.Sh_2211_Wtaunu_L_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 22659000,
+        "nfiles": 334,
+        "size_TB": 0.335769
+    },
+    "mc20_13TeV.700344.Sh_2211_Wtaunu_L_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 14193000,
+        "nfiles": 141,
+        "size_TB": 0.191743
+    },
+    "mc20_13TeV.700345.Sh_2211_Wtaunu_L_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 37703000,
+        "nfiles": 811,
+        "size_TB": 0.484896
+    },
+    "mc20_13TeV.700345.Sh_2211_Wtaunu_L_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 44526000,
+        "nfiles": 731,
+        "size_TB": 0.587094
+    },
+    "mc20_13TeV.700345.Sh_2211_Wtaunu_L_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 24321000,
+        "nfiles": 247,
+        "size_TB": 0.289454
+    },
+    "mc20_13TeV.700346.Sh_2211_Wtaunu_L_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697": {
+        "nevts": 45640000,
+        "nfiles": 666,
+        "size_TB": 0.5351739999999999
+    },
+    "mc20_13TeV.700346.Sh_2211_Wtaunu_L_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697": {
+        "nevts": 39022000,
+        "nfiles": 602,
+        "size_TB": 0.46826100000000004
+    },
+    "mc20_13TeV.700346.Sh_2211_Wtaunu_L_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697": {
+        "nevts": 57130000,
+        "nfiles": 871,
+        "size_TB": 0.6156670000000001
+    },
+    "mc20_13TeV.700792.Sh_2214_Ztautau_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8527_s3797_r13144_p6697": {
+        "nevts": 47424000,
+        "nfiles": 732,
+        "size_TB": 0.6904750000000001
+    },
+    "mc20_13TeV.700792.Sh_2214_Ztautau_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8527_s3797_r13145_p6697": {
+        "nevts": 59213000,
+        "nfiles": 902,
+        "size_TB": 0.881771
+    },
+    "mc20_13TeV.700792.Sh_2214_Ztautau_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8527_s3797_r13167_p7018": {
+        "nevts": 35324000,
+        "nfiles": 448,
+        "size_TB": 0.49518
+    },
+    "mc20_13TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13144_p7018": {
+        "nevts": 39982000,
+        "nfiles": 530,
+        "size_TB": 0.5755929999999999
+    },
+    "mc20_13TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13145_p6697": {
+        "nevts": 105942000,
+        "nfiles": 1901,
+        "size_TB": 1.494
+    },
+    "mc20_13TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13167_p7018": {
+        "nevts": 23673000,
+        "nfiles": 455,
+        "size_TB": 0.312153
+    },
+    "mc20_13TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8527_s3681_r13145_r13146_p6697": {
+        "nevts": 3700000,
+        "nfiles": 53,
+        "size_TB": 0.047237
+    },
+    "mc20_13TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13144_p7018": {
+        "nevts": 7315000,
+        "nfiles": 85,
+        "size_TB": 0.095793
+    },
+    "mc20_13TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13167_p7018": {
+        "nevts": 68821000,
+        "nfiles": 903,
+        "size_TB": 0.8204859999999999
+    },
+    "mc20_13TeV.701000.Sh_2214_lllljj.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 338000,
+        "nfiles": 12,
+        "size_TB": 0.004562999999999999
+    },
+    "mc20_13TeV.701000.Sh_2214_lllljj.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 834000,
+        "nfiles": 28,
+        "size_TB": 0.011549
+    },
+    "mc20_13TeV.701000.Sh_2214_lllljj.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 258000,
+        "nfiles": 9,
+        "size_TB": 0.003215
+    },
+    "mc20_13TeV.701005.Sh_2214_lllvjj.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 317000,
+        "nfiles": 11,
+        "size_TB": 0.004338
+    },
+    "mc20_13TeV.701005.Sh_2214_lllvjj.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 829000,
+        "nfiles": 21,
+        "size_TB": 0.011632
+    },
+    "mc20_13TeV.701005.Sh_2214_lllvjj.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 249000,
+        "nfiles": 10,
+        "size_TB": 0.003148
+    },
+    "mc20_13TeV.701010.Sh_2214_llvvjj_os.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 328000,
+        "nfiles": 11,
+        "size_TB": 0.004143
+    },
+    "mc20_13TeV.701010.Sh_2214_llvvjj_os.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 415000,
+        "nfiles": 12,
+        "size_TB": 0.005378999999999999
+    },
+    "mc20_13TeV.701010.Sh_2214_llvvjj_os.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 247000,
+        "nfiles": 5,
+        "size_TB": 0.002848
+    },
+    "mc20_13TeV.701015.Sh_2214_llvvjj_ss.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 327000,
+        "nfiles": 10,
+        "size_TB": 0.004285
+    },
+    "mc20_13TeV.701015.Sh_2214_llvvjj_ss.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 418000,
+        "nfiles": 12,
+        "size_TB": 0.00567
+    },
+    "mc20_13TeV.701015.Sh_2214_llvvjj_ss.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 249000,
+        "nfiles": 6,
+        "size_TB": 0.003009
+    },
+    "mc20_13TeV.701020.Sh_2214_lllljj_Int.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 20000,
+        "nfiles": 1,
+        "size_TB": 0.000256732
+    },
+    "mc20_13TeV.701020.Sh_2214_lllljj_Int.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 19000,
+        "nfiles": 1,
+        "size_TB": 0.000250947
+    },
+    "mc20_13TeV.701020.Sh_2214_lllljj_Int.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 9550,
+        "nfiles": 1,
+        "size_TB": 0.000116821
+    },
+    "mc20_13TeV.701025.Sh_2214_lllvjj_Int.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 19960,
+        "nfiles": 1,
+        "size_TB": 0.000271228
+    },
+    "mc20_13TeV.701025.Sh_2214_lllvjj_Int.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 19940,
+        "nfiles": 1,
+        "size_TB": 0.00027876699999999997
+    },
+    "mc20_13TeV.701025.Sh_2214_lllvjj_Int.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 9920,
+        "nfiles": 1,
+        "size_TB": 0.000126404
+    },
+    "mc20_13TeV.701030.Sh_2214_llvvjj_os_Int.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 20000,
+        "nfiles": 1,
+        "size_TB": 0.00026973300000000003
+    },
+    "mc20_13TeV.701030.Sh_2214_llvvjj_os_Int.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 43000,
+        "nfiles": 3,
+        "size_TB": 0.000599936
+    },
+    "mc20_13TeV.701030.Sh_2214_llvvjj_os_Int.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 10000,
+        "nfiles": 1,
+        "size_TB": 0.00012767100000000002
+    },
+    "mc20_13TeV.701035.Sh_2214_llvvjj_ss_Int.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 19000,
+        "nfiles": 1,
+        "size_TB": 0.000268212
+    },
+    "mc20_13TeV.701035.Sh_2214_llvvjj_ss_Int.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 40000,
+        "nfiles": 2,
+        "size_TB": 0.000576462
+    },
+    "mc20_13TeV.701035.Sh_2214_llvvjj_ss_Int.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 10000,
+        "nfiles": 1,
+        "size_TB": 0.000133382
+    },
+    "mc20_13TeV.701055.Sh_2214_llvv_ss.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 23971000,
+        "nfiles": 422,
+        "size_TB": 0.336749
+    },
+    "mc20_13TeV.701055.Sh_2214_llvv_ss.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 29476000,
+        "nfiles": 533,
+        "size_TB": 0.426221
+    },
+    "mc20_13TeV.701055.Sh_2214_llvv_ss.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 17467000,
+        "nfiles": 309,
+        "size_TB": 0.228153
+    },
+    "mc20_13TeV.701085.Sh_2214_ZqqZll.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 27802000,
+        "nfiles": 362,
+        "size_TB": 0.379995
+    },
+    "mc20_13TeV.701085.Sh_2214_ZqqZll.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 33953000,
+        "nfiles": 571,
+        "size_TB": 0.477372
+    },
+    "mc20_13TeV.701085.Sh_2214_ZqqZll.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 19958000,
+        "nfiles": 150,
+        "size_TB": 0.252833
+    },
+    "mc20_13TeV.701090.Sh_2214_ZbbZll.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 27981000,
+        "nfiles": 666,
+        "size_TB": 0.397949
+    },
+    "mc20_13TeV.701090.Sh_2214_ZbbZll.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 33932000,
+        "nfiles": 532,
+        "size_TB": 0.49433499999999997
+    },
+    "mc20_13TeV.701090.Sh_2214_ZbbZll.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 19626000,
+        "nfiles": 207,
+        "size_TB": 0.258496
+    },
+    "mc20_13TeV.701095.Sh_2214_ZqqZvv.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 27931000,
+        "nfiles": 447,
+        "size_TB": 0.327198
+    },
+    "mc20_13TeV.701095.Sh_2214_ZqqZvv.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 33977000,
+        "nfiles": 450,
+        "size_TB": 0.410558
+    },
+    "mc20_13TeV.701095.Sh_2214_ZqqZvv.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 19959000,
+        "nfiles": 251,
+        "size_TB": 0.215326
+    },
+    "mc20_13TeV.701100.Sh_2214_ZbbZvv.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 27987000,
+        "nfiles": 380,
+        "size_TB": 0.34452
+    },
+    "mc20_13TeV.701100.Sh_2214_ZbbZvv.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 33623000,
+        "nfiles": 435,
+        "size_TB": 0.42537
+    },
+    "mc20_13TeV.701100.Sh_2214_ZbbZvv.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 19977000,
+        "nfiles": 243,
+        "size_TB": 0.22747499999999998
+    },
+    "mc20_13TeV.701105.Sh_2214_WqqZll.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 27974000,
+        "nfiles": 350,
+        "size_TB": 0.394568
+    },
+    "mc20_13TeV.701105.Sh_2214_WqqZll.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 32360000,
+        "nfiles": 495,
+        "size_TB": 0.46942700000000004
+    },
+    "mc20_13TeV.701105.Sh_2214_WqqZll.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 19988000,
+        "nfiles": 223,
+        "size_TB": 0.26237099999999997
+    },
+    "mc20_13TeV.701110.Sh_2214_WqqZvv.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 27995000,
+        "nfiles": 510,
+        "size_TB": 0.340714
+    },
+    "mc20_13TeV.701110.Sh_2214_WqqZvv.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 33981000,
+        "nfiles": 439,
+        "size_TB": 0.426094
+    },
+    "mc20_13TeV.701110.Sh_2214_WqqZvv.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 19987000,
+        "nfiles": 170,
+        "size_TB": 0.225418
+    },
+    "mc20_13TeV.701115.Sh_2214_WlvZqq.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 27946000,
+        "nfiles": 422,
+        "size_TB": 0.370468
+    },
+    "mc20_13TeV.701115.Sh_2214_WlvZqq.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 33933000,
+        "nfiles": 560,
+        "size_TB": 0.461194
+    },
+    "mc20_13TeV.701115.Sh_2214_WlvZqq.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 19956000,
+        "nfiles": 229,
+        "size_TB": 0.245151
+    },
+    "mc20_13TeV.701120.Sh_2214_WlvZbb.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 27991000,
+        "nfiles": 464,
+        "size_TB": 0.38555
+    },
+    "mc20_13TeV.701120.Sh_2214_WlvZbb.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 33939000,
+        "nfiles": 484,
+        "size_TB": 0.479643
+    },
+    "mc20_13TeV.701120.Sh_2214_WlvZbb.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 19965000,
+        "nfiles": 197,
+        "size_TB": 0.255217
+    },
+    "mc20_13TeV.701125.Sh_2214_WlvWqq.deriv.DAOD_PHYSLITE.e8547_s3797_r13144_p6697": {
+        "nevts": 20695000,
+        "nfiles": 283,
+        "size_TB": 0.262316
+    },
+    "mc20_13TeV.701125.Sh_2214_WlvWqq.deriv.DAOD_PHYSLITE.e8547_s3797_r13145_p6697": {
+        "nevts": 25983000,
+        "nfiles": 495,
+        "size_TB": 0.338727
+    },
+    "mc20_13TeV.701125.Sh_2214_WlvWqq.deriv.DAOD_PHYSLITE.e8547_s3797_r13167_p6697": {
+        "nevts": 14995000,
+        "nfiles": 204,
+        "size_TB": 0.17566800000000002
+    },
+    "mc20_13TeV.701260.Sh_ttW_0LxAODFilt.deriv.DAOD_PHYSLITE.e8577_s3797_r13144_p6697": {
+        "nevts": 1870000,
+        "nfiles": 52,
+        "size_TB": 0.034276
+    },
+    "mc20_13TeV.701260.Sh_ttW_0LxAODFilt.deriv.DAOD_PHYSLITE.e8577_s3797_r13145_p6697": {
+        "nevts": 2439000,
+        "nfiles": 48,
+        "size_TB": 0.045488
+    },
+    "mc20_13TeV.701260.Sh_ttW_0LxAODFilt.deriv.DAOD_PHYSLITE.e8577_s3797_r13167_p6697": {
+        "nevts": 1518000,
+        "nfiles": 49,
+        "size_TB": 0.026371
+    },
+    "mc20_13TeV.701261.Sh_ttW_1LxAODFilt.deriv.DAOD_PHYSLITE.e8577_s3797_r13144_p6697": {
+        "nevts": 3499000,
+        "nfiles": 68,
+        "size_TB": 0.064439
+    },
+    "mc20_13TeV.701261.Sh_ttW_1LxAODFilt.deriv.DAOD_PHYSLITE.e8577_s3797_r13145_p6697": {
+        "nevts": 4579000,
+        "nfiles": 67,
+        "size_TB": 0.085949
+    },
+    "mc20_13TeV.701261.Sh_ttW_1LxAODFilt.deriv.DAOD_PHYSLITE.e8577_s3797_r13167_p6697": {
+        "nevts": 2720000,
+        "nfiles": 86,
+        "size_TB": 0.047649000000000004
+    },
+    "mc20_13TeV.701262.Sh_ttW_2LxAODFilt.deriv.DAOD_PHYSLITE.e8577_s3797_r13144_p6697": {
+        "nevts": 3999000,
+        "nfiles": 80,
+        "size_TB": 0.07467499999999999
+    },
+    "mc20_13TeV.701262.Sh_ttW_2LxAODFilt.deriv.DAOD_PHYSLITE.e8577_s3797_r13145_p6697": {
+        "nevts": 5249000,
+        "nfiles": 120,
+        "size_TB": 0.099996
+    },
+    "mc20_13TeV.701262.Sh_ttW_2LxAODFilt.deriv.DAOD_PHYSLITE.e8577_s3797_r13167_p6697": {
+        "nevts": 3200000,
+        "nfiles": 56,
+        "size_TB": 0.056375
+    },
+    "mc23_13p6TeV.522024.aMCPy8EG_NNPDF30NLO_A14N23LO_ttee_run3.deriv.DAOD_PHYSLITE.e8558_s4159_r15224_p6697": {
+        "nevts": 1410000,
+        "nfiles": 39,
+        "size_TB": 0.028506
+    },
+    "mc23_13p6TeV.522024.aMCPy8EG_NNPDF30NLO_A14N23LO_ttee_run3.deriv.DAOD_PHYSLITE.e8558_s4162_r14622_p6697": {
+        "nevts": 1550000,
+        "nfiles": 42,
+        "size_TB": 0.028273
+    },
+    "mc23_13p6TeV.522024.aMCPy8EG_NNPDF30NLO_A14N23LO_ttee_run3.deriv.DAOD_PHYSLITE.e8558_s4369_r16083_p6697": {
+        "nevts": 5990000,
+        "nfiles": 101,
+        "size_TB": 0.116506
+    },
+    "mc23_13p6TeV.522028.aMCPy8EG_NNPDF30NLO_A14N23LO_ttmumu_run3.deriv.DAOD_PHYSLITE.e8558_s4159_r15224_p6697": {
+        "nevts": 1490000,
+        "nfiles": 75,
+        "size_TB": 0.028087
+    },
+    "mc23_13p6TeV.522028.aMCPy8EG_NNPDF30NLO_A14N23LO_ttmumu_run3.deriv.DAOD_PHYSLITE.e8558_s4162_r14622_p6697": {
+        "nevts": 1600000,
+        "nfiles": 25,
+        "size_TB": 0.027785
+    },
+    "mc23_13p6TeV.522028.aMCPy8EG_NNPDF30NLO_A14N23LO_ttmumu_run3.deriv.DAOD_PHYSLITE.e8558_s4369_r16083_p6697": {
+        "nevts": 5990000,
+        "nfiles": 218,
+        "size_TB": 0.11113200000000001
+    },
+    "mc23_13p6TeV.522032.aMCPy8EG_NNPDF30NLO_A14N23LO_tttautau_run3.deriv.DAOD_PHYSLITE.e8558_s4159_r15224_p6697": {
+        "nevts": 1490000,
+        "nfiles": 39,
+        "size_TB": 0.027039999999999998
+    },
+    "mc23_13p6TeV.522032.aMCPy8EG_NNPDF30NLO_A14N23LO_tttautau_run3.deriv.DAOD_PHYSLITE.e8558_s4162_r14622_p6697": {
+        "nevts": 1500000,
+        "nfiles": 37,
+        "size_TB": 0.025425999999999997
+    },
+    "mc23_13p6TeV.522032.aMCPy8EG_NNPDF30NLO_A14N23LO_tttautau_run3.deriv.DAOD_PHYSLITE.e8558_s4369_r16083_p6697": {
+        "nevts": 6000000,
+        "nfiles": 96,
+        "size_TB": 0.10721599999999999
+    },
+    "mc23_13p6TeV.522036.aMCPy8EG_NNPDF30NLO_A14N23LO_ttZqq_run3.deriv.DAOD_PHYSLITE.e8558_s4159_r15224_p6697": {
+        "nevts": 2920000,
+        "nfiles": 103,
+        "size_TB": 0.054441
+    },
+    "mc23_13p6TeV.522036.aMCPy8EG_NNPDF30NLO_A14N23LO_ttZqq_run3.deriv.DAOD_PHYSLITE.e8558_s4162_r14622_p6697": {
+        "nevts": 3190000,
+        "nfiles": 74,
+        "size_TB": 0.055854
+    },
+    "mc23_13p6TeV.522036.aMCPy8EG_NNPDF30NLO_A14N23LO_ttZqq_run3.deriv.DAOD_PHYSLITE.e8558_s4369_r16083_p6697": {
+        "nevts": 12000000,
+        "nfiles": 302,
+        "size_TB": 0.219903
+    },
+    "mc23_13p6TeV.522040.aMCPy8EG_NNPDF30NLO_A14N23LO_ttZnunu_run3.deriv.DAOD_PHYSLITE.e8558_s4159_r15224_p6697": {
+        "nevts": 1450000,
+        "nfiles": 31,
+        "size_TB": 0.023620000000000002
+    },
+    "mc23_13p6TeV.522040.aMCPy8EG_NNPDF30NLO_A14N23LO_ttZnunu_run3.deriv.DAOD_PHYSLITE.e8558_s4162_r14622_p6697": {
+        "nevts": 1590000,
+        "nfiles": 45,
+        "size_TB": 0.024375
+    },
+    "mc23_13p6TeV.522040.aMCPy8EG_NNPDF30NLO_A14N23LO_ttZnunu_run3.deriv.DAOD_PHYSLITE.e8558_s4369_r16083_p6697": {
+        "nevts": 6000000,
+        "nfiles": 91,
+        "size_TB": 0.096536
+    },
+    "mc23_13p6TeV.525955.aMCPy8EG_tWZ_Ztoll_DR1.deriv.DAOD_PHYSLITE.e8558_s4159_r15224_p6697": {
+        "nevts": 1390000,
+        "nfiles": 69,
+        "size_TB": 0.025744
+    },
+    "mc23_13p6TeV.525955.aMCPy8EG_tWZ_Ztoll_DR1.deriv.DAOD_PHYSLITE.e8558_s4162_r14622_p6697": {
+        "nevts": 1480000,
+        "nfiles": 32,
+        "size_TB": 0.024797
+    },
+    "mc23_13p6TeV.525955.aMCPy8EG_tWZ_Ztoll_DR1.deriv.DAOD_PHYSLITE.e8558_s4369_r16083_p6697": {
+        "nevts": 5160000,
+        "nfiles": 98,
+        "size_TB": 0.092266
+    },
+    "mc23_13p6TeV.545027.aMCPy8EG_tllq_4FS_HT6.deriv.DAOD_PHYSLITE.e8564_s4159_r15530_p6697": {
+        "nevts": 17480000,
+        "nfiles": 284,
+        "size_TB": 0.268277
+    },
+    "mc23_13p6TeV.545027.aMCPy8EG_tllq_4FS_HT6.deriv.DAOD_PHYSLITE.e8564_s4162_r15540_p6697": {
+        "nevts": 17480000,
+        "nfiles": 522,
+        "size_TB": 0.246372
+    },
+    "mc23_13p6TeV.545027.aMCPy8EG_tllq_4FS_HT6.deriv.DAOD_PHYSLITE.e8564_s4369_r16083_p6697": {
+        "nevts": 61160000,
+        "nfiles": 987,
+        "size_TB": 0.9192380000000001
+    },
+    "mc23_13p6TeV.545028.aMCPy8EG_tbarllq_4FS_HT6.deriv.DAOD_PHYSLITE.e8564_s4159_r15530_p6697": {
+        "nevts": 17080000,
+        "nfiles": 365,
+        "size_TB": 0.261385
+    },
+    "mc23_13p6TeV.545028.aMCPy8EG_tbarllq_4FS_HT6.deriv.DAOD_PHYSLITE.e8564_s4162_r15540_p6697": {
+        "nevts": 17480000,
+        "nfiles": 213,
+        "size_TB": 0.243302
+    },
+    "mc23_13p6TeV.545028.aMCPy8EG_tbarllq_4FS_HT6.deriv.DAOD_PHYSLITE.e8564_s4369_r16083_p6697": {
+        "nevts": 61170000,
+        "nfiles": 1004,
+        "size_TB": 0.9152809999999999
+    },
+    "mc23_13p6TeV.601229.PhPy8EG_A14_ttbar_hdamp258p75_SingleLep.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697": {
+        "nevts": 249730000,
+        "nfiles": 4773,
+        "size_TB": 3.685
+    },
+    "mc23_13p6TeV.601229.PhPy8EG_A14_ttbar_hdamp258p75_SingleLep.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 49970000,
+        "nfiles": 566,
+        "size_TB": 0.6874389999999999
+    },
+    "mc23_13p6TeV.601229.PhPy8EG_A14_ttbar_hdamp258p75_SingleLep.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 249200000,
+        "nfiles": 5824,
+        "size_TB": 3.638
+    },
+    "mc23_13p6TeV.601230.PhPy8EG_A14_ttbar_hdamp258p75_dil.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697": {
+        "nevts": 249770000,
+        "nfiles": 3585,
+        "size_TB": 3.592
+    },
+    "mc23_13p6TeV.601230.PhPy8EG_A14_ttbar_hdamp258p75_dil.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 49940000,
+        "nfiles": 722,
+        "size_TB": 0.66108
+    },
+    "mc23_13p6TeV.601230.PhPy8EG_A14_ttbar_hdamp258p75_dil.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 249410000,
+        "nfiles": 4877,
+        "size_TB": 3.531
+    },
+    "mc23_13p6TeV.601348.PhPy8EG_tb_lep_antitop.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 7490000,
+        "nfiles": 74,
+        "size_TB": 0.084635
+    },
+    "mc23_13p6TeV.601348.PhPy8EG_tb_lep_antitop.deriv.DAOD_PHYSLITE.e8514_s4162_r14622_p6697": {
+        "nevts": 2000000,
+        "nfiles": 28,
+        "size_TB": 0.021093
+    },
+    "mc23_13p6TeV.601348.PhPy8EG_tb_lep_antitop.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 7480000,
+        "nfiles": 155,
+        "size_TB": 0.08422299999999999
+    },
+    "mc23_13p6TeV.601349.PhPy8EG_tb_lep_top.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 12470000,
+        "nfiles": 226,
+        "size_TB": 0.141799
+    },
+    "mc23_13p6TeV.601349.PhPy8EG_tb_lep_top.deriv.DAOD_PHYSLITE.e8514_s4162_r14622_p6697": {
+        "nevts": 2990000,
+        "nfiles": 99,
+        "size_TB": 0.031815
+    },
+    "mc23_13p6TeV.601349.PhPy8EG_tb_lep_top.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 12430000,
+        "nfiles": 213,
+        "size_TB": 0.140294
+    },
+    "mc23_13p6TeV.601350.PhPy8EG_tqb_lep_antitop.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 14990000,
+        "nfiles": 208,
+        "size_TB": 0.166873
+    },
+    "mc23_13p6TeV.601350.PhPy8EG_tqb_lep_antitop.deriv.DAOD_PHYSLITE.e8514_s4162_r14622_p6697": {
+        "nevts": 3990000,
+        "nfiles": 72,
+        "size_TB": 0.041352
+    },
+    "mc23_13p6TeV.601350.PhPy8EG_tqb_lep_antitop.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 14880000,
+        "nfiles": 281,
+        "size_TB": 0.164683
+    },
+    "mc23_13p6TeV.601351.PhPy8EG_tqb_lep_top.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 22490000,
+        "nfiles": 301,
+        "size_TB": 0.248781
+    },
+    "mc23_13p6TeV.601351.PhPy8EG_tqb_lep_top.deriv.DAOD_PHYSLITE.e8514_s4162_r14622_p6697": {
+        "nevts": 6000000,
+        "nfiles": 68,
+        "size_TB": 0.06168
+    },
+    "mc23_13p6TeV.601351.PhPy8EG_tqb_lep_top.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 22140000,
+        "nfiles": 518,
+        "size_TB": 0.24395
+    },
+    "mc23_13p6TeV.601352.PhPy8EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_s4159_r15224_p6697": {
+        "nevts": 9990000,
+        "nfiles": 246,
+        "size_TB": 0.13442400000000002
+    },
+    "mc23_13p6TeV.601352.PhPy8EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_s4162_r14622_p6697": {
+        "nevts": 9990000,
+        "nfiles": 213,
+        "size_TB": 0.125909
+    },
+    "mc23_13p6TeV.601352.PhPy8EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_s4369_r16083_p6697": {
+        "nevts": 34810000,
+        "nfiles": 488,
+        "size_TB": 0.463194
+    },
+    "mc23_13p6TeV.601355.PhPy8EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8551_s4159_r15224_p6697": {
+        "nevts": 9990000,
+        "nfiles": 136,
+        "size_TB": 0.13391399999999998
+    },
+    "mc23_13p6TeV.601355.PhPy8EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8551_s4162_r14622_p6697": {
+        "nevts": 9980000,
+        "nfiles": 157,
+        "size_TB": 0.125525
+    },
+    "mc23_13p6TeV.601355.PhPy8EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8551_s4369_r16083_p6697": {
+        "nevts": 59810000,
+        "nfiles": 1224,
+        "size_TB": 0.796976
+    },
+    "mc23_13p6TeV.601398.PhPy8EG_A14_ttbar_hdamp517p5_SingleLep.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697": {
+        "nevts": 124890000,
+        "nfiles": 2283,
+        "size_TB": 1.851
+    },
+    "mc23_13p6TeV.601398.PhPy8EG_A14_ttbar_hdamp517p5_SingleLep.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 79920000,
+        "nfiles": 1478,
+        "size_TB": 1.107
+    },
+    "mc23_13p6TeV.601398.PhPy8EG_A14_ttbar_hdamp517p5_SingleLep.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 122370000,
+        "nfiles": 2355,
+        "size_TB": 1.792
+    },
+    "mc23_13p6TeV.601399.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697": {
+        "nevts": 124830000,
+        "nfiles": 1701,
+        "size_TB": 1.804
+    },
+    "mc23_13p6TeV.601399.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 79940000,
+        "nfiles": 1202,
+        "size_TB": 1.064
+    },
+    "mc23_13p6TeV.601399.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 120190000,
+        "nfiles": 2025,
+        "size_TB": 1.709
+    },
+    "mc23_13p6TeV.601414.PhH7EG_A14_ttbar_hdamp258p75_Single_Lep.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697": {
+        "nevts": 123520000,
+        "nfiles": 2859,
+        "size_TB": 1.814
+    },
+    "mc23_13p6TeV.601414.PhH7EG_A14_ttbar_hdamp258p75_Single_Lep.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 79930000,
+        "nfiles": 1588,
+        "size_TB": 1.096
+    },
+    "mc23_13p6TeV.601414.PhH7EG_A14_ttbar_hdamp258p75_Single_Lep.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 115560000,
+        "nfiles": 2430,
+        "size_TB": 1.674
+    },
+    "mc23_13p6TeV.601415.PhH7EG_A14_ttbar_hdamp258p75_Dilep.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697": {
+        "nevts": 124890000,
+        "nfiles": 2413,
+        "size_TB": 1.779
+    },
+    "mc23_13p6TeV.601415.PhH7EG_A14_ttbar_hdamp258p75_Dilep.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 79950000,
+        "nfiles": 1465,
+        "size_TB": 1.048
+    },
+    "mc23_13p6TeV.601415.PhH7EG_A14_ttbar_hdamp258p75_Dilep.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 107370000,
+        "nfiles": 1959,
+        "size_TB": 1.501
+    },
+    "mc23_13p6TeV.601627.PhPy8EG_tW_DS_dyn_incl_antitop.deriv.DAOD_PHYSLITE.e8549_s4159_r15530_p6697": {
+        "nevts": 9980000,
+        "nfiles": 182,
+        "size_TB": 0.13197
+    },
+    "mc23_13p6TeV.601627.PhPy8EG_tW_DS_dyn_incl_antitop.deriv.DAOD_PHYSLITE.e8549_s4162_r15540_p6697": {
+        "nevts": 9980000,
+        "nfiles": 218,
+        "size_TB": 0.123957
+    },
+    "mc23_13p6TeV.601627.PhPy8EG_tW_DS_dyn_incl_antitop.deriv.DAOD_PHYSLITE.e8549_s4369_r16083_p6697": {
+        "nevts": 34920000,
+        "nfiles": 968,
+        "size_TB": 0.45974200000000004
+    },
+    "mc23_13p6TeV.601631.PhPy8EG_tW_DS_dyn_incl_top.deriv.DAOD_PHYSLITE.e8549_s4159_r15530_p6697": {
+        "nevts": 9990000,
+        "nfiles": 156,
+        "size_TB": 0.13225800000000001
+    },
+    "mc23_13p6TeV.601631.PhPy8EG_tW_DS_dyn_incl_top.deriv.DAOD_PHYSLITE.e8549_s4162_r15540_p6697": {
+        "nevts": 9980000,
+        "nfiles": 256,
+        "size_TB": 0.12433
+    },
+    "mc23_13p6TeV.601631.PhPy8EG_tW_DS_dyn_incl_top.deriv.DAOD_PHYSLITE.e8549_s4369_r16083_p6697": {
+        "nevts": 34980000,
+        "nfiles": 596,
+        "size_TB": 0.459716
+    },
+    "mc23_13p6TeV.602235.PhH7EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8551_a910_r15540_p6697": {
+        "nevts": 10000000,
+        "nfiles": 91,
+        "size_TB": 0.11854
+    },
+    "mc23_13p6TeV.602235.PhH7EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8551_a911_r15530_p6697": {
+        "nevts": 10000000,
+        "nfiles": 287,
+        "size_TB": 0.12756900000000002
+    },
+    "mc23_13p6TeV.602235.PhH7EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8551_a934_r16083_p6697": {
+        "nevts": 34980000,
+        "nfiles": 751,
+        "size_TB": 0.44132
+    },
+    "mc23_13p6TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_a910_r15540_p6697": {
+        "nevts": 9520000,
+        "nfiles": 178,
+        "size_TB": 0.113133
+    },
+    "mc23_13p6TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_a911_r15530_p6697": {
+        "nevts": 10000000,
+        "nfiles": 320,
+        "size_TB": 0.12773
+    },
+    "mc23_13p6TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_a934_r16083_p6697": {
+        "nevts": 35000000,
+        "nfiles": 543,
+        "size_TB": 0.440662
+    },
+    "mc23_13p6TeV.700777.Sh_2214_Wenu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 17650000,
+        "nfiles": 433,
+        "size_TB": 0.250403
+    },
+    "mc23_13p6TeV.700777.Sh_2214_Wenu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 10910000,
+        "nfiles": 132,
+        "size_TB": 0.143194
+    },
+    "mc23_13p6TeV.700777.Sh_2214_Wenu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 17670000,
+        "nfiles": 302,
+        "size_TB": 0.246543
+    },
+    "mc23_13p6TeV.700778.Sh_2214_Wenu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 123630000,
+        "nfiles": 1730,
+        "size_TB": 1.508
+    },
+    "mc23_13p6TeV.700778.Sh_2214_Wenu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 76040000,
+        "nfiles": 986,
+        "size_TB": 0.8547870000000001
+    },
+    "mc23_13p6TeV.700778.Sh_2214_Wenu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 72950000,
+        "nfiles": 1174,
+        "size_TB": 0.8743099999999999
+    },
+    "mc23_13p6TeV.700779.Sh_2214_Wenu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697": {
+        "nevts": 302460000,
+        "nfiles": 4296,
+        "size_TB": 3.28
+    },
+    "mc23_13p6TeV.700779.Sh_2214_Wenu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 313530000,
+        "nfiles": 3359,
+        "size_TB": 3.131
+    },
+    "mc23_13p6TeV.700779.Sh_2214_Wenu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 309240000,
+        "nfiles": 5938,
+        "size_TB": 3.308
+    },
+    "mc23_13p6TeV.700780.Sh_2214_Wmunu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 17650000,
+        "nfiles": 241,
+        "size_TB": 0.23905500000000002
+    },
+    "mc23_13p6TeV.700780.Sh_2214_Wmunu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 10890000,
+        "nfiles": 135,
+        "size_TB": 0.139572
+    },
+    "mc23_13p6TeV.700780.Sh_2214_Wmunu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 17300000,
+        "nfiles": 329,
+        "size_TB": 0.23502699999999999
+    },
+    "mc23_13p6TeV.700781.Sh_2214_Wmunu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 123670000,
+        "nfiles": 1791,
+        "size_TB": 1.444
+    },
+    "mc23_13p6TeV.700781.Sh_2214_Wmunu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 76020000,
+        "nfiles": 1367,
+        "size_TB": 0.8338049999999999
+    },
+    "mc23_13p6TeV.700781.Sh_2214_Wmunu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 122780000,
+        "nfiles": 1858,
+        "size_TB": 1.428
+    },
+    "mc23_13p6TeV.700782.Sh_2214_Wmunu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697": {
+        "nevts": 308040000,
+        "nfiles": 4134,
+        "size_TB": 3.213
+    },
+    "mc23_13p6TeV.700782.Sh_2214_Wmunu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 314690000,
+        "nfiles": 3810,
+        "size_TB": 3.068
+    },
+    "mc23_13p6TeV.700782.Sh_2214_Wmunu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 308190000,
+        "nfiles": 6071,
+        "size_TB": 3.211
+    },
+    "mc23_13p6TeV.700783.Sh_2214_Wtaunu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 17670000,
+        "nfiles": 180,
+        "size_TB": 0.236744
+    },
+    "mc23_13p6TeV.700783.Sh_2214_Wtaunu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 10200000,
+        "nfiles": 125,
+        "size_TB": 0.129667
+    },
+    "mc23_13p6TeV.700783.Sh_2214_Wtaunu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 17660000,
+        "nfiles": 373,
+        "size_TB": 0.23763900000000002
+    },
+    "mc23_13p6TeV.700784.Sh_2214_Wtaunu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 123660000,
+        "nfiles": 2266,
+        "size_TB": 1.435
+    },
+    "mc23_13p6TeV.700784.Sh_2214_Wtaunu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 76140000,
+        "nfiles": 878,
+        "size_TB": 0.829943
+    },
+    "mc23_13p6TeV.700784.Sh_2214_Wtaunu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 73920000,
+        "nfiles": 1201,
+        "size_TB": 0.854717
+    },
+    "mc23_13p6TeV.700785.Sh_2214_Wtaunu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697": {
+        "nevts": 306920000,
+        "nfiles": 4318,
+        "size_TB": 3.192
+    },
+    "mc23_13p6TeV.700785.Sh_2214_Wtaunu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 315450000,
+        "nfiles": 4008,
+        "size_TB": 3.073
+    },
+    "mc23_13p6TeV.700785.Sh_2214_Wtaunu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 309170000,
+        "nfiles": 4291,
+        "size_TB": 3.207
+    },
+    "mc23_13p6TeV.700786.Sh_2214_Zee_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 34810000,
+        "nfiles": 342,
+        "size_TB": 0.5301849999999999
+    },
+    "mc23_13p6TeV.700786.Sh_2214_Zee_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 22020000,
+        "nfiles": 307,
+        "size_TB": 0.303019
+    },
+    "mc23_13p6TeV.700786.Sh_2214_Zee_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 34780000,
+        "nfiles": 664,
+        "size_TB": 0.515505
+    },
+    "mc23_13p6TeV.700787.Sh_2214_Zee_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 61250000,
+        "nfiles": 1101,
+        "size_TB": 0.868293
+    },
+    "mc23_13p6TeV.700787.Sh_2214_Zee_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 38040000,
+        "nfiles": 637,
+        "size_TB": 0.486839
+    },
+    "mc23_13p6TeV.700787.Sh_2214_Zee_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 61760000,
+        "nfiles": 800,
+        "size_TB": 0.8475
+    },
+    "mc23_13p6TeV.700788.Sh_2214_Zee_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697": {
+        "nevts": 306260000,
+        "nfiles": 5916,
+        "size_TB": 3.852
+    },
+    "mc23_13p6TeV.700788.Sh_2214_Zee_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 314620000,
+        "nfiles": 3832,
+        "size_TB": 3.551
+    },
+    "mc23_13p6TeV.700788.Sh_2214_Zee_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 309070000,
+        "nfiles": 4664,
+        "size_TB": 3.767
+    },
+    "mc23_13p6TeV.700789.Sh_2214_Zmumu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 35340000,
+        "nfiles": 1099,
+        "size_TB": 0.495454
+    },
+    "mc23_13p6TeV.700789.Sh_2214_Zmumu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6491": {
+        "nevts": 26270000,
+        "nfiles": 245,
+        "size_TB": 0.35839
+    },
+    "mc23_13p6TeV.700789.Sh_2214_Zmumu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 35340000,
+        "nfiles": 436,
+        "size_TB": 0.490921
+    },
+    "mc23_13p6TeV.700790.Sh_2214_Zmumu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 60900000,
+        "nfiles": 931,
+        "size_TB": 0.791137
+    },
+    "mc23_13p6TeV.700790.Sh_2214_Zmumu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6491": {
+        "nevts": 37940000,
+        "nfiles": 246,
+        "size_TB": 0.493464
+    },
+    "mc23_13p6TeV.700790.Sh_2214_Zmumu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 61850000,
+        "nfiles": 772,
+        "size_TB": 0.8016989999999999
+    },
+    "mc23_13p6TeV.700791.Sh_2214_Zmumu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697": {
+        "nevts": 308980000,
+        "nfiles": 5417,
+        "size_TB": 3.574
+    },
+    "mc23_13p6TeV.700791.Sh_2214_Zmumu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 124950000,
+        "nfiles": 1256,
+        "size_TB": 1.342
+    },
+    "mc23_13p6TeV.700791.Sh_2214_Zmumu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 308890000,
+        "nfiles": 4512,
+        "size_TB": 3.562
+    },
+    "mc23_13p6TeV.700792.Sh_2214_Ztautau_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 35330000,
+        "nfiles": 457,
+        "size_TB": 0.47638600000000003
+    },
+    "mc23_13p6TeV.700792.Sh_2214_Ztautau_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 22020000,
+        "nfiles": 302,
+        "size_TB": 0.280342
+    },
+    "mc23_13p6TeV.700792.Sh_2214_Ztautau_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 35340000,
+        "nfiles": 558,
+        "size_TB": 0.476334
+    },
+    "mc23_13p6TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697": {
+        "nevts": 60950000,
+        "nfiles": 1368,
+        "size_TB": 0.772088
+    },
+    "mc23_13p6TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 38030000,
+        "nfiles": 549,
+        "size_TB": 0.452111
+    },
+    "mc23_13p6TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 61870000,
+        "nfiles": 1168,
+        "size_TB": 0.780102
+    },
+    "mc23_13p6TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697": {
+        "nevts": 308200000,
+        "nfiles": 4304,
+        "size_TB": 3.487
+    },
+    "mc23_13p6TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697": {
+        "nevts": 315000000,
+        "nfiles": 3640,
+        "size_TB": 3.339
+    },
+    "mc23_13p6TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697": {
+        "nevts": 61840000,
+        "nfiles": 1138,
+        "size_TB": 0.6977490000000001
+    },
+    "mc23_13p6TeV.700995.Sh_2214_ttW_0Lfilter.deriv.DAOD_PHYSLITE.e8532_s4159_r15224_p6697": {
+        "nevts": 3310000,
+        "nfiles": 62,
+        "size_TB": 0.057238
+    },
+    "mc23_13p6TeV.700995.Sh_2214_ttW_0Lfilter.deriv.DAOD_PHYSLITE.e8532_s4162_r14622_p6697": {
+        "nevts": 3310000,
+        "nfiles": 75,
+        "size_TB": 0.054772
+    },
+    "mc23_13p6TeV.700995.Sh_2214_ttW_0Lfilter.deriv.DAOD_PHYSLITE.e8532_s4369_r16083_p6697": {
+        "nevts": 11640000,
+        "nfiles": 194,
+        "size_TB": 0.19983099999999998
+    },
+    "mc23_13p6TeV.700996.Sh_2214_ttW_1Lfilter.deriv.DAOD_PHYSLITE.e8532_s4159_r15224_p6697": {
+        "nevts": 5980000,
+        "nfiles": 155,
+        "size_TB": 0.10670600000000001
+    },
+    "mc23_13p6TeV.700996.Sh_2214_ttW_1Lfilter.deriv.DAOD_PHYSLITE.e8532_s4162_r14622_p6697": {
+        "nevts": 5980000,
+        "nfiles": 56,
+        "size_TB": 0.10018
+    },
+    "mc23_13p6TeV.700996.Sh_2214_ttW_1Lfilter.deriv.DAOD_PHYSLITE.e8532_s4369_r16083_p6697": {
+        "nevts": 20950000,
+        "nfiles": 520,
+        "size_TB": 0.368774
+    },
+    "mc23_13p6TeV.700997.Sh_2214_ttW_2Lfilter.deriv.DAOD_PHYSLITE.e8532_s4159_r15224_p6697": {
+        "nevts": 7060000,
+        "nfiles": 206,
+        "size_TB": 0.131645
+    },
+    "mc23_13p6TeV.700997.Sh_2214_ttW_2Lfilter.deriv.DAOD_PHYSLITE.e8532_s4162_r14622_p6697": {
+        "nevts": 7070000,
+        "nfiles": 73,
+        "size_TB": 0.121964
+    },
+    "mc23_13p6TeV.700997.Sh_2214_ttW_2Lfilter.deriv.DAOD_PHYSLITE.e8532_s4369_r16083_p6697": {
+        "nevts": 24810000,
+        "nfiles": 696,
+        "size_TB": 0.454255
+    },
+    "mc23_13p6TeV.701000.Sh_2214_lllljj.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 380000,
+        "nfiles": 14,
+        "size_TB": 0.004896
+    },
+    "mc23_13p6TeV.701000.Sh_2214_lllljj.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 390000,
+        "nfiles": 14,
+        "size_TB": 0.004583
+    },
+    "mc23_13p6TeV.701000.Sh_2214_lllljj.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 670000,
+        "nfiles": 26,
+        "size_TB": 0.008506
+    },
+    "mc23_13p6TeV.701005.Sh_2214_lllvjj.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 490000,
+        "nfiles": 16,
+        "size_TB": 0.0064459999999999995
+    },
+    "mc23_13p6TeV.701005.Sh_2214_lllvjj.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 490000,
+        "nfiles": 12,
+        "size_TB": 0.005855000000000001
+    },
+    "mc23_13p6TeV.701005.Sh_2214_lllvjj.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 1710000,
+        "nfiles": 55,
+        "size_TB": 0.022063
+    },
+    "mc23_13p6TeV.701010.Sh_2214_llvvjj_os.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 490000,
+        "nfiles": 12,
+        "size_TB": 0.0057480000000000005
+    },
+    "mc23_13p6TeV.701010.Sh_2214_llvvjj_os.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 500000,
+        "nfiles": 11,
+        "size_TB": 0.005367
+    },
+    "mc23_13p6TeV.701010.Sh_2214_llvvjj_os.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 1740000,
+        "nfiles": 34,
+        "size_TB": 0.020018
+    },
+    "mc23_13p6TeV.701015.Sh_2214_llvvjj_ss.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 490000,
+        "nfiles": 13,
+        "size_TB": 0.006144
+    },
+    "mc23_13p6TeV.701015.Sh_2214_llvvjj_ss.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 500000,
+        "nfiles": 13,
+        "size_TB": 0.005725
+    },
+    "mc23_13p6TeV.701015.Sh_2214_llvvjj_ss.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 1740000,
+        "nfiles": 29,
+        "size_TB": 0.021293
+    },
+    "mc23_13p6TeV.701020.Sh_2214_lllljj_Int.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 20000,
+        "nfiles": 1,
+        "size_TB": 0.000233925
+    },
+    "mc23_13p6TeV.701020.Sh_2214_lllljj_Int.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 20000,
+        "nfiles": 1,
+        "size_TB": 0.000216407
+    },
+    "mc23_13p6TeV.701020.Sh_2214_lllljj_Int.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 80000,
+        "nfiles": 3,
+        "size_TB": 0.000926735
+    },
+    "mc23_13p6TeV.701025.Sh_2214_lllvjj_Int.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 20000,
+        "nfiles": 1,
+        "size_TB": 0.000256121
+    },
+    "mc23_13p6TeV.701025.Sh_2214_lllvjj_Int.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 20000,
+        "nfiles": 1,
+        "size_TB": 0.00023312000000000002
+    },
+    "mc23_13p6TeV.701025.Sh_2214_lllvjj_Int.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 80000,
+        "nfiles": 3,
+        "size_TB": 0.001001
+    },
+    "mc23_13p6TeV.701030.Sh_2214_llvvjj_os_Int.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 20000,
+        "nfiles": 1,
+        "size_TB": 0.000258308
+    },
+    "mc23_13p6TeV.701030.Sh_2214_llvvjj_os_Int.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 20000,
+        "nfiles": 1,
+        "size_TB": 0.00023551
+    },
+    "mc23_13p6TeV.701030.Sh_2214_llvvjj_os_Int.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 180000,
+        "nfiles": 10,
+        "size_TB": 0.002284
+    },
+    "mc23_13p6TeV.701035.Sh_2214_llvvjj_ss_Int.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 20000,
+        "nfiles": 1,
+        "size_TB": 0.000273419
+    },
+    "mc23_13p6TeV.701035.Sh_2214_llvvjj_ss_Int.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 10000,
+        "nfiles": 1,
+        "size_TB": 0.000127572
+    },
+    "mc23_13p6TeV.701035.Sh_2214_llvvjj_ss_Int.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 90000,
+        "nfiles": 5,
+        "size_TB": 0.0012070000000000002
+    },
+    "mc23_13p6TeV.701055.Sh_2214_llvv_ss.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 34980000,
+        "nfiles": 747,
+        "size_TB": 0.47361200000000003
+    },
+    "mc23_13p6TeV.701055.Sh_2214_llvv_ss.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 34980000,
+        "nfiles": 559,
+        "size_TB": 0.433547
+    },
+    "mc23_13p6TeV.701055.Sh_2214_llvv_ss.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 69300000,
+        "nfiles": 1376,
+        "size_TB": 0.919107
+    },
+    "mc23_13p6TeV.701085.Sh_2214_ZqqZll.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 39960000,
+        "nfiles": 409,
+        "size_TB": 0.5148830000000001
+    },
+    "mc23_13p6TeV.701085.Sh_2214_ZqqZll.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 39960000,
+        "nfiles": 405,
+        "size_TB": 0.47372000000000003
+    },
+    "mc23_13p6TeV.701085.Sh_2214_ZqqZll.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 69970000,
+        "nfiles": 1431,
+        "size_TB": 0.890733
+    },
+    "mc23_13p6TeV.701090.Sh_2214_ZbbZll.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 39980000,
+        "nfiles": 583,
+        "size_TB": 0.5384059999999999
+    },
+    "mc23_13p6TeV.701090.Sh_2214_ZbbZll.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 39980000,
+        "nfiles": 556,
+        "size_TB": 0.496021
+    },
+    "mc23_13p6TeV.701090.Sh_2214_ZbbZll.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 69960000,
+        "nfiles": 925,
+        "size_TB": 0.927865
+    },
+    "mc23_13p6TeV.701095.Sh_2214_ZqqZvv.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 39860000,
+        "nfiles": 921,
+        "size_TB": 0.410872
+    },
+    "mc23_13p6TeV.701095.Sh_2214_ZqqZvv.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 39980000,
+        "nfiles": 443,
+        "size_TB": 0.385426
+    },
+    "mc23_13p6TeV.701095.Sh_2214_ZqqZvv.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 69860000,
+        "nfiles": 1448,
+        "size_TB": 0.717703
+    },
+    "mc23_13p6TeV.701100.Sh_2214_ZbbZvv.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 39980000,
+        "nfiles": 662,
+        "size_TB": 0.43343200000000004
+    },
+    "mc23_13p6TeV.701100.Sh_2214_ZbbZvv.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 39970000,
+        "nfiles": 444,
+        "size_TB": 0.407308
+    },
+    "mc23_13p6TeV.701100.Sh_2214_ZbbZvv.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 69970000,
+        "nfiles": 784,
+        "size_TB": 0.756242
+    },
+    "mc23_13p6TeV.701105.Sh_2214_WqqZll.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 39980000,
+        "nfiles": 563,
+        "size_TB": 0.5383709999999999
+    },
+    "mc23_13p6TeV.701105.Sh_2214_WqqZll.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 39980000,
+        "nfiles": 396,
+        "size_TB": 0.4948
+    },
+    "mc23_13p6TeV.701105.Sh_2214_WqqZll.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 69550000,
+        "nfiles": 1240,
+        "size_TB": 0.9225249999999999
+    },
+    "mc23_13p6TeV.701110.Sh_2214_WqqZvv.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 39960000,
+        "nfiles": 481,
+        "size_TB": 0.43022000000000005
+    },
+    "mc23_13p6TeV.701110.Sh_2214_WqqZvv.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 39980000,
+        "nfiles": 392,
+        "size_TB": 0.40445299999999995
+    },
+    "mc23_13p6TeV.701110.Sh_2214_WqqZvv.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 69810000,
+        "nfiles": 1144,
+        "size_TB": 0.75064
+    },
+    "mc23_13p6TeV.701115.Sh_2214_WlvZqq.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 39970000,
+        "nfiles": 544,
+        "size_TB": 0.48336900000000005
+    },
+    "mc23_13p6TeV.701115.Sh_2214_WlvZqq.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 39960000,
+        "nfiles": 411,
+        "size_TB": 0.45036000000000004
+    },
+    "mc23_13p6TeV.701115.Sh_2214_WlvZqq.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 69800000,
+        "nfiles": 980,
+        "size_TB": 0.8349679999999999
+    },
+    "mc23_13p6TeV.701120.Sh_2214_WlvZbb.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 39980000,
+        "nfiles": 448,
+        "size_TB": 0.506598
+    },
+    "mc23_13p6TeV.701120.Sh_2214_WlvZbb.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 39640000,
+        "nfiles": 381,
+        "size_TB": 0.46897500000000003
+    },
+    "mc23_13p6TeV.701120.Sh_2214_WlvZbb.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 69890000,
+        "nfiles": 1093,
+        "size_TB": 0.87785
+    },
+    "mc23_13p6TeV.701125.Sh_2214_WlvWqq.deriv.DAOD_PHYSLITE.e8543_s4159_r15224_p6697": {
+        "nevts": 30000000,
+        "nfiles": 594,
+        "size_TB": 0.344945
+    },
+    "mc23_13p6TeV.701125.Sh_2214_WlvWqq.deriv.DAOD_PHYSLITE.e8543_s4162_r14622_p6697": {
+        "nevts": 28160000,
+        "nfiles": 356,
+        "size_TB": 0.300951
+    },
+    "mc23_13p6TeV.701125.Sh_2214_WlvWqq.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697": {
+        "nevts": 69970000,
+        "nfiles": 914,
+        "size_TB": 0.79457
+    }
+}
