@@ -47,6 +47,11 @@ NanoAODSchema.warn_missing_crossrefs = False
 COUNTER_DELIMITER = "::"
 ENTRY_RANGE_DELIMITER = "_"
 
+
+# =============================================================================
+# Public Utilities
+# =============================================================================
+
 def default_histogram() -> hist.Hist:
     """
     Create a default histogram for tracking processing success/failure.
@@ -87,6 +92,199 @@ def get_dataset_config_by_name(dataset_name: str, configuration: Any):
             return dataset_config
     return None
 
+
+# =============================================================================
+# Branch and Column Management Helpers
+# =============================================================================
+
+def _build_branches_to_keep(
+    configuration: Any, is_mc: bool
+) -> Dict[str, List[str]]:
+    """
+    Build dictionary of branches to keep based on configuration.
+
+    This replicates the logic from the existing skimming code to determine
+    which branches should be saved in the output files.
+
+    Parameters
+    ----------
+    configuration : Any
+        Main analysis configuration
+    is_mc : bool
+        Whether this is Monte Carlo data
+
+    Returns
+    -------
+    Dict[str, List[str]]
+        Dictionary mapping object names to lists of branch names
+    """
+    branches = configuration.preprocess.branches
+    mc_branches = configuration.preprocess.mc_branches
+
+    filtered = {}
+    for obj, obj_branches in branches.items():
+        if not is_mc:
+            # For data, exclude MC-only branches
+            filtered[obj] = [
+                br for br in obj_branches
+                if br not in mc_branches.get(obj, [])
+            ]
+        else:
+            # For MC, keep all branches
+            filtered[obj] = obj_branches
+
+    return filtered
+
+
+def _extract_output_columns(
+    events: Any,
+    branches_to_keep: Dict[str, List[str]],
+) -> Dict[str, Any]:
+    """Extract the branch data that should be persisted."""
+    output_data: Dict[str, Any] = {}
+    for obj, obj_branches in branches_to_keep.items():
+        if obj == "event":
+            for branch in obj_branches:
+                if hasattr(events, branch):
+                    output_data[branch] = getattr(events, branch)
+        else:
+            if hasattr(events, obj):
+                obj_collection = getattr(events, obj)
+                for branch in obj_branches:
+                    if hasattr(obj_collection, branch):
+                        output_data[f"{obj}_{branch}"] = getattr(
+                            obj_collection, branch
+                        )
+
+    return output_data
+
+
+def _build_parquet_payload(
+    output_columns: Dict[str, Any]
+) -> Optional[ak.Array]:
+    """Construct the awkward payload used for parquet serialization."""
+    if not output_columns:
+        return None
+
+    return ak.zip(output_columns, depth_limit=1)
+
+
+# =============================================================================
+# Path and Output Management Helpers
+# =============================================================================
+
+def _build_output_path(
+    dataset: str,
+    file_index: int,
+    part_index: int,
+    fmt: str,
+) -> str:
+    """
+    Build relative output path for a skimmed file chunk.
+
+    Constructs standardized directory structure: {dataset}/file_{N}/part_{M}.{ext}
+    where N is the file index and M is the part (chunk) index within that file.
+    """
+    extension_map = {
+        "parquet": ".parquet",
+        "root_ttree": ".root",
+        "rntuple": ".ntuple",
+        "safetensors": ".safetensors",
+    }
+    try:
+        extension = extension_map[fmt]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported output format '{fmt}'.") from exc
+
+    return f"{dataset}/file_{file_index}/part_{part_index}{extension}"
+
+
+def _resolve_output_path(
+    workitem: WorkItem,
+    output_cfg: SkimOutputConfig,
+    output_manager,
+    file_counters: Dict[str, int],
+    part_counters: Dict[str, int],
+) -> Tuple[Union[Path, str], bool]:
+    """
+    Resolve output path/URI for a skimmed workitem file.
+
+    Constructs hierarchical keys for file/part lookups in counter dictionaries.
+    Returns either local Path or remote URI string based on protocol configuration.
+    """
+    dataset = workitem.dataset
+    # Build hierarchical keys: file_key identifies source file, part_key identifies chunk
+    file_key = f"{dataset}{COUNTER_DELIMITER}{workitem.filename}"
+    file_index = file_counters[file_key]
+    part_key = f"{file_key}{COUNTER_DELIMITER}{workitem.entrystart}{ENTRY_RANGE_DELIMITER}{workitem.entrystop}"
+    part_index = part_counters[part_key]
+
+    suffix = _build_output_path(dataset, file_index, part_index, output_cfg.format)
+
+    if output_cfg.protocol == "local":
+        base_dir = Path(output_manager.get_skimmed_dir())
+        return base_dir / suffix, True
+
+    base_uri = (output_cfg.base_uri or "").rstrip("/")
+    if not base_uri:
+        raise ValueError(
+            f"Skim output protocol '{output_cfg.protocol}' requires a base_uri"
+        )
+    return f"{base_uri}/{suffix}", output_cfg.protocol == "local"
+
+
+# =============================================================================
+# Output Persistence
+# =============================================================================
+
+def _save_workitem_output(
+    events: Any,
+    output_file: Union[Path, str],
+    config: SkimmingConfig,
+    configuration: Any,
+    is_mc: bool,
+) -> None:
+    """
+    Persist filtered events according to the configured skim output.
+
+    Parameters
+    ----------
+    events : Any
+        Filtered events to save.
+    output_file : Path or str
+        Destination path URI.
+    config : SkimmingConfig
+        Skimming configuration.
+    configuration : Any
+        Main analysis configuration with branch selections.
+    is_mc : bool
+        Whether this dataset represents Monte Carlo data.
+    """
+    output_cfg = config.output
+    path_str = str(output_file)
+    writer_kwargs = output_cfg.to_kwargs or {}
+    branches_to_keep = _build_branches_to_keep(configuration, is_mc)
+    output_columns = _extract_output_columns(events, branches_to_keep)
+
+    if output_cfg.format == "parquet":
+        payload = _build_parquet_payload(output_columns)
+        if payload is None:
+            logger.warning("No branches extracted for parquet output; skipping write.")
+            return
+        ak.to_parquet(payload, path_str, **writer_kwargs)
+    elif output_cfg.format == "root_ttree":
+        raise NotImplementedError("ROOT TTree output is not yet implemented.")
+    elif output_cfg.format == "rntuple":
+        raise NotImplementedError("RNTuple output is not yet implemented.")
+    elif output_cfg.format == "safetensors":
+        raise NotImplementedError("safetensors output is not yet implemented.")
+    else:
+        raise ValueError(f"Unsupported skim output format: {output_cfg.format}")
+
+
+# =============================================================================
+# Core Workitem Processing
+# =============================================================================
 
 def process_workitem(
     workitem: WorkItem,
@@ -212,7 +410,6 @@ def process_workitem(
             }
         }
 
-
 def merge_results(
     result_a: Dict[str, Any], result_b: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -256,182 +453,9 @@ def merge_results(
         "failure_infos": failure_infos,
     }
 
-def _extract_output_columns(
-    events: Any,
-    branches_to_keep: Dict[str, List[str]],
-) -> Dict[str, Any]:
-    """Extract the branch data that should be persisted."""
-    output_data: Dict[str, Any] = {}
-    for obj, obj_branches in branches_to_keep.items():
-        if obj == "event":
-            for branch in obj_branches:
-                if hasattr(events, branch):
-                    output_data[branch] = getattr(events, branch)
-        else:
-            if hasattr(events, obj):
-                obj_collection = getattr(events, obj)
-                for branch in obj_branches:
-                    if hasattr(obj_collection, branch):
-                        output_data[f"{obj}_{branch}"] = getattr(
-                            obj_collection, branch
-                        )
-
-    return output_data
-
-
-def _build_parquet_payload(
-    output_columns: Dict[str, Any]
-) -> Optional[ak.Array]:
-    """Construct the awkward payload used for parquet serialization."""
-    if not output_columns:
-        return None
-
-    return ak.zip(output_columns, depth_limit=1)
-
-
-def _resolve_output_path(
-    workitem: WorkItem,
-    output_cfg: SkimOutputConfig,
-    output_manager,
-    file_counters: Dict[str, int],
-    part_counters: Dict[str, int],
-) -> Tuple[Union[Path, str], bool]:
-    """
-    Resolve output path/URI for a skimmed workitem file.
-
-    Constructs hierarchical keys for file/part lookups in counter dictionaries.
-    Returns either local Path or remote URI string based on protocol configuration.
-    """
-    dataset = workitem.dataset
-    # Build hierarchical keys: file_key identifies source file, part_key identifies chunk
-    file_key = f"{dataset}{COUNTER_DELIMITER}{workitem.filename}"
-    file_index = file_counters[file_key]
-    part_key = f"{file_key}{COUNTER_DELIMITER}{workitem.entrystart}{ENTRY_RANGE_DELIMITER}{workitem.entrystop}"
-    part_index = part_counters[part_key]
-
-    suffix = _build_output_path(dataset, file_index, part_index, output_cfg.format)
-
-    if output_cfg.protocol == "local":
-        base_dir = Path(output_manager.get_skimmed_dir())
-        return base_dir / suffix, True
-
-    base_uri = (output_cfg.base_uri or "").rstrip("/")
-    if not base_uri:
-        raise ValueError(
-            f"Skim output protocol '{output_cfg.protocol}' requires a base_uri"
-        )
-    return f"{base_uri}/{suffix}", output_cfg.protocol == "local"
-
-
-def _save_workitem_output(
-    events: Any,
-    output_file: Union[Path, str],
-    config: SkimmingConfig,
-    configuration: Any,
-    is_mc: bool,
-) -> None:
-    """
-    Persist filtered events according to the configured skim output.
-
-    Parameters
-    ----------
-    events : Any
-        Filtered events to save.
-    output_file : Path or str
-        Destination path URI.
-    config : SkimmingConfig
-        Skimming configuration.
-    configuration : Any
-        Main analysis configuration with branch selections.
-    is_mc : bool
-        Whether this dataset represents Monte Carlo data.
-    """
-    output_cfg = config.output
-    path_str = str(output_file)
-    writer_kwargs = output_cfg.to_kwargs or {}
-    branches_to_keep = _build_branches_to_keep(configuration, is_mc)
-    output_columns = _extract_output_columns(events, branches_to_keep)
-
-    if output_cfg.format == "parquet":
-        payload = _build_parquet_payload(output_columns)
-        if payload is None:
-            logger.warning("No branches extracted for parquet output; skipping write.")
-            return
-        ak.to_parquet(payload, path_str, **writer_kwargs)
-    elif output_cfg.format == "root_ttree":
-        raise NotImplementedError("ROOT TTree output is not yet implemented.")
-    elif output_cfg.format == "rntuple":
-        raise NotImplementedError("RNTuple output is not yet implemented.")
-    elif output_cfg.format == "safetensors":
-        raise NotImplementedError("safetensors output is not yet implemented.")
-    else:
-        raise ValueError(f"Unsupported skim output format: {output_cfg.format}")
-
-
-def _build_branches_to_keep(
-    configuration: Any, is_mc: bool
-) -> Dict[str, List[str]]:
-    """
-    Build dictionary of branches to keep based on configuration.
-
-    This replicates the logic from the existing skimming code to determine
-    which branches should be saved in the output files.
-
-    Parameters
-    ----------
-    configuration : Any
-        Main analysis configuration
-    is_mc : bool
-        Whether this is Monte Carlo data
-
-    Returns
-    -------
-    Dict[str, List[str]]
-        Dictionary mapping object names to lists of branch names
-    """
-    branches = configuration.preprocess.branches
-    mc_branches = configuration.preprocess.mc_branches
-
-    filtered = {}
-    for obj, obj_branches in branches.items():
-        if not is_mc:
-            # For data, exclude MC-only branches
-            filtered[obj] = [
-                br for br in obj_branches
-                if br not in mc_branches.get(obj, [])
-            ]
-        else:
-            # For MC, keep all branches
-            filtered[obj] = obj_branches
-
-    return filtered
-
-
-def _build_output_path(
-    dataset: str,
-    file_index: int,
-    part_index: int,
-    fmt: str,
-) -> str:
-    """
-    Build relative output path for a skimmed file chunk.
-
-    Constructs standardized directory structure: {dataset}/file_{N}/part_{M}.{ext}
-    where N is the file index and M is the part (chunk) index within that file.
-    """
-    extension_map = {
-        "parquet": ".parquet",
-        "root_ttree": ".root",
-        "rntuple": ".ntuple",
-        "safetensors": ".safetensors",
-    }
-    try:
-        extension = extension_map[fmt]
-    except KeyError as exc:
-        raise ValueError(f"Unsupported output format '{fmt}'.") from exc
-
-    return f"{dataset}/file_{file_index}/part_{part_index}{extension}"
-
+# =============================================================================
+# Workitem Skimming Manager
+# =============================================================================
 
 class WorkitemSkimmingManager:
     """
@@ -848,6 +872,11 @@ class WorkitemSkimmingManager:
                 part_counters[part_key] = len(existing_parts)
 
         return file_counters, part_counters
+
+
+# =============================================================================
+# Main Entry Point
+# =============================================================================
 
 def process_and_load_events(
     workitems: List[WorkItem],
