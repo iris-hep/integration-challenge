@@ -42,6 +42,11 @@ setup_logging()
 logger = logging.getLogger(__name__)
 NanoAODSchema.warn_missing_crossrefs = False
 
+# Counter key delimiters for workitem file/part numbering
+# Format: "{dataset}::{filename}" for files, "{file_key}::{start}_{stop}" for parts
+COUNTER_DELIMITER = "::"
+ENTRY_RANGE_DELIMITER = "_"
+
 def default_histogram() -> hist.Hist:
     """
     Create a default histogram for tracking processing success/failure.
@@ -83,7 +88,7 @@ def get_dataset_config_by_name(dataset_name: str, configuration: Any):
     return None
 
 
-def workitem_analysis(
+def process_workitem(
     workitem: WorkItem,
     config: SkimmingConfig,
     configuration: Any,
@@ -93,7 +98,12 @@ def workitem_analysis(
     is_mc: bool = True,
 ) -> Dict[str, Any]:
     """
-    Retrieve the dataset configuration matching the provided dataset name.
+    Load events from a WorkItem, apply event selection, and save filtered output.
+
+    Processes a single file chunk (WorkItem) by loading events from ROOT using
+    NanoEventsFactory, applying configured selection function to filter events,
+    extracting specified branches, and persisting filtered output. Returns success
+    or failure information for retry logic.
 
     Parameters
     ----------
@@ -203,14 +213,15 @@ def workitem_analysis(
         }
 
 
-def reduce_results(
+def merge_results(
     result_a: Dict[str, Any], result_b: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    Combine partial results from workitem processing.
+    Merge two result dictionaries from parallel workitem processing.
 
-    It combines histograms, failed items, and other metrics from parallel
-    processing.
+    Used by dask.bag.fold() to combine results from parallel workers. Adds
+    histograms, unions failed item sets, concatenates output file lists, and
+    accumulates failure information for detailed error reporting.
 
     Parameters
     ----------
@@ -285,14 +296,20 @@ def _resolve_output_path(
     file_counters: Dict[str, int],
     part_counters: Dict[str, int],
 ) -> Tuple[Union[Path, str], bool]:
-    """Resolve the destination path/URI for a skimmed output file."""
+    """
+    Resolve output path/URI for a skimmed workitem file.
+
+    Constructs hierarchical keys for file/part lookups in counter dictionaries.
+    Returns either local Path or remote URI string based on protocol configuration.
+    """
     dataset = workitem.dataset
-    file_key = f"{dataset}::{workitem.filename}"
+    # Build hierarchical keys: file_key identifies source file, part_key identifies chunk
+    file_key = f"{dataset}{COUNTER_DELIMITER}{workitem.filename}"
     file_index = file_counters[file_key]
-    part_key = f"{file_key}::{workitem.entrystart}_{workitem.entrystop}"
+    part_key = f"{file_key}{COUNTER_DELIMITER}{workitem.entrystart}{ENTRY_RANGE_DELIMITER}{workitem.entrystop}"
     part_index = part_counters[part_key]
 
-    suffix = _build_output_suffix(dataset, file_index, part_index, output_cfg.format)
+    suffix = _build_output_path(dataset, file_index, part_index, output_cfg.format)
 
     if output_cfg.protocol == "local":
         base_dir = Path(output_manager.get_skimmed_dir())
@@ -390,13 +407,18 @@ def _build_branches_to_keep(
     return filtered
 
 
-def _build_output_suffix(
+def _build_output_path(
     dataset: str,
     file_index: int,
     part_index: int,
     fmt: str,
 ) -> str:
-    """Construct the relative output path for a skimmed chunk."""
+    """
+    Build relative output path for a skimmed file chunk.
+
+    Constructs standardized directory structure: {dataset}/file_{N}/part_{M}.{ext}
+    where N is the file index and M is the part (chunk) index within that file.
+    """
     extension_map = {
         "parquet": ".parquet",
         "root_ttree": ".root",
@@ -650,11 +672,13 @@ class WorkitemSkimmingManager:
         # Count files written per dataset
         for output_file in output_files:
             try:
-                # Extract dataset from file path
-                # Path format: {output_dir}/{dataset}/file__{N}/part_{M}.parquet
+                # Extract dataset name from output path structure
+                # IMPORTANT: Assumes path format: .../output_dir/{dataset}/file_{N}/part_{M}.ext
+                # path_parts[-3] gets dataset from this fixed structure
+                # If _build_output_path() changes, this logic must be updated
                 path_parts = Path(output_file).parts
                 if len(path_parts) >= 3:
-                    dataset = path_parts[-3]  # Get dataset from path
+                    dataset = path_parts[-3]
                     dataset_stats[dataset]["files_written"] += 1
             except Exception:
                 pass
@@ -825,7 +849,7 @@ class WorkitemSkimmingManager:
 
         return file_counters, part_counters
 
-def process_workitems_with_skimming(
+def process_and_load_events(
     workitems: List[WorkItem],
     config: Any,
     output_manager,
@@ -974,8 +998,10 @@ def process_workitems_with_skimming(
             if nevts == 0:
                 logger.warning(f"No nevts found for {fileset_key}, using 0")
 
-            # Create cache key for the merged fileset_key
-            # Use sorted file paths to ensure consistent cache key
+            # Generate deterministic cache key from fileset and file list
+            # Cache key = MD5("{fileset_key}::{file1}::{file2}::...")
+            # Files are sorted to ensure same key regardless of discovery order.
+            # If any output file changes or is regenerated, cache is invalidated.
             sorted_files = sorted(output_files)
             cache_input = f"{fileset_key}::{':'.join(sorted_files)}"
             cache_key = hashlib.md5(cache_input.encode()).hexdigest()

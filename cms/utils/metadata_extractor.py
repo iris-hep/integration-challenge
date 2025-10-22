@@ -180,27 +180,30 @@ class FilesetBuilder:
         processes_filter: Optional[List[str]] = None
     ) -> Tuple[Dict[str, Dict[str, Any]], List[Dataset]]:
         """
-        Builds a coffea-compatible fileset mapping and Dataset objects.
+        Build coffea-compatible fileset and Dataset objects from configurations.
 
-        Iterates through configured processes, collects ROOT file paths, and
-        constructs both:
-        1. A fileset dictionary for coffea preprocessing
-        2. Dataset objects for our own analysis pipeline
+        Iterates through configured processes, collects ROOT file paths from listing
+        files, and constructs both a fileset dict for coffea preprocessing and Dataset
+        objects for the analysis pipeline. Handles multi-directory datasets by creating
+        separate fileset entries with index suffixes (e.g., "signal_0__nominal").
+
+        Dataset key format:
+        - MC: "process__variation" or "process_N__variation" for multi-directory
+        - Data: "process" or "process_N" for multi-directory
 
         Parameters
         ----------
         identifiers : Optional[Union[int, List[int]]], optional
-            Specific listing file IDs (without `.txt`) to process. If `None`, all
-            `.txt` files in the process's listing directory are used.
+            Specific listing file IDs to process. If None, uses all .txt files.
         processes_filter : Optional[List[str]], optional
-            If provided, only build fileset for processes in this list.
+            Only build fileset for these processes. If None, builds all.
 
         Returns
         -------
         Tuple[Dict[str, Dict[str, Any]], List[Dataset]]
-            A tuple containing:
-            - The constructed fileset in coffea format
-            - A list of Dataset objects
+            (fileset_dict, datasets_list) where fileset_dict maps dataset keys to
+            {"files": {path: treename}, "metadata": {...}} and datasets_list contains
+            Dataset objects with cross-sections and process metadata.
         """
         fileset: Dict[str, Dict[str, Any]] = {}
         datasets: List[Dataset] = []
@@ -245,7 +248,9 @@ class FilesetBuilder:
                     # Collect ROOT file paths from this directory
                     file_paths = get_root_file_paths(listing_dir, identifiers, redirector)[:max_files]
 
-                    # Define the dataset key for coffea (process__variation)
+                    # Construct dataset key for coffea fileset
+                    # Multi-directory datasets (e.g., different run periods) get index suffix
+                    # to create distinct keys: signal_0__nominal, signal_1__nominal
                     if not is_data:
                         # If multiple directories, append index to distinguish them
                         if len(listing_dirs) > 1:
@@ -453,7 +458,6 @@ class NanoAODMetadataGenerator:
 
         # Initialize modularized components for fileset building and metadata extraction
         self.fileset_builder = FilesetBuilder(self.dataset_manager, self.output_manager)
-        print(dask)
         self.metadata_extractor = CoffeaMetadataExtractor(dask=dask)
 
         # Attributes to store generated/read metadata.
