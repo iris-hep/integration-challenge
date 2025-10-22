@@ -7,19 +7,16 @@ This module contains all skimming-related configuration including:
 - Skimming configuration parameters
 """
 import json
-import os
 from pathlib import Path
 from typing import List, Tuple
 
 from coffea.analysis_tools import PackedSelection
-from utils.schema import WorkerEval
-from .cuts import lumi_mask
 
 
 def get_cross_sections_for_datasets(
     years: List[str],
     dataset_names: List[str],
-    base_path: str = "example_cms/datasets"
+    base_path: str = "example-demo/cms_datasets"
 ) -> Tuple[str, ...]:
     """
     Extract cross-sections for datasets across multiple years.
@@ -31,7 +28,7 @@ def get_cross_sections_for_datasets(
     dataset_names : List[str]
         List of dataset names to look up (e.g., ["WJetsToLNu_HT-70To100"])
     base_path : str
-        Base path to the datasets directory
+        Base path to the cms_datasets directory
 
     Returns
     -------
@@ -118,7 +115,7 @@ datasets_config = [
     # Signal: Z' -> ttbar (M=2000 GeV, W=200 GeV)
     {
         "name": "signal",
-        "directories": tuple(f"example_cms/datasets/{year}/ZPrimeToTT_M2000_W200/" for year in YEARS),
+        "directories": tuple(f"example-demo/cms_datasets/{year}/ZPrimeToTT_M2000_W200/" for year in YEARS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, ["ZPrimeToTT_M2000_W200"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -128,7 +125,7 @@ datasets_config = [
     # TTbar semileptonic
     {
         "name": "ttbar_semilep",
-        "directories": tuple(f"example_cms/datasets/{year}/TTToSemiLeptonic/" for year in YEARS),
+        "directories": tuple(f"example-demo/cms_datasets/{year}/TTToSemiLeptonic/" for year in YEARS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, ["TTToSemiLeptonic"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -138,7 +135,7 @@ datasets_config = [
     # TTbar hadronic
     {
         "name": "ttbar_had",
-        "directories": tuple(f"example_cms/datasets/{year}/TTToHadronic/" for year in YEARS),
+        "directories": tuple(f"example-demo/cms_datasets/{year}/TTToHadronic/" for year in YEARS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, ["TTToHadronic"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -148,7 +145,7 @@ datasets_config = [
     # TTbar dileptonic
     {
         "name": "ttbar_lep",
-        "directories": tuple(f"example_cms/datasets/{year}/TTTo2L2Nu/" for year in YEARS),
+        "directories": tuple(f"example-demo/cms_datasets/{year}/TTTo2L2Nu/" for year in YEARS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, ["TTTo2L2Nu"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -158,7 +155,7 @@ datasets_config = [
     # W+jets (HT-binned, combined across years)
     {
         "name": "wjets",
-        "directories": tuple(f"example_cms/datasets/{year}/{ds}/" for year in YEARS for ds in WJETS_DATASETS),
+        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in WJETS_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, WJETS_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -168,7 +165,7 @@ datasets_config = [
     # DY+jets (HT-binned, combined across years)
     {
         "name": "dyjets",
-        "directories": tuple(f"example_cms/datasets/{year}/{ds}/" for year in YEARS for ds in DYJETS_DATASETS),
+        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in DYJETS_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, DYJETS_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -178,7 +175,7 @@ datasets_config = [
     # Single top (all channels combined)
     {
         "name": "single_top",
-        "directories": tuple(f"example_cms/datasets/{year}/{ds}/" for year in YEARS for ds in SINGLETOP_DATASETS),
+        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in SINGLETOP_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, SINGLETOP_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -188,7 +185,7 @@ datasets_config = [
     # QCD multijet (HT-binned, combined across years)
     {
         "name": "qcd",
-        "directories": tuple(f"example_cms/datasets/{year}/{ds}/" for year in YEARS for ds in QCD_DATASETS),
+        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in QCD_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, QCD_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -198,7 +195,7 @@ datasets_config = [
     # Diboson (WW, WZ, ZZ combined)
     {
         "name": "diboson",
-        "directories": tuple(f"example_cms/datasets/{year}/{ds}/" for year in YEARS for ds in DIBOSON_DATASETS),
+        "directories": tuple(f"example-demo/cms_datasets/{year}/{ds}/" for year in YEARS for ds in DIBOSON_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, DIBOSON_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -209,7 +206,7 @@ datasets_config = [
     {
         "name": "data",
         "directories": tuple(
-            f"example_cms/datasets/{year}/SingleMuonRun{run}/"
+            f"example-demo/cms_datasets/{year}/SingleMuonRun{run}/"
             for year, runs in [("2016", ["B", "C", "D", "E", "F"]),
                               ("2017", ["B", "C", "D", "E", "F"]),
                               ("2018", ["A", "B", "C", "D"])]
@@ -220,12 +217,6 @@ datasets_config = [
         "tree_name": "Events",
         "weight_branch": None,
         "redirector": REDIRECTOR,
-        "is_data": True,
-        "lumi_mask": {
-            "function": lumi_mask,
-            "use": [("event", "run"), ("event", "luminosityBlock")],
-            "static_kwargs": {"lumifile": "./example_cms/corrections/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt"},
-        },
     }
 ]
 
@@ -264,39 +255,8 @@ def default_skim_selection(puppimet, hlt):
 
 
 skimming_config = {
-    "function": default_skim_selection,
-    "use": [("PuppiMET", None), ("HLT", None)],
+    "selection_function": default_skim_selection,
+    "selection_use": [("PuppiMET", None), ("HLT", None)],
     "chunk_size": 100_000,
     "tree_name": "Events",
-    # "output": {
-    #     "format": "parquet",
-    #     "local": False,  # Set to True for local filesystem
-    #     "base_uri": "s3://",  # S3 endpoint
-    #     # To switch to local Ceph: change endpoint_url to
-    #     # "http://rook-ceph-rgw-my-store.rook-ceph.svc/triton-116ed3e4-b173-48c1-aea0-affee451feda"
-    #     "to_kwargs": {
-    #         "compression": "zstd",
-    #         "storage_options": {
-    #             "key": WorkerEval(lambda: os.environ['AWS_ACCESS_KEY_ID']),
-    #             "secret": WorkerEval(lambda: os.environ['AWS_SECRET_ACCESS_KEY']),
-    #             "client_kwargs": {
-    #                 "endpoint_url": 'https://red-s3.unl.edu/cmsaf-test-oshadura'
-    #             }
-    #         }
-    #     },
-    #     "from_kwargs": {
-    #         "storage_options": {
-    #             "key": WorkerEval(lambda: os.environ['AWS_ACCESS_KEY_ID']),
-    #             "secret": WorkerEval(lambda: os.environ['AWS_SECRET_ACCESS_KEY']),
-    #             "client_kwargs": {
-    #                 "endpoint_url": 'https://red-s3.unl.edu/cmsaf-test-oshadura'
-    #             }
-    #         }
-    #     }
-    # }
-    "output": {
-        "format": "root_ttree",
-        "local": True,  # Set to True for local filesystem
-        #"base_uri": "/home/cms-jovyan/integration-challenge/cms/"
-    }
 }

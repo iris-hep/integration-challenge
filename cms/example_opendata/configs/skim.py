@@ -8,7 +8,6 @@ This module contains all skimming-related configuration including:
 """
 
 from coffea.analysis_tools import PackedSelection
-from .cuts import lumi_mask
 
 
 # ==============================================================================
@@ -107,8 +106,8 @@ def default_skim_selection(puppimet, hlt):
 
 
 skimming_config = {
-    "function": default_skim_selection,
-    "use": [("PuppiMET", None), ("HLT", None)],
+    "selection_function": default_skim_selection,
+    "selection_use": [("PuppiMET", None), ("HLT", None)],
     "chunk_size": 100_000,
     "tree_name": "Events",
 }
