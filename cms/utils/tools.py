@@ -116,7 +116,7 @@ def get_function_arguments(
 
     args: List[ak.Array] = []
     for obj_name, field_name in arg_spec or []:
-        if field_name:
+        if field_name and obj_name != "event":
             try:
                 args.append(objects[obj_name][field_name])
             except KeyError:

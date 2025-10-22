@@ -7,8 +7,7 @@ from coffea.analysis_tools import PackedSelection
 # Select good run data
 # ===================
 def lumi_mask(
-    lumifile: str, run: ak.Array, lumiBlock: ak.Array, jax: bool = False
-) -> ak.Array:
+    run: ak.Array, lumiBlock: ak.Array, lumifile: str = "") -> ak.Array:
     """
     Create a boolean mask selecting events that pass the good run/lumi criteria.
     https://github.com/cms-opendata-workshop/workshop2024-lesson-event-selection/blob/main/instructors/dpoa_workshop_utilities.py
@@ -49,47 +48,37 @@ def lumi_mask(
     good_blocks = [
         good_lumi_sections[field] for field in good_lumi_sections.fields
     ]
-    all_good_blocks = ak.to_backend(ak.Array(good_blocks), ak.backend(run))
+    all_good_blocks = ak.Array(good_blocks)
 
     # -----------------------------
     # Match run numbers to good runs
     # -----------------------------
-    def find_indices(arr1: np.ndarray, arr2: ak.Array) -> ak.Array:
-        arr1_np = np.asarray(ak.to_numpy(arr1))
-        arr2_np = np.asarray(ak.to_numpy(arr2))
+    def find_indices(good_runs: np.ndarray, event_runs: ak.Array) -> ak.Array:
+        good_runs_np = np.asarray(ak.to_numpy(good_runs))
+        event_runs_np = np.asarray(ak.to_numpy(event_runs))
 
-        # Sort arr1 and track indices
-        sorter = np.argsort(arr1_np)
-        sorted_arr1 = arr1_np[sorter]
+        # Sort good_runs and track indices
+        sorter = np.argsort(good_runs_np)
+        sorted_good_runs = good_runs_np[sorter]
 
-        # Find insertion positions of arr2 elements into arr1
-        pos = np.searchsorted(sorted_arr1, arr2_np)
+        # Find insertion positions of event_runs elements into good_runs
+        pos = np.searchsorted(sorted_good_runs, event_runs_np)
 
         # Validate matches
-        valid = (pos < len(arr1_np)) & (sorted_arr1[pos] == arr2_np)
+        valid = (pos < len(good_runs_np)) & (sorted_good_runs[pos] == event_runs_np)
 
         # Build result array
-        out = np.full(len(arr2_np), -1, dtype=int)
+        out = np.full(len(event_runs_np), -1, dtype=int)
         out[valid] = sorter[pos[valid]]
-        return ak.to_backend(ak.Array(out), ak.backend(arr2))
+        return ak.Array(out)
 
     good_run_indices = find_indices(good_runs, run)
 
     # -----------------------------
     # Compute per-event lumi block diffs
     # -----------------------------
-    # Optionally convert inputs to CPU before difference
-    if jax:
-        lumiBlock = ak.to_backend(lumiBlock, "cpu")
-        all_good_blocks = ak.to_backend(all_good_blocks, "cpu")
-        good_run_indices = ak.to_backend(good_run_indices, "cpu")
-
     # Calculate (event lumi - good lumi) for matched run
     diff = lumiBlock - all_good_blocks[good_run_indices]
-
-    # Optionally switch back to JAX backend
-    if jax:
-        diff = ak.to_backend(diff, "jax")
 
     # -----------------------------
     # Evaluate mask from differences

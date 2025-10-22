@@ -21,7 +21,6 @@ import hashlib
 import logging
 import os
 from pathlib import Path
-import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
 from collections import defaultdict
 
@@ -35,7 +34,7 @@ from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from coffea.processor.executor import WorkItem
 from tabulate import tabulate
 
-from utils.schema import SkimmingConfig, SkimOutputConfig, WorkerEval
+from utils.schema import SkimmingConfig, SkimOutputConfig
 from utils.tools import get_function_arguments
 from utils.logging import setup_logging
 
@@ -112,6 +111,7 @@ def workitem_analysis(
     dataset_configs = getattr(dataset_manager, "datasets", []) if dataset_manager else []
 
     try:
+        output_files: List[str] = []
         # Extract workitem metadata
         filename = workitem.filename
         treename = workitem.treename
@@ -162,15 +162,19 @@ def workitem_analysis(
             dummy_values = [500.0] * min(processed_events, 100)
             dummy_hist.fill(dummy_values)
 
-        output_files = []
-        if processed_events > 0:
-            output_file = _create_output_file_path(
-                workitem, output_manager, file_counters, part_counters
-            )
-            _save_workitem_output(
-                filtered_events, output_file, config, configuration, is_mc
-            )
-            output_files.append(str(output_file))
+        output_path, is_local = _resolve_output_path(
+            workitem,
+            config.output,
+            output_manager,
+            file_counters,
+            part_counters,
+        )
+        if is_local:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+        _save_workitem_output(
+            filtered_events, output_path, config, configuration, is_mc
+        )
+        output_files.append(str(output_path))
 
         return {
             "hist": dummy_hist,
@@ -241,132 +245,18 @@ def reduce_results(
         "failure_infos": failure_infos,
     }
 
-def _get_output_file_path(
-    workitem: WorkItem,
-    output_manager,
-    file_counters: Dict[str, int],
-    part_counters: Dict[str, int],
-):
-    """
-    Get output file path following the existing pattern with entry-range-based
-    counters.
-
-    Uses the same output structure as the current skimming code:
-    {skimmed_dir}/{dataset}/file__{file_idx}/part_{chunk}.root
-
-    Parameters
-    ----------
-    workitem : WorkItem
-        The workitem being processed
-    output_manager : OutputDirectoryManager
-        Centralized output directory manager
-    file_counters : Dict[str, int]
-        Pre-computed mapping of file keys to file numbers
-    part_counters : Dict[str, int]
-        Pre-computed mapping of part keys (including entry ranges) to part numbers
-
-    Returns
-    -------
-    Path
-        Full path to the output file
-    """
-    dataset = workitem.dataset
-
-    # Create keys that include entry ranges for proper differentiation
-    file_key = f"{dataset}::{workitem.filename}"
-    part_key = f"{file_key}::{workitem.entrystart}_{workitem.entrystop}"
-
-    # Get pre-computed file and part numbers
-    file_number = file_counters[file_key]
-    part_number = part_counters[part_key]
-
-    # Create output directory structure using output manager
-    skimmed_dir = output_manager.get_skimmed_dir()
-    dataset_dir = skimmed_dir / dataset / f"file__{file_number}"
-
-    # Create output filename with entry-range-based part number
-    output_filename = f"part_{part_number}.parquet"
-
-    path = dataset_dir / output_filename
-
-    return f"s3://{path.as_posix()}"
-
-def _create_output_file_path(
-    workitem: WorkItem,
-    output_manager,
-    file_counters: Dict[str, int],
-    part_counters: Dict[str, int],
-) -> Path:
-    """
-    Create output file path following the existing pattern with entry-range-based
-    counters.
-
-    Uses the same output structure as the current skimming code:
-    {skimmed_dir}/{dataset}/file__{file_idx}/part_{chunk}.root
-
-    Parameters
-    ----------
-    workitem : WorkItem
-        The workitem being processed
-    output_manager : OutputDirectoryManager
-        Centralized output directory manager
-    file_counters : Dict[str, int]
-        Pre-computed mapping of file keys to file numbers
-    part_counters : Dict[str, int]
-        Pre-computed mapping of part keys (including entry ranges) to part numbers
-
-    """
-    path = _get_output_file_path(workitem,
-                                 output_manager,
-                                 file_counters,
-                                 part_counters)
-    pathobj = Path(path)
-    pathobj.parents[0].mkdir(parents=True, exist_ok=True)
-
-    return path
-
-
-def _save_workitem_output(
+def _extract_output_columns(
     events: Any,
-    output_file: Path,
-    config: SkimmingConfig,
-    configuration: Any,
-    is_mc: bool,
-) -> None:
-    """
-    Save filtered events to output parquet file.
-
-    This function handles the actual I/O of saving skimmed events to disk,
-    using the same branch selection logic as the existing skimming code.
-
-    Parameters
-    ----------
-    events : Any
-        Filtered events to save
-    output_file : Path
-        Output file path
-    config : SkimmingConfig
-        Skimming configuration
-    configuration : Any
-        Main analysis configuration with branch selections
-    is_mc : bool
-        Whether this is Monte Carlo data
-    """
-    # Build branches to keep using existing logic
-    branches_to_keep = _build_branches_to_keep(configuration, is_mc)
-
-    # Prepare data for writing
-    output_data = {}
-
-    # Extract branches following the existing pattern
+    branches_to_keep: Dict[str, List[str]],
+) -> Dict[str, Any]:
+    """Extract the branch data that should be persisted."""
+    output_data: Dict[str, Any] = {}
     for obj, obj_branches in branches_to_keep.items():
         if obj == "event":
-            # Event-level branches
             for branch in obj_branches:
                 if hasattr(events, branch):
                     output_data[branch] = getattr(events, branch)
         else:
-            # Object collection branches
             if hasattr(events, obj):
                 obj_collection = getattr(events, obj)
                 for branch in obj_branches:
@@ -375,21 +265,90 @@ def _save_workitem_output(
                             obj_collection, branch
                         )
 
-    # Write to parquet file
-    if output_data:
-        print(str(output_file))
-        ak.to_parquet(
-            ak.zip(output_data, depth_limit=1),
-            "s3://" + str(output_file),
-            compression="zstd",
-            storage_options={
-                "key": os.environ['AWS_ACCESS_KEY_ID'],
-                "secret": os.environ['AWS_SECRET_ACCESS_KEY'],
-                "client_kwargs": {
-                "endpoint_url": "https://red-s3.unl.edu/cmsaf-test-oshadura",
-                },
-            }
+    return output_data
+
+
+def _build_parquet_payload(
+    output_columns: Dict[str, Any]
+) -> Optional[ak.Array]:
+    """Construct the awkward payload used for parquet serialization."""
+    if not output_columns:
+        return None
+
+    return ak.zip(output_columns, depth_limit=1)
+
+
+def _resolve_output_path(
+    workitem: WorkItem,
+    output_cfg: SkimOutputConfig,
+    output_manager,
+    file_counters: Dict[str, int],
+    part_counters: Dict[str, int],
+) -> Tuple[Union[Path, str], bool]:
+    """Resolve the destination path/URI for a skimmed output file."""
+    dataset = workitem.dataset
+    file_key = f"{dataset}::{workitem.filename}"
+    file_index = file_counters[file_key]
+    part_key = f"{file_key}::{workitem.entrystart}_{workitem.entrystop}"
+    part_index = part_counters[part_key]
+
+    suffix = _build_output_suffix(dataset, file_index, part_index, output_cfg.format)
+
+    if output_cfg.protocol == "local":
+        base_dir = Path(output_manager.get_skimmed_dir())
+        return base_dir / suffix, True
+
+    base_uri = (output_cfg.base_uri or "").rstrip("/")
+    if not base_uri:
+        raise ValueError(
+            f"Skim output protocol '{output_cfg.protocol}' requires a base_uri"
         )
+    return f"{base_uri}/{suffix}", output_cfg.protocol == "local"
+
+
+def _save_workitem_output(
+    events: Any,
+    output_file: Union[Path, str],
+    config: SkimmingConfig,
+    configuration: Any,
+    is_mc: bool,
+) -> None:
+    """
+    Persist filtered events according to the configured skim output.
+
+    Parameters
+    ----------
+    events : Any
+        Filtered events to save.
+    output_file : Path or str
+        Destination path URI.
+    config : SkimmingConfig
+        Skimming configuration.
+    configuration : Any
+        Main analysis configuration with branch selections.
+    is_mc : bool
+        Whether this dataset represents Monte Carlo data.
+    """
+    output_cfg = config.output
+    path_str = str(output_file)
+    writer_kwargs = output_cfg.to_kwargs or {}
+    branches_to_keep = _build_branches_to_keep(configuration, is_mc)
+    output_columns = _extract_output_columns(events, branches_to_keep)
+
+    if output_cfg.format == "parquet":
+        payload = _build_parquet_payload(output_columns)
+        if payload is None:
+            logger.warning("No branches extracted for parquet output; skipping write.")
+            return
+        ak.to_parquet(payload, path_str, **writer_kwargs)
+    elif output_cfg.format == "root_ttree":
+        raise NotImplementedError("ROOT TTree output is not yet implemented.")
+    elif output_cfg.format == "rntuple":
+        raise NotImplementedError("RNTuple output is not yet implemented.")
+    elif output_cfg.format == "safetensors":
+        raise NotImplementedError("safetensors output is not yet implemented.")
+    else:
+        raise ValueError(f"Unsupported skim output format: {output_cfg.format}")
 
 
 def _build_branches_to_keep(
@@ -431,55 +390,13 @@ def _build_branches_to_keep(
     return filtered
 
 
-def _extract_output_columns(
-    events: Any,
-    branches_to_keep: Dict[str, List[str]],
-) -> Dict[str, Any]:
-    """Extract the branch data that should be persisted."""
-    output_data: Dict[str, Any] = {}
-    for obj, obj_branches in branches_to_keep.items():
-        if obj == "event":
-            for branch in obj_branches:
-                if hasattr(events, branch):
-                    output_data[branch] = getattr(events, branch)
-        else:
-            if hasattr(events, obj):
-                obj_collection = getattr(events, obj)
-                for branch in obj_branches:
-                    if hasattr(obj_collection, branch):
-                        output_data[f"{obj}_{branch}"] = getattr(
-                            obj_collection, branch
-                        )
-
-    return output_data
-
-
-def _build_parquet_payload(
-    output_columns: Dict[str, Any]
-) -> Optional[ak.Array]:
-    """Construct the awkward payload used for parquet serialization."""
-    if not output_columns:
-        return None
-
-    return ak.zip(output_columns, depth_limit=1)
-
-
-# =============================================================================
-# Path and Output Management Helpers
-# =============================================================================
-
-def _build_output_path(
+def _build_output_suffix(
     dataset: str,
     file_index: int,
     part_index: int,
     fmt: str,
 ) -> str:
-    """
-    Build relative output path for a skimmed file chunk.
-
-    Constructs standardized directory structure: {dataset}/file_{N}/part_{M}.{ext}
-    where N is the file index and M is the part (chunk) index within that file.
-    """
+    """Construct the relative output path for a skimmed chunk."""
     extension_map = {
         "parquet": ".parquet",
         "root_ttree": ".root",
@@ -493,408 +410,6 @@ def _build_output_path(
 
     return f"{dataset}/file_{file_index}/part_{part_index}{extension}"
 
-
-def _resolve_output_path(
-    workitem: WorkItem,
-    output_cfg: SkimOutputConfig,
-    output_manager,
-    file_counters: Dict[str, int],
-    part_counters: Dict[str, int],
-) -> Tuple[Union[Path, str], bool]:
-    """
-    Resolve output path/URI for a skimmed workitem file.
-
-    Constructs hierarchical keys for file/part lookups in counter dictionaries.
-    Returns either local Path or remote URI string based on local flag.
-    """
-    dataset = workitem.dataset
-    # Build hierarchical keys: file_key identifies source file, part_key identifies chunk
-    file_key = f"{dataset}{COUNTER_DELIMITER}{workitem.filename}"
-    file_index = file_counters[file_key]
-    part_key = f"{file_key}{COUNTER_DELIMITER}{workitem.entrystart}{ENTRY_RANGE_DELIMITER}{workitem.entrystop}"
-    part_index = part_counters[part_key]
-
-    suffix = _build_output_path(dataset, file_index, part_index, output_cfg.format)
-
-    if output_cfg.local or not output_cfg.base_uri:
-        base_dir = Path(output_manager.get_skimmed_dir())
-        return  str(base_dir / suffix), True
-    else:
-        base_uri = (output_cfg.base_uri or "").rstrip("/")
-        if base_uri == "":
-            base_dir = Path(output_manager.get_skimmed_dir())
-            return str(base_dir / suffix), output_cfg.local
-        else:
-            path = f"{base_uri}/{suffix}"
-            return path, output_cfg.local
-
-# =============================================================================
-# Output Persistence
-# =============================================================================
-
-def _resolve_lazy_values(obj):
-    """
-    Recursively resolve WorkerEval-wrapped callables in nested dicts/lists.
-
-    Only evaluates objects explicitly marked with WorkerEval. Other callables
-    are passed through unchanged, allowing writer functions to receive callable
-    arguments when needed.
-
-    This enables configuration values to be computed on workers (e.g., reading
-    environment variables that exist on workers but not client) while preserving
-    legitimate callable arguments.
-
-    Parameters
-    ----------
-    obj : Any
-        Configuration object potentially containing WorkerEval instances
-
-    Returns
-    -------
-    Any
-        Configuration with WorkerEval instances evaluated to their values
-
-    Examples
-    --------
-    >>> from utils.schema import WorkerEval
-    >>> import os
-    >>> config = {
-    ...     "key": WorkerEval(lambda: os.environ['AWS_KEY']),
-    ...     "compression": my_compressor_func,  # Not evaluated
-    ... }
-    >>> resolved = _resolve_lazy_values(config)
-    # config["key"] is now the env var value
-    # config["compression"] is still my_compressor_func
-    """
-    if isinstance(obj, WorkerEval):
-        return obj()
-    elif isinstance(obj, dict):
-        return {k: _resolve_lazy_values(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [_resolve_lazy_values(item) for item in obj]
-    elif isinstance(obj, tuple):
-        return tuple(_resolve_lazy_values(item) for item in obj)
-    else:
-        # Pass through everything else unchanged (including callables)
-        return obj
-
-
-def _save_workitem_output(
-    events: Any,
-    output_file: Union[Path, str],
-    config: SkimmingConfig,
-    configuration: Any,
-    is_mc: bool,
-) -> None:
-    """
-    Persist filtered events according to the configured skim output.
-
-    Parameters
-    ----------
-    events : Any
-        Filtered events to save.
-    output_file : Path or str
-        Destination path URI.
-    config : SkimmingConfig
-        Skimming configuration.
-    configuration : Any
-        Main analysis configuration with branch selections.
-    is_mc : bool
-        Whether this dataset represents Monte Carlo data.
-    """
-    output_cfg = config.output
-    path_str = str(output_file)
-
-    # Resolve any lazy callables (WorkerEval) on worker before passing to writer
-    writer_kwargs = _resolve_lazy_values(output_cfg.to_kwargs or {})
-
-    branches_to_keep = _build_branches_to_keep(configuration, is_mc)
-    output_columns = _extract_output_columns(events, branches_to_keep)
-
-    if output_cfg.format == "parquet":
-        payload = _build_parquet_payload(output_columns)
-        if payload is None:
-            logger.warning("No branches extracted for parquet output; skipping write.")
-            return
-        ak.to_parquet(payload, path_str, **writer_kwargs)
-    elif output_cfg.format == "root_ttree": 
-        _write_root_ttree(output_columns, path_str, config.tree_name, writer_kwargs)
-    elif output_cfg.format == "rntuple":
-        raise NotImplementedError("RNTuple output is not yet implemented.")
-    elif output_cfg.format == "safetensors":
-        raise NotImplementedError("safetensors output is not yet implemented.")
-    else:
-        raise ValueError(f"Unsupported skim output format: {output_cfg.format}")
-
-
-def _write_root_ttree(
-    output_columns: Dict[str, Any],
-    output_path: str,
-    tree_name: str,
-    writer_kwargs: Optional[Dict[str, Any]],
-) -> None:
-    """
-    Persist skimmed events to a ROOT TTree using uproot.
-
-    Parameters
-    ----------
-    output_columns : Dict[str, Any]
-        Mapping of branch names to awkward arrays.
-    output_path : str
-        Destination ROOT file path.
-    tree_name : str
-        Name of the output TTree.
-    writer_kwargs : Optional[Dict[str, Any]]
-        Keyword arguments forwarded to uproot.recreate. Unsupported options
-        specific to tree/branch creation are currently ignored.
-    """
-    if not output_columns:
-        logger.warning("No branches extracted for ROOT output; skipping write.")
-        return
-
-    # Materialize arrays to ensure uproot receives concrete data buffers.
-    file_kwargs: Dict[str, Any] = dict(writer_kwargs or {})
-    tree_kwargs: Dict[str, Any] = file_kwargs.pop("tree_kwargs", {})
-
-    branch_types = {k: v.type for k, v in output_columns.items()}
-
-    with uproot.recreate(output_path, **file_kwargs) as root_file:
-        tree = root_file.mktree(tree_name, branch_types, **tree_kwargs)
-        tree.extend(output_columns)
-
-
-def _load_skimmed_events(
-    file_path: Union[str, Path],
-    config: SkimmingConfig,
-    reader_kwargs: Optional[Dict[str, Any]] = None,
-) -> Any:
-    """
-    Load events from a single skimmed file using the configured format.
-
-    Parameters
-    ----------
-    file_path : Union[str, Path]
-        Path to the skimmed output file.
-    config : SkimmingConfig
-        Skimming configuration describing output format and reader kwargs.
-
-    Returns
-    -------
-    Any
-        Events object produced by the appropriate NanoEventsFactory reader.
-    """
-    output_cfg = config.output
-    kwargs = dict(reader_kwargs or {})
-    fmt = output_cfg.format
-
-    if fmt == "parquet":
-        kwargs.setdefault("schemaclass", NanoAODSchema)
-        reader = NanoEventsFactory.from_parquet(str(file_path), **kwargs)
-        return reader.events()
-    elif fmt == "root_ttree":
-        kwargs.setdefault("schemaclass", NanoAODSchema)
-        tree_name = kwargs.pop("treename", config.tree_name)
-        reader = NanoEventsFactory.from_root(
-            {str(file_path): tree_name},
-            **kwargs,
-        )
-        return reader.events()
-    elif fmt == "rntuple":
-        raise NotImplementedError("Reading skim output format 'rntuple' is not yet implemented.")
-    elif fmt == "safetensors":
-        raise NotImplementedError("Reading skim output format 'safetensors' is not yet implemented.")
-    else:
-        raise ValueError(f"Unsupported skim output format: {fmt}")
-
-
-# =============================================================================
-# Core Workitem Processing
-# =============================================================================
-
-def process_workitem(
-    workitem: WorkItem,
-    config: SkimmingConfig,
-    configuration: Any,
-    output_manager,
-    file_counters: Dict[str, int],
-    part_counters: Dict[str, int],
-    is_mc: bool = True,
-) -> Dict[str, Any]:
-    """
-    Load events from a WorkItem, apply event selection, and save filtered output.
-
-    Processes a single file chunk (WorkItem) by loading events from ROOT using
-    NanoEventsFactory, applying configured selection function to filter events,
-    extracting specified branches, and persisting filtered output. Returns success
-    or failure information for retry logic.
-
-    Parameters
-    ----------
-    workitem : WorkItem
-        The coffea WorkItem containing file metadata and entry ranges
-    config : SkimmingConfig
-        Skimming configuration with selection functions and output settings
-    configuration : Any
-        Main analysis configuration object containing branch selections
-    output_manager : OutputDirectoryManager
-        Centralized output directory manager
-    file_counters : Dict[str, int]
-        Pre-computed mapping of file keys to file numbers
-    part_counters : Dict[str, int]
-        Pre-computed mapping of part keys (including entry ranges) to part numbers
-    is_mc : bool, default True
-        Whether the workitem represents Monte Carlo data
-
-    Returns
-    -------
-    Dict[str, Any]
-        Dictionary containing:
-        - 'hist': Dummy histogram for success tracking
-        - 'failed_items': Set of failed workitems (empty on success)
-        - 'processed_events': Number of events processed
-        - 'output_files': List of created output files
-    """
-    dummy_hist = default_histogram()
-
-    try:
-        output_files: List[str] = []
-        # Extract workitem metadata
-        filename = workitem.filename
-        treename = workitem.treename
-        entry_start = workitem.entrystart
-        entry_stop = workitem.entrystop
-        dataset = workitem.dataset
-
-        # Load events using NanoEventsFactory
-        events = NanoEventsFactory.from_root(
-            {filename: treename},
-            entry_start=entry_start,
-            entry_stop=entry_stop,
-            schemaclass=NanoAODSchema,
-        ).events()
-
-        total_events = len(events)
-
-        # Apply skimming selection using the provided function
-        selection_func = config.function
-        selection_use = config.use
-
-        # Get function arguments using existing utility
-        selection_args, selection_static_kwargs = get_function_arguments(
-            selection_use,
-            events,
-            function_name=selection_func.__name__,
-            static_kwargs=config.get("static_kwargs"),
-        )
-        packed_selection = selection_func(
-            *selection_args, **selection_static_kwargs
-        )
-
-        # Apply final selection mask
-        selection_names = packed_selection.names
-        if selection_names:
-            final_selection = selection_names[-1]
-            mask = packed_selection.all(final_selection)
-        else:
-            # No selection applied, keep all events
-            mask = slice(None)
-
-        filtered_events = events[mask]
-        processed_events = len(filtered_events)
-
-        # Fill dummy histogram with some dummy values for tracking
-        if processed_events > 0:
-            # Use a simple observable for the dummy histogram
-            dummy_values = [500.0] * min(processed_events, 100)
-            dummy_hist.fill(dummy_values)
-
-        output_path, like_local = _resolve_output_path(
-            workitem,
-            config.output,
-            output_manager,
-            file_counters,
-            part_counters,
-        )
-        if like_local:
-            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-        
-        _save_workitem_output(
-            filtered_events, output_path, config, configuration, is_mc
-        )
-        output_files.append(str(output_path))
-
-        return {
-            "hist": dummy_hist,
-            "failed_items": set(),
-            "processed_events": processed_events,
-            "output_files": output_files,
-            "failure_info": None,
-        }
-
-    except Exception as e:
-        error_type = type(e).__name__
-        error_msg = str(e)
-        logger.error(f"Failed to process workitem {workitem.filename}: {error_type}: {error_msg}")
-        return {
-            "hist": default_histogram(),
-            "failed_items": {workitem},  # Track failure
-            "processed_events": 0,
-            "output_files": [],
-            "failure_info": {
-                "workitem": workitem,
-                "error_type": error_type,
-                "error_msg": error_msg,
-                "dataset": workitem.dataset,
-                "filename": workitem.filename,
-            }
-        }
-
-def merge_results(
-    result_a: Dict[str, Any], result_b: Dict[str, Any]
-) -> Dict[str, Any]:
-    """
-    Merge two result dictionaries from parallel workitem processing.
-
-    Used by dask.bag.fold() to combine results from parallel workers. Adds
-    histograms, unions failed item sets, concatenates output file lists, and
-    accumulates failure information for detailed error reporting.
-
-    Parameters
-    ----------
-    result_a : Dict[str, Any]
-        First result dictionary
-    result_b : Dict[str, Any]
-        Second result dictionary
-
-    Returns
-    -------
-    Dict[str, Any]
-        Combined result dictionary
-    """
-    # Collect failure info from both results
-    failure_infos = []
-    if result_a.get("failure_info"):
-        failure_infos.append(result_a["failure_info"])
-    if result_b.get("failure_info"):
-        failure_infos.append(result_b["failure_info"])
-
-    # If we have multiple failures, accumulate them as a list
-    if "failure_infos" in result_a:
-        failure_infos.extend(result_a["failure_infos"])
-    if "failure_infos" in result_b:
-        failure_infos.extend(result_b["failure_infos"])
-
-    return {
-        "hist": result_a["hist"] + result_b["hist"],
-        "failed_items": result_a["failed_items"] | result_b["failed_items"],
-        "processed_events": result_a["processed_events"] + result_b["processed_events"],
-        "output_files": result_a["output_files"] + result_b["output_files"],
-        "failure_infos": failure_infos,
-    }
-
-# =============================================================================
-# Workitem Skimming Manager
-# =============================================================================
 
 class WorkitemSkimmingManager:
     """
@@ -1076,7 +591,6 @@ class WorkitemSkimmingManager:
         List[str]
             List of existing output file paths
         """
-        from s3pathlib import S3Path
         output_files = []
         dataset_counts = {}
 
@@ -1084,16 +598,21 @@ class WorkitemSkimmingManager:
         file_counters, part_counters = self._compute_counters(workitems)
 
         for workitem in workitems:
-            expected_output = _get_output_file_path(
-                workitem, self.output_manager, file_counters, part_counters
+            resolved_path, is_local = _resolve_output_path(
+                workitem,
+                self.config.output,
+                self.output_manager,
+                file_counters,
+                part_counters,
             )
-            print("Exepected", expected_output,  os.path.exists(expected_output))
 
-            if S3Path(expected_output).exists:
-                # Parquet files don't have tree names, just add the path
-                output_files.append(str(expected_output))
+            if not is_local:
+                continue
 
-                # Count files per dataset
+            path_obj = Path(resolved_path)
+            if path_obj.exists():
+                output_files.append(str(path_obj))
+
                 dataset = workitem.dataset
                 dataset_counts[dataset] = dataset_counts.get(dataset, 0) + 1
 
@@ -1480,22 +999,21 @@ def process_workitems_with_skimming(
             all_events = []
             total_events_loaded = 0
 
-            # Resolve any lazy callables (WorkerEval) before passing to reader
-            reader_kwargs = _resolve_lazy_values(skimming_config.output.from_kwargs or {})
+            if skimming_config.output.format != "parquet":
+                raise NotImplementedError(
+                    f"Reading skim output format '{skimming_config.output.format}' "
+                    "is not implemented."
+                )
+
+            load_kwargs = dict(skimming_config.output.from_kwargs or {})
+            load_kwargs.setdefault("schemaclass", NanoAODSchema)
+
             for file_path in output_files:
                 try:
-                    # Load events from parquet file with NanoAOD schema
-                    # Note: NanoEventsFactory.from_parquet requires string path, not Path object
-                    events = NanoEventsFactory.from_parquet(
-                        str(file_path), schemaclass=NanoAODSchema,
-                        storage_options={
-                                            "key": os.environ['AWS_ACCESS_KEY_ID'],
-                                            "secret": os.environ['AWS_SECRET_ACCESS_KEY'],
-                                            "client_kwargs": {
-                                            "endpoint_url": "https://red-s3.unl.edu/cmsaf-test-oshadura",
-                                            },
-                                        },
-                    ).events()
+                    reader = NanoEventsFactory.from_parquet(
+                        str(file_path), **load_kwargs
+                    )
+                    events = reader.events()
                     # Note: ak.materialize() causes errors with NanoEventsFactory parquet sources
                     all_events.append(events)
                     total_events_loaded += len(events)

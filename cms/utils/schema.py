@@ -356,6 +356,52 @@ class DatasetManagerConfig(SubscriptableModel):
 # ------------------------
 # Skimming configuration
 # ------------------------
+class SkimOutputConfig(SubscriptableModel):
+    """Configuration for a single skimmed output artifact."""
+
+    format: Annotated[
+        Literal["parquet", "root_ttree", "rntuple", "safetensors"],
+        Field(description="Output format for skimmed events"),
+    ]
+    protocol: Annotated[
+        Literal["local", "s3", "xrootd", "http"],
+        Field(
+            default="local",
+            description="Storage protocol used to write and read the output.",
+        ),
+    ]
+    base_uri: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description=(
+                "Base URI or directory for non-local outputs. "
+                "Required when protocol is not 'local'."
+            ),
+        ),
+    ]
+    to_kwargs: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            default=None,
+            description=(
+                "Additional keyword arguments forwarded to the writer "
+                "function (e.g., ak.to_parquet)."
+            ),
+        ),
+    ]
+    from_kwargs: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            default=None,
+            description=(
+                "Additional keyword arguments forwarded to the reader "
+                "function (e.g., ak.from_parquet)."
+            ),
+        ),
+    ]
+
+
 class SkimmingConfig(FunctorConfig):
     """Configuration for workitem-based skimming selections and output"""
 
@@ -373,6 +419,13 @@ class SkimmingConfig(FunctorConfig):
     max_retries: Annotated[
         int,
         Field(default=3, description="Maximum number of retry attempts for failed workitems")
+    ]
+    output: Annotated[
+        SkimOutputConfig,
+        Field(
+            default_factory=lambda: SkimOutputConfig(format="parquet"),
+            description="Output format and destination for skimmed data",
+        ),
     ]
 
 # ------------------------
