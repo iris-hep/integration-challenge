@@ -32,7 +32,7 @@ fsspec-xrootd = ">=0.4.0"
 rich = ">=14.1.0,<15"
 ipykernel = ">=6.30.1,<7"
 ipywidgets = ">=8.1.7,<9"
-
+nbstripout = ">=0.8.1,<0.9"
 
 [feature.lab.dependencies]
 notebook = ">=7.4.5,<8"
@@ -48,3 +48,6 @@ depends-on = ["lab"]
 
 [environments]
 lab = ["lab"]
+
+[pypi-dependencies]
+rucio = ">=37.7.1, <38"
