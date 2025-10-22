@@ -1,0 +1,1 @@
+root://eospublic.cern.ch//eos/opendata/cms/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/70000/1A6F1D10-B812-4744-91CB-6FA15428CD53.root
