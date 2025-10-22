@@ -10,7 +10,7 @@ import sys
 import warnings
 
 from analysis.nondiff import NonDiffAnalysis
-from user.configuration import config as ZprimeConfig
+from example_opendata.configs.configuration import config as ZprimeConfig
 from utils.datasets import ConfigurableDatasetManager
 from utils.logging import setup_logging, log_banner
 from utils.schema import Config, load_config_with_restricted_cli
