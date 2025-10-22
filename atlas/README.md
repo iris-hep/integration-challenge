@@ -45,8 +45,3 @@ runTop_el.py -h
 ## Step 2: coffea for ntuple processing
 
 Using https://github.com/scipp-atlas/atlas-schema, example notebook for usage is `process_ntuples.ipynb`.
-
-related issues / PRs / MRs:
-- `postprocess` step in processor https://github.com/scikit-hep/coffea/issues/1383
-- `atlasopenmagic` warnings in notebooks: https://github.com/atlas-outreach-data-tools/atlasopenmagic/issues/31
-- identifying weight systematics more easily: https://gitlab.cern.ch/atlas/athena/-/merge_requests/81794
