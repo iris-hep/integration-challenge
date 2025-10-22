@@ -3,8 +3,6 @@ environments:
   default:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
-    indexes:
-    - https://pypi.org/simple
     packages:
       linux-64:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/_libgcc_mutex-0.1-conda_forge.tar.bz2
@@ -21,6 +19,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/async-lru-2.0.5-pyh29332c3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/atlas-schema-0.4.1-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/atlasopenmagic-1.6.1-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/attrs-25.3.0-pyh71513ae_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/awkward-2.8.9-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/awkward-cpp-50-py313hd3cbb54_0.conda
@@ -318,7 +317,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.23.0-py313h536fd9c_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb8e6e7a_2.conda
-      - pypi: https://files.pythonhosted.org/packages/f5/8c/b2fdd6d6b000892dbf2d410f732708e088b8667b90a6cae907bd24aa946e/atlasopenmagic-1.6.1-py3-none-any.whl
       osx-arm64:
       - conda: https://conda.anaconda.org/conda-forge/noarch/aiohappyeyeballs-2.6.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/aiohttp-3.13.0-py313ha205f9d_0.conda
@@ -332,6 +330,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/asttokens-3.0.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/async-lru-2.0.5-pyh29332c3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/atlas-schema-0.4.1-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/atlasopenmagic-1.6.1-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/attrs-25.3.0-pyh71513ae_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/awkward-2.8.9-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/awkward-cpp-50-py313h7add70c_0.conda
@@ -624,7 +623,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zlib-1.3.1-h8359307_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstandard-0.23.0-py313h90d716c_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zstd-1.5.7-h6491c7d_2.conda
-      - pypi: https://files.pythonhosted.org/packages/f5/8c/b2fdd6d6b000892dbf2d410f732708e088b8667b90a6cae907bd24aa946e/atlasopenmagic-1.6.1-py3-none-any.whl
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_libgcc_mutex-0.1-conda_forge.tar.bz2
   sha256: fe51de6107f9edc7aa4f786a70f4a883943bc9d39b3bb7307c04c41410990726
@@ -861,22 +859,20 @@ packages:
   - python >=3.9
   license: Apache-2.0
   license_family: APACHE
-  purls:
-  - pkg:pypi/atlas-schema?source=hash-mapping
   size: 27649
   timestamp: 1759900097777
-- pypi: https://files.pythonhosted.org/packages/f5/8c/b2fdd6d6b000892dbf2d410f732708e088b8667b90a6cae907bd24aa946e/atlasopenmagic-1.6.1-py3-none-any.whl
-  name: atlasopenmagic
-  version: 1.6.1
-  sha256: 10c3a10334defd9c0e9582f9e50614305cce61bd9a7aec505c1c2074228644c2
-  requires_dist:
-  - pyyaml
+- conda: https://conda.anaconda.org/conda-forge/noarch/atlasopenmagic-1.6.1-pyhcf101f3_0.conda
+  sha256: 4e2bec572cfa29e2fa1e46aea9f448bbaebc845b8ac2466137ac16ff4ab2a545
+  md5: 19434195fb639ead9b846627759d2abe
+  depends:
+  - python >=3.10
   - requests
-  - pre-commit ; extra == 'dev'
-  - pylint ; extra == 'dev'
-  - pytest ; extra == 'dev'
-  - pytest-cov ; extra == 'dev'
-  requires_python: '>=3.10'
+  - pyyaml
+  - python
+  license: Apache-2.0
+  license_family: APACHE
+  size: 30236
+  timestamp: 1759999126223
 - conda: https://conda.anaconda.org/conda-forge/noarch/attrs-25.3.0-pyh71513ae_0.conda
   sha256: 99c53ffbcb5dc58084faf18587b215f9ac8ced36bbfb55fa807c00967e419019
   md5: a10d11958cadc13fdb43df75f8b1903f
@@ -2133,8 +2129,6 @@ packages:
   - wrapt <2,>=1.10
   license: MIT
   license_family: MIT
-  purls:
-  - pkg:pypi/deprecated?source=hash-mapping
   size: 14382
   timestamp: 1737987072859
 - conda: https://conda.anaconda.org/conda-forge/noarch/distributed-2025.3.0-pyhd8ed1ab_0.conda
@@ -2387,8 +2381,6 @@ packages:
   - python
   license: BSD-3-Clause
   license_family: BSD
-  purls:
-  - pkg:pypi/hepunits?source=hash-mapping
   size: 20952
   timestamp: 1759869174190
 - conda: https://conda.anaconda.org/conda-forge/noarch/hist-2.9.0-pyhb7efba9_0.conda
@@ -5508,8 +5500,6 @@ packages:
   - typing-extensions >=4.5
   license: BSD-3-Clause
   license_family: BSD
-  purls:
-  - pkg:pypi/particle?source=hash-mapping
   size: 165155
   timestamp: 1759249456790
 - conda: https://conda.anaconda.org/conda-forge/noarch/pexpect-4.9.0-pyhd8ed1ab_1.conda
@@ -6904,8 +6894,6 @@ packages:
   - python_abi 3.13.* *_cp313
   license: BSD-2-Clause
   license_family: BSD
-  purls:
-  - pkg:pypi/wrapt?source=hash-mapping
   size: 64865
   timestamp: 1756851811052
 - conda: https://conda.anaconda.org/conda-forge/osx-arm64/wrapt-1.17.3-py313hcdf3177_1.conda
@@ -6918,8 +6906,6 @@ packages:
   - python_abi 3.13.* *_cp313
   license: BSD-2-Clause
   license_family: BSD
-  purls:
-  - pkg:pypi/wrapt?source=hash-mapping
   size: 62577
   timestamp: 1756851972334
 - conda: https://conda.anaconda.org/conda-forge/linux-64/xorg-libxau-1.0.12-hb9d3cd8_0.conda

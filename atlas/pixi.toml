@@ -23,6 +23,4 @@ fsspec-xrootd = ">=0.5.1,<0.6"
 ipywidgets = ">=8.1.7,<9"
 coffea = ">=2025.10.1,<2026"
 atlas-schema = ">=0.4.1,<0.5"
-
-[pypi-dependencies]
-atlasopenmagic = ">=1.6.1, <2"
+atlasopenmagic = ">=1.6.1,<2"
