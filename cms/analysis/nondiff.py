@@ -12,6 +12,7 @@ import vector
 from coffea.analysis_tools import PackedSelection
 
 from analysis.base import Analysis
+from example_opendata.configs.cuts import lumi_mask
 from utils.output_files import (
     save_histograms_to_pickle,
     save_histograms_to_root,
