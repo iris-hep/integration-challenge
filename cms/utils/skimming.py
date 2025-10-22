@@ -1,10 +1,20 @@
 """
-Event skimming and preprocessing module.
+Event skimming and preprocessing for NanoAOD datasets.
 
-This module provides workitem-based processing of NanoAOD datasets with
-automatic failure handling, event merging, and caching. It processes file
-chunks (workitems) in parallel using dask.bag, applies configurable event
-selections, and merges output files per dataset for efficient analysis.
+Workflow:
+1. **Skimming**: Process WorkItems in parallel (dask.bag), apply event selections,
+   save filtered output to configured format. Retry failures.
+2. **Discovery**: Scan output directory for previously skimmed files.
+3. **Loading & Merging**: Load output files, merge per dataset into single arrays,
+   cache results for fast subsequent runs.
+4. **Metadata**: Attach cross-sections, luminosity, nevts to Dataset objects.
+
+Output Structure: {output_dir}/{dataset}/file_{N}/part_{M}.{ext}
+
+Key Components:
+    WorkitemSkimmingManager: Orchestrates parallel skimming with retries
+    process_workitem: Processes individual file chunks
+    process_and_load_events: Main entry point for full workflow
 """
 
 import hashlib
@@ -31,6 +41,11 @@ from utils.logging import setup_logging
 setup_logging()
 logger = logging.getLogger(__name__)
 NanoAODSchema.warn_missing_crossrefs = False
+
+# Counter key delimiters for workitem file/part numbering
+# Format: "{dataset}::{filename}" for files, "{file_key}::{start}_{stop}" for parts
+COUNTER_DELIMITER = "::"
+ENTRY_RANGE_DELIMITER = "_"
 
 def default_histogram() -> hist.Hist:
     """
@@ -73,7 +88,7 @@ def get_dataset_config_by_name(dataset_name: str, configuration: Any):
     return None
 
 
-def workitem_analysis(
+def process_workitem(
     workitem: WorkItem,
     config: SkimmingConfig,
     configuration: Any,
@@ -83,10 +98,12 @@ def workitem_analysis(
     is_mc: bool = True,
 ) -> Dict[str, Any]:
     """
-    Process a single workitem for skimming analysis.
+    Load events from a WorkItem, apply event selection, and save filtered output.
 
-    This function handles I/O, applies skimming selections, and saves
-    output files on successful processing.
+    Processes a single file chunk (WorkItem) by loading events from ROOT using
+    NanoEventsFactory, applying configured selection function to filter events,
+    extracting specified branches, and persisting filtered output. Returns success
+    or failure information for retry logic.
 
     Parameters
     ----------
@@ -209,14 +226,15 @@ def workitem_analysis(
         }
 
 
-def reduce_results(
+def merge_results(
     result_a: Dict[str, Any], result_b: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
-    Combine partial results from workitem processing.
+    Merge two result dictionaries from parallel workitem processing.
 
-    It combines histograms, failed items, and other metrics from parallel
-    processing.
+    Used by dask.bag.fold() to combine results from parallel workers. Adds
+    histograms, unions failed item sets, concatenates output file lists, and
+    accumulates failure information for detailed error reporting.
 
     Parameters
     ----------
@@ -291,14 +309,20 @@ def _resolve_output_path(
     file_counters: Dict[str, int],
     part_counters: Dict[str, int],
 ) -> Tuple[Union[Path, str], bool]:
-    """Resolve the destination path/URI for a skimmed output file."""
+    """
+    Resolve output path/URI for a skimmed workitem file.
+
+    Constructs hierarchical keys for file/part lookups in counter dictionaries.
+    Returns either local Path or remote URI string based on protocol configuration.
+    """
     dataset = workitem.dataset
-    file_key = f"{dataset}::{workitem.filename}"
+    # Build hierarchical keys: file_key identifies source file, part_key identifies chunk
+    file_key = f"{dataset}{COUNTER_DELIMITER}{workitem.filename}"
     file_index = file_counters[file_key]
-    part_key = f"{file_key}::{workitem.entrystart}_{workitem.entrystop}"
+    part_key = f"{file_key}{COUNTER_DELIMITER}{workitem.entrystart}{ENTRY_RANGE_DELIMITER}{workitem.entrystop}"
     part_index = part_counters[part_key]
 
-    suffix = _build_output_suffix(dataset, file_index, part_index, output_cfg.format)
+    suffix = _build_output_path(dataset, file_index, part_index, output_cfg.format)
 
     if output_cfg.protocol == "local":
         base_dir = Path(output_manager.get_skimmed_dir())
@@ -396,13 +420,18 @@ def _build_branches_to_keep(
     return filtered
 
 
-def _build_output_suffix(
+def _build_output_path(
     dataset: str,
     file_index: int,
     part_index: int,
     fmt: str,
 ) -> str:
-    """Construct the relative output path for a skimmed chunk."""
+    """
+    Build relative output path for a skimmed file chunk.
+
+    Constructs standardized directory structure: {dataset}/file_{N}/part_{M}.{ext}
+    where N is the file index and M is the part (chunk) index within that file.
+    """
     extension_map = {
         "parquet": ".parquet",
         "root_ttree": ".root",
@@ -510,9 +539,9 @@ class WorkitemSkimmingManager:
             # Create dask bag from remaining workitems
             bag = dask.bag.from_sequence(remaining_workitems)
 
-            # Map analysis function over workitems
+            # Map processing function over workitems
             futures = bag.map(
-                lambda wi: workitem_analysis(
+                lambda wi: process_workitem(
                     wi,
                     self.config,
                     configuration,
@@ -527,7 +556,7 @@ class WorkitemSkimmingManager:
             )
 
             # Reduce results using fold operation
-            task = futures.fold(reduce_results, split_every=split_every)
+            task = futures.fold(merge_results, split_every=split_every)
 
             # Compute results
             (result,) = dask.compute(task)
@@ -654,11 +683,13 @@ class WorkitemSkimmingManager:
         # Count files written per dataset
         for output_file in output_files:
             try:
-                # Extract dataset from file path
-                # Path format: {output_dir}/{dataset}/file__{N}/part_{M}.parquet
+                # Extract dataset name from output path structure
+                # IMPORTANT: Assumes path format: .../output_dir/{dataset}/file_{N}/part_{M}.ext
+                # path_parts[-3] gets dataset from this fixed structure
+                # If _build_output_path() changes, this logic must be updated
                 path_parts = Path(output_file).parts
                 if len(path_parts) >= 3:
-                    dataset = path_parts[-3]  # Get dataset from path
+                    dataset = path_parts[-3]
                     dataset_stats[dataset]["files_written"] += 1
             except Exception:
                 pass
@@ -809,8 +840,8 @@ class WorkitemSkimmingManager:
 
         for workitem in workitems:
             dataset = workitem.dataset
-            file_key = f"{dataset}::{workitem.filename}"
-            part_key = f"{file_key}::{workitem.entrystart}_{workitem.entrystop}"
+            file_key = f"{dataset}{COUNTER_DELIMITER}{workitem.filename}"
+            part_key = f"{file_key}{COUNTER_DELIMITER}{workitem.entrystart}{ENTRY_RANGE_DELIMITER}{workitem.entrystop}"
 
             # Assign file number if not already assigned
             if file_key not in file_counters:
@@ -823,13 +854,13 @@ class WorkitemSkimmingManager:
             if part_key not in part_counters:
                 # Count existing parts for this file
                 existing_parts = [
-                    k for k in part_counters.keys() if k.startswith(f"{file_key}::")
+                    k for k in part_counters.keys() if k.startswith(f"{file_key}{COUNTER_DELIMITER}")
                 ]
                 part_counters[part_key] = len(existing_parts)
 
         return file_counters, part_counters
 
-def process_workitems_with_skimming(
+def process_and_load_events(
     workitems: List[WorkItem],
     config: Any,
     output_manager,
@@ -837,15 +868,13 @@ def process_workitems_with_skimming(
     nanoaods_summary: Optional[Dict[str, Any]] = None,
 ) -> List:
     """
-    Process workitems using the workitem-based skimming approach with event
-    merging and caching.
+    Run skimming workflow and load merged events into Dataset objects.
 
-    This function serves as the main entry point for the workitem-based
-    preprocessing workflow. It processes workitems (if skimming is enabled)
-    and then discovers, merges, and caches events from the saved files for
-    analysis. Events from multiple output files per dataset are automatically
-    merged into a single NanoEvents object for improved performance and memory
-    efficiency.
+    Main entry point orchestrating: (1) skimming WorkItems in parallel if enabled,
+    (2) discovering output files, (3) loading and merging events per dataset,
+    (4) caching merged results, and (5) populating Dataset.events with event arrays
+    and metadata. Events from multiple output files are merged into single arrays
+    for performance.
 
     Parameters
     ----------
@@ -980,8 +1009,10 @@ def process_workitems_with_skimming(
             if nevts == 0:
                 logger.warning(f"No nevts found for {fileset_key}, using 0")
 
-            # Create cache key for the merged fileset_key
-            # Use sorted file paths to ensure consistent cache key
+            # Generate deterministic cache key from fileset and file list
+            # Cache key = MD5("{fileset_key}::{file1}::{file2}::...")
+            # Files are sorted to ensure same key regardless of discovery order.
+            # If any output file changes or is regenerated, cache is invalidated.
             sorted_files = sorted(output_files)
             cache_input = f"{fileset_key}::{':'.join(sorted_files)}"
             cache_key = hashlib.md5(cache_input.encode()).hexdigest()

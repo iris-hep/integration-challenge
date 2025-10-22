@@ -1,15 +1,26 @@
 """
 NanoAOD dataset metadata extraction and management.
 
-This module builds filesets from ROOT file listings, extracts metadata using
-coffea preprocessing tools, and creates WorkItem objects that are later processed
-as chunks during the skimming phase.
+Three-stage workflow for preparing NanoAOD datasets before analysis:
 
-Outputs three main JSON files:
-- fileset.json: Maps dataset names to ROOT file paths and tree names
-- workitems.json: Contains WorkItem objects with file chunks and entry ranges
-- nanoaods.json: Summary of event counts per dataset and process
+1. **Fileset Building**: Reads ROOT file paths from .txt listings, creates
+   coffea-compatible fileset dicts, and generates Dataset objects.
+   Output: fileset.json
 
+2. **Metadata Extraction**: Uses coffea preprocessing to chunk files into
+   WorkItems (file segments for parallel processing with entry ranges).
+   Output: workitems.json
+
+3. **Event Count Aggregation**: Sums total events per process/variation for
+   MC normalization. Counts pre-skimming NanoAOD statistics.
+   Output: nanoaods.json
+
+Key Classes:
+    FilesetBuilder: Constructs filesets from dataset configs
+    CoffeaMetadataExtractor: Extracts WorkItems via coffea preprocessing
+    NanoAODMetadataGenerator: Orchestrates full workflow
+
+Dataset Key Format: "process__variation" (MC) or "process" (data)
 """
 
 # Standard library imports
@@ -35,16 +46,42 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 
-def _parse_dataset(dataset_key: str) -> Tuple[str, str]:
-    """
-    Splits a dataset key like 'process__variation' into ('process', 'variation').
+# Dataset key format constants
+DATASET_DELIMITER = "__"  # Delimiter for "process__variation" keys in fileset
+DEFAULT_VARIATION = "nominal"  # Default variation when none specified
 
-    If no '__' is present, 'nominal' is used as the variation.
+
+def parse_dataset_key(dataset_key: str) -> Tuple[str, str]:
     """
-    if "__" in dataset_key:
-        proc, var = dataset_key.split("__", 1)
+    Parse a dataset key string into process and variation components.
+
+    Dataset keys encode both the physics process and systematic variation in a
+    single string using the DATASET_DELIMITER ("__"). This function splits them
+    for separate access. If no delimiter is found, assumes nominal variation.
+
+    Parameters
+    ----------
+    dataset_key : str
+        Dataset key in format "process__variation" (e.g., "ttbar__nominal")
+        or just "process" for data without variations.
+
+    Returns
+    -------
+    Tuple[str, str]
+        (process_name, variation_name) where variation defaults to "nominal"
+        if not explicitly specified in the key.
+
+    Examples
+    --------
+    >>> parse_dataset_key("signal__nominal")
+    ("signal", "nominal")
+    >>> parse_dataset_key("data")
+    ("data", "nominal")
+    """
+    if DATASET_DELIMITER in dataset_key:
+        proc, var = dataset_key.split(DATASET_DELIMITER, 1)
     else:
-        proc, var = dataset_key, "nominal"
+        proc, var = dataset_key, DEFAULT_VARIATION
     return proc, var
 
 
@@ -54,29 +91,33 @@ def get_root_file_paths(
     redirector: str = None,
 ) -> List[str]:
     """
-    Collects ROOT file paths from `.txt` listing files in a directory.
+    Read ROOT file paths from .txt listing files.
 
-    Searches for `*.txt` files in the specified directory (or specific
-    `<id>.txt` files if `identifiers` is given) and reads each line as a
-    ROOT file path.
+    Reads .txt files where each line contains one ROOT file path. This approach
+    separates file lists from code, enabling version control and easy updates.
+    The `identifiers` parameter allows processing subsets for testing.
+    The `redirector` parameter prepends protocol prefixes for remote access.
 
     Parameters
     ----------
     directory : str or Path
-        Path to the folder containing text listing files.
+        Directory containing .txt listing files
     identifiers : int or list of ints, optional
-        Specific listing file IDs (without `.txt`) to process. If `None`, all
-        `.txt` files in the folder are used.
+        Process only specific listing files by ID (e.g., [0, 1] reads 0.txt, 1.txt).
+        If None, reads all .txt files in directory.
+    redirector : str, optional
+        URL prefix to prepend to paths (e.g., "root://xrootd.server.com//").
+        If None, paths used as-is.
 
     Returns
     -------
     List[str]
-        A list of ROOT file paths as strings.
+        ROOT file paths with optional redirector prefix applied.
 
     Raises
     ------
     FileNotFoundError
-        If no listing files are found or a specified file is missing.
+        If directory contains no .txt files or specified identifier file missing.
     """
     dir_path = Path(directory)
     # Determine which text files to parse
@@ -139,27 +180,30 @@ class FilesetBuilder:
         processes_filter: Optional[List[str]] = None
     ) -> Tuple[Dict[str, Dict[str, Any]], List[Dataset]]:
         """
-        Builds a coffea-compatible fileset mapping and Dataset objects.
+        Build coffea-compatible fileset and Dataset objects from configurations.
 
-        Iterates through configured processes, collects ROOT file paths, and
-        constructs both:
-        1. A fileset dictionary for coffea preprocessing
-        2. Dataset objects for our own analysis pipeline
+        Iterates through configured processes, collects ROOT file paths from listing
+        files, and constructs both a fileset dict for coffea preprocessing and Dataset
+        objects for the analysis pipeline. Handles multi-directory datasets by creating
+        separate fileset entries with index suffixes (e.g., "signal_0__nominal").
+
+        Dataset key format:
+        - MC: "process__variation" or "process_N__variation" for multi-directory
+        - Data: "process" or "process_N" for multi-directory
 
         Parameters
         ----------
         identifiers : Optional[Union[int, List[int]]], optional
-            Specific listing file IDs (without `.txt`) to process. If `None`, all
-            `.txt` files in the process's listing directory are used.
+            Specific listing file IDs to process. If None, uses all .txt files.
         processes_filter : Optional[List[str]], optional
-            If provided, only build fileset for processes in this list.
+            Only build fileset for these processes. If None, builds all.
 
         Returns
         -------
         Tuple[Dict[str, Dict[str, Any]], List[Dataset]]
-            A tuple containing:
-            - The constructed fileset in coffea format
-            - A list of Dataset objects
+            (fileset_dict, datasets_list) where fileset_dict maps dataset keys to
+            {"files": {path: treename}, "metadata": {...}} and datasets_list contains
+            Dataset objects with cross-sections and process metadata.
         """
         fileset: Dict[str, Dict[str, Any]] = {}
         datasets: List[Dataset] = []
@@ -204,7 +248,9 @@ class FilesetBuilder:
                     # Collect ROOT file paths from this directory
                     file_paths = get_root_file_paths(listing_dir, identifiers, redirector)[:max_files]
 
-                    # Define the dataset key for coffea (process__variation)
+                    # Construct dataset key for coffea fileset
+                    # Multi-directory datasets (e.g., different run periods) get index suffix
+                    # to create distinct keys: signal_0__nominal, signal_1__nominal
                     if not is_data:
                         # If multiple directories, append index to distinguish them
                         if len(listing_dirs) > 1:
@@ -333,17 +379,22 @@ class CoffeaMetadataExtractor:
         self, fileset: Dict[str, Dict[str, str]],
     ) -> List[WorkItem]:
         """
-        Extracts metadata from the given fileset using coffea.preprocess.
+        Extract WorkItems from fileset using coffea preprocessing.
+
+        WorkItems are file chunks for parallel processing. Coffea automatically splits
+        large ROOT files into chunks based on entry count (controlled by chunksize).
+        Each WorkItem contains: filename, tree name, entry range (start/stop), file UUID,
+        and dataset key. These are later processed independently for skimming.
 
         Parameters
         ----------
         fileset : Dict[str, Dict[str, str]]
-            A coffea-compatible fileset mapping dataset names to file paths and tree names.
+            Coffea-compatible fileset mapping dataset keys to file paths and tree names.
 
         Returns
         -------
         List[WorkItem]
-            A list of `coffea.processor.WorkItem` objects with extracted metadata.
+            WorkItem objects with file metadata and entry ranges for chunked processing.
         """
         logger.info("Extracting metadata using coffea.dataset_tools.preprocess")
         try:
@@ -407,7 +458,6 @@ class NanoAODMetadataGenerator:
 
         # Initialize modularized components for fileset building and metadata extraction
         self.fileset_builder = FilesetBuilder(self.dataset_manager, self.output_manager)
-        print(dask)
         self.metadata_extractor = CoffeaMetadataExtractor(dask=dask)
 
         # Attributes to store generated/read metadata.
@@ -484,8 +534,8 @@ class NanoAODMetadataGenerator:
             self.workitems = self.metadata_extractor.extract_metadata(self.fileset)
             self.write_metadata()
 
-            # Step 3: Summarize and save NanoAODs metadata
-            self.summarise_nanoaods()
+            # Step 3: Aggregate event counts and save summary
+            self.summarize_event_counts()
             self.write_nanoaods_summary()
             logger.info("Metadata generation complete.")
         else:
@@ -549,19 +599,31 @@ class NanoAODMetadataGenerator:
             json.dump(self.nanoaods_summary, f, indent=4)
         logger.info(f"NanoAODs summary written to {nanoaods_summary_path}")
 
-    def summarise_nanoaods(self) -> None:
+    def summarize_event_counts(self) -> None:
         """
-        Summarizes the extracted `WorkItem` metadata into a structured NanoAODs summary.
+        Aggregate event counts from WorkItems into a process/variation summary.
 
-        This method processes `self.workitems` to aggregate event counts per
-        file, process, and variation, storing the result in `self.nanoaods_summary`
-        with the schema:
-        `{process_name: {variation_label: {"files": [...], "nevts_total": int}}}`.
+        Processes extracted WorkItems to count total events per file, process, and
+        systematic variation. These counts represent pre-skimming NanoAOD statistics
+        and are used for MC normalization in the analysis phase. Each file's events
+        are summed across all its WorkItem chunks (since coffea splits large files).
+
+        The aggregated summary is stored in `self.nanoaods_summary` with schema:
+        ```python
+        {
+            "process": {
+                "variation": {
+                    "files": [{"path": str, "nevts": int}, ...],
+                    "nevts_total": int
+                }
+            }
+        }
+        ```
 
         Raises
         ------
         ValueError
-            If `self.workitems` has not been populated.
+            If `self.workitems` has not been populated via extraction or loading.
         """
         # Ensure sample chunks are available for summarization
         if self.workitems is None:
@@ -589,7 +651,7 @@ class NanoAODMetadataGenerator:
             nevts = max(0, stop - start)
 
             # Parse the dataset key to get process and variation names
-            proc, var = _parse_dataset(dataset)
+            proc, var = parse_dataset_key(dataset)
             logger.debug(f"Processing WorkItem: {proc}, {var}, {filename}, {nevts} events")
 
             # Aggregate event counts for the specific process, variation, and filename
@@ -862,7 +924,9 @@ class NanoAODMetadataGenerator:
             workitem_dict = dataclasses.asdict(workitem)
 
             # Encode binary file UUID as base64 string for JSON compatibility
-            # This is necessary because JSON cannot handle raw bytes
+            # WorkItem.fileuuid is binary (bytes), which JSON cannot serialize.
+            # Base64 encoding converts it to ASCII string for JSON storage.
+            # Decoded back to binary when reading (see read_metadata).
             workitem_dict["fileuuid"] = base64.b64encode(workitem_dict["fileuuid"]).decode("ascii")
 
             serializable.append(workitem_dict) # type: ignore
