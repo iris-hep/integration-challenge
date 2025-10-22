@@ -16,19 +16,13 @@ containers = {
     ],
 
     #
-    # ttbar baseline, should include var3c variation + muR/muF as weights
+    # ttbar baseline, allhad removed, should include var3c variation + muR/muF as weights
     #
     "ttbar_nom": [
         # centralpage --scope=mc20_13TeV --physlite Top TTbar Baseline PowhegPythia
         "mc20_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_PHYSLITE.e6337_s3681_r13167_r13146_p6697",
         "mc20_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_PHYSLITE.e6337_s3681_r13144_r13146_p6697",
         "mc20_13TeV.410470.PhPy8EG_A14_ttbar_hdamp258p75_nonallhad.deriv.DAOD_PHYSLITE.e6337_s3681_r13145_r13146_p6697",
-        "mc20_13TeV.410471.PhPy8EG_A14_ttbar_hdamp258p75_allhad.deriv.DAOD_PHYSLITE.e6337_s3681_r13167_r13146_p6697",
-        "mc20_13TeV.410471.PhPy8EG_A14_ttbar_hdamp258p75_allhad.deriv.DAOD_PHYSLITE.e6337_s3681_r13144_r13146_p6697",
-        "mc20_13TeV.410471.PhPy8EG_A14_ttbar_hdamp258p75_allhad.deriv.DAOD_PHYSLITE.e6337_s3681_r13145_r13146_p6697",
-        "mc20_13TeV.410472.PhPy8EG_A14_ttbar_hdamp258p75_dil.deriv.DAOD_PHYSLITE.e6348_s3681_r13167_r13146_p6697",
-        "mc20_13TeV.410472.PhPy8EG_A14_ttbar_hdamp258p75_dil.deriv.DAOD_PHYSLITE.e6348_s3681_r13144_r13146_p6697",
-        "mc20_13TeV.410472.PhPy8EG_A14_ttbar_hdamp258p75_dil.deriv.DAOD_PHYSLITE.e6348_s3681_r13145_r13146_p6697",
         # centralpage --scope=mc23_13p6TeV --physlite Top TTbar Baseline PowhegPythia
         "mc23_13p6TeV.601229.PhPy8EG_A14_ttbar_hdamp258p75_SingleLep.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697",
         "mc23_13p6TeV.601229.PhPy8EG_A14_ttbar_hdamp258p75_SingleLep.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697",
@@ -36,23 +30,48 @@ containers = {
         "mc23_13p6TeV.601230.PhPy8EG_A14_ttbar_hdamp258p75_dil.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697",
         "mc23_13p6TeV.601230.PhPy8EG_A14_ttbar_hdamp258p75_dil.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697",
         "mc23_13p6TeV.601230.PhPy8EG_A14_ttbar_hdamp258p75_dil.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697",
-        "mc23_13p6TeV.601237.PhPy8EG_A14_ttbar_hdamp258p75_allhad.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697",
-        "mc23_13p6TeV.601237.PhPy8EG_A14_ttbar_hdamp258p75_allhad.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697",
-        "mc23_13p6TeV.601237.PhPy8EG_A14_ttbar_hdamp258p75_allhad.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697",
     ],
 
     #
-    # TODO ttbar systematics
+    # ttbar systematics
     #
-    # centralpage --scope=mc20_13TeV --physlite Top TTbar Alternative PowhegHerwig713  # missing a few containers
-    # centralpage --scope=mc23_13p6TeV --physlite Top TTbar Alternative PowhegHerwig713
-    #
-    # centralpage --scope=mc20_13TeV --physlite Top TTbar Systematic Hdamp  # missing a few containers
-    # centralpage --scope=mc23_13p6TeV --physlite Top TTbar  Systematic PowhegPythia8_pTHard1
-    #
-    # centralpage --scope=mc20_13TeV --physlite Top TTbar Systematic Var2/FSR  # empty
-    # FSR variation not listed for mc23
-    "ttbar_var": [],
+    "ttbar_H7": [
+        # centralpage --scope=mc20_13TeV --physlite Top TTbar Alternative PowhegHerwig713
+        "mc20_13TeV.411233.PowhegHerwig7EvtGen_tt_hdamp258p75_713_SingleLep.deriv.DAOD_PHYSLITE.e7580_a907_r14859_p6697",
+        "mc20_13TeV.411233.PowhegHerwig7EvtGen_tt_hdamp258p75_713_SingleLep.deriv.DAOD_PHYSLITE.e7580_a907_r14860_p6697",
+        "mc20_13TeV.411233.PowhegHerwig7EvtGen_tt_hdamp258p75_713_SingleLep.deriv.DAOD_PHYSLITE.e7580_a907_r14861_p6697",
+        "mc20_13TeV.411234.PowhegHerwig7EvtGen_tt_hdamp258p75_713_dil.deriv.DAOD_PHYSLITE.e7580_a907_r14859_p6697",
+        "mc20_13TeV.411234.PowhegHerwig7EvtGen_tt_hdamp258p75_713_dil.deriv.DAOD_PHYSLITE.e7580_a907_r14860_p6697",
+        "mc20_13TeV.411234.PowhegHerwig7EvtGen_tt_hdamp258p75_713_dil.deriv.DAOD_PHYSLITE.e7580_a907_r14861_p6697",
+        # centralpage --scope=mc23_13p6TeV --physlite Top TTbar Systematic PowhegHerwig7
+        "mc23_13p6TeV.601414.PhH7EG_A14_ttbar_hdamp258p75_Single_Lep.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697",
+        "mc23_13p6TeV.601414.PhH7EG_A14_ttbar_hdamp258p75_Single_Lep.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697",
+        "mc23_13p6TeV.601414.PhH7EG_A14_ttbar_hdamp258p75_Single_Lep.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697",
+        "mc23_13p6TeV.601415.PhH7EG_A14_ttbar_hdamp258p75_Dilep.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697",
+        "mc23_13p6TeV.601415.PhH7EG_A14_ttbar_hdamp258p75_Dilep.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697",
+        "mc23_13p6TeV.601415.PhH7EG_A14_ttbar_hdamp258p75_Dilep.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697",
+    ],
+    "ttbar_hdamp": [
+        # centralpage --scope=mc20_13TeV --physlite Top TTbar Systematic Hdamp
+        "mc20_13TeV.410480.PhPy8EG_A14_ttbar_hdamp517p5_SingleLep.deriv.DAOD_PHYSLITE.e6454_a907_r14859_p6697",
+        "mc20_13TeV.410480.PhPy8EG_A14_ttbar_hdamp517p5_SingleLep.deriv.DAOD_PHYSLITE.e6454_a907_r14860_p6697",
+        "mc20_13TeV.410480.PhPy8EG_A14_ttbar_hdamp517p5_SingleLep.deriv.DAOD_PHYSLITE.e6454_a907_r14861_p6697",
+        "mc20_13TeV.410482.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e6454_a907_r14859_p6697",
+        "mc20_13TeV.410482.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e6454_a907_r14860_p6697",
+        "mc20_13TeV.410482.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e6454_a907_r14861_p6697",
+        # centralpage --scope=mc23_13p6TeV --physlite Top TTbar Systematic PowhegPythia8_hdamp
+        "mc23_13p6TeV.601398.PhPy8EG_A14_ttbar_hdamp517p5_SingleLep.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697",
+        "mc23_13p6TeV.601398.PhPy8EG_A14_ttbar_hdamp517p5_SingleLep.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697",
+        "mc23_13p6TeV.601398.PhPy8EG_A14_ttbar_hdamp517p5_SingleLep.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697",
+        "mc23_13p6TeV.601399.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697",
+        "mc23_13p6TeV.601399.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697",
+        "mc23_13p6TeV.601399.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697",
+    ],
+    "ttbar_pthard": [
+        # TODO (low priority) incomplete in mc23
+        # centralpage --scope=mc20_13TeV --physlite Top TTbar Systematic pThard1
+        # centralpage --scope=mc23_13p6TeV --physlite Top TTbar Systematic PowhegPythia8_pTHard1
+    ],
 
     #
     # single top baseline
@@ -75,20 +94,14 @@ containers = {
     ],
     "st_tchan": [
         # centralpage --scope=mc20_13TeV --physlite Top SingleTop Baseline PowhegPythia-tchan
+        # hadronic top decays removed
         "mc20_13TeV.410658.PhPy8EG_A14_tchan_BW50_lept_top.deriv.DAOD_PHYSLITE.e6671_s3681_r13167_r13146_p6697",
         "mc20_13TeV.410658.PhPy8EG_A14_tchan_BW50_lept_top.deriv.DAOD_PHYSLITE.e6671_s3681_r13144_r13146_p6697",
         "mc20_13TeV.410658.PhPy8EG_A14_tchan_BW50_lept_top.deriv.DAOD_PHYSLITE.e6671_s3681_r13145_r13146_p6697",
         "mc20_13TeV.410659.PhPy8EG_A14_tchan_BW50_lept_antitop.deriv.DAOD_PHYSLITE.e6671_s3681_r13167_r13146_p6697",
         "mc20_13TeV.410659.PhPy8EG_A14_tchan_BW50_lept_antitop.deriv.DAOD_PHYSLITE.e6671_s3681_r13144_r13146_p6697",
         "mc20_13TeV.410659.PhPy8EG_A14_tchan_BW50_lept_antitop.deriv.DAOD_PHYSLITE.e6671_s3681_r13145_r13146_p6697",
-        "mc20_13TeV.600027.PhPy8EG_A14_tchan_BW50_had_top.deriv.DAOD_PHYSLITE.e8041_s3681_r13167_p6697",
-        "mc20_13TeV.600027.PhPy8EG_A14_tchan_BW50_had_top.deriv.DAOD_PHYSLITE.e8041_s3681_r13144_p6697",
-        "mc20_13TeV.600027.PhPy8EG_A14_tchan_BW50_had_top.deriv.DAOD_PHYSLITE.e8041_s3681_r13145_p6697",
-        "mc20_13TeV.600028.PhPy8EG_A14_tchan_BW50_had_antitop.deriv.DAOD_PHYSLITE.e8041_s3681_r13167_p6697",
-        "mc20_13TeV.600028.PhPy8EG_A14_tchan_BW50_had_antitop.deriv.DAOD_PHYSLITE.e8041_s3681_r13144_p6697",
-        "mc20_13TeV.600028.PhPy8EG_A14_tchan_BW50_had_antitop.deriv.DAOD_PHYSLITE.e8041_s3681_r13145_p6697",
         # centralpage --scope=mc23_13p6TeV --physlite Top SingleTop Baseline PowhegPythia8-tchan
-        # TODO (low priority) missing hadronic top decays
         "mc23_13p6TeV.601350.PhPy8EG_tqb_lep_antitop.deriv.DAOD_PHYSLITE.e8514_s4162_r14622_p6697",
         "mc23_13p6TeV.601350.PhPy8EG_tqb_lep_antitop.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697",
         "mc23_13p6TeV.601350.PhPy8EG_tqb_lep_antitop.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697",
@@ -101,12 +114,6 @@ containers = {
         "mc20_13TeV.601352.PhPy8EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8547_s4231_r13167_p6697",
         "mc20_13TeV.601352.PhPy8EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8547_s4231_r13144_p6697",
         "mc20_13TeV.601352.PhPy8EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8547_s4231_r13145_p6697",
-        "mc20_13TeV.601353.PhPy8EG_tW_dyn_DR_dil_antitop.deriv.DAOD_PHYSLITE.e8547_s4231_r13167_p6697",
-        "mc20_13TeV.601353.PhPy8EG_tW_dyn_DR_dil_antitop.deriv.DAOD_PHYSLITE.e8547_s4231_r13144_p6697",
-        "mc20_13TeV.601353.PhPy8EG_tW_dyn_DR_dil_antitop.deriv.DAOD_PHYSLITE.e8547_s4231_r13145_p6697",
-        "mc20_13TeV.601354.PhPy8EG_tW_dyn_DR_dil_top.deriv.DAOD_PHYSLITE.e8547_s4231_r13167_p6697",
-        "mc20_13TeV.601354.PhPy8EG_tW_dyn_DR_dil_top.deriv.DAOD_PHYSLITE.e8547_s4231_r13144_p6697",
-        "mc20_13TeV.601354.PhPy8EG_tW_dyn_DR_dil_top.deriv.DAOD_PHYSLITE.e8547_s4231_r13145_p6697",
         "mc20_13TeV.601355.PhPy8EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8547_s4231_r13167_p6697",
         "mc20_13TeV.601355.PhPy8EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8547_s4231_r13144_p6697",
         "mc20_13TeV.601355.PhPy8EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8547_s4231_r13145_p6697",
@@ -114,21 +121,51 @@ containers = {
         "mc23_13p6TeV.601352.PhPy8EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_s4162_r14622_p6697",
         "mc23_13p6TeV.601352.PhPy8EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_s4159_r15224_p6697",
         "mc23_13p6TeV.601352.PhPy8EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_s4369_r16083_p6697",
-        "mc23_13p6TeV.601353.PhPy8EG_tW_dyn_DR_dil_antitop.deriv.DAOD_PHYSLITE.e8551_s4162_r14622_p6697",
-        "mc23_13p6TeV.601353.PhPy8EG_tW_dyn_DR_dil_antitop.deriv.DAOD_PHYSLITE.e8551_s4159_r15224_p6697",
-        "mc23_13p6TeV.601353.PhPy8EG_tW_dyn_DR_dil_antitop.deriv.DAOD_PHYSLITE.e8551_s4369_r16083_p6697",
-        "mc23_13p6TeV.601354.PhPy8EG_tW_dyn_DR_dil_top.deriv.DAOD_PHYSLITE.e8551_s4162_r14622_p6697",
-        "mc23_13p6TeV.601354.PhPy8EG_tW_dyn_DR_dil_top.deriv.DAOD_PHYSLITE.e8551_s4159_r15224_p6697",
-        "mc23_13p6TeV.601354.PhPy8EG_tW_dyn_DR_dil_top.deriv.DAOD_PHYSLITE.e8551_s4369_r16083_p6697",
         "mc23_13p6TeV.601355.PhPy8EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8551_s4162_r14622_p6697",
         "mc23_13p6TeV.601355.PhPy8EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8551_s4159_r15224_p6697",
         "mc23_13p6TeV.601355.PhPy8EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8551_s4369_r16083_p6697",
     ],
 
     #
-    # TODO single top systematics: could add Wt PH7 and pTHard=1
+    # single top systematics
     #
-    "st_var": [],
+    "Wt_DS": [
+        # centralpage --scope=mc20_13TeV --physlite Top SingleTop Systematic PowhegPythia8-DynScale-DS-Wt
+        "mc20_13TeV.601627.PhPy8EG_tW_DS_dyn_incl_antitop.deriv.DAOD_PHYSLITE.e8482_s3681_r13167_r13146_p6697",
+        "mc20_13TeV.601627.PhPy8EG_tW_DS_dyn_incl_antitop.deriv.DAOD_PHYSLITE.e8482_s3681_r13144_r13146_p6697",
+        "mc20_13TeV.601627.PhPy8EG_tW_DS_dyn_incl_antitop.deriv.DAOD_PHYSLITE.e8482_s3681_r13145_r13146_p6697",
+        "mc20_13TeV.601631.PhPy8EG_tW_DS_dyn_incl_top.deriv.DAOD_PHYSLITE.e8482_s3681_r13167_r13146_p6697",
+        "mc20_13TeV.601631.PhPy8EG_tW_DS_dyn_incl_top.deriv.DAOD_PHYSLITE.e8482_s3681_r13144_r13146_p6697",
+        "mc20_13TeV.601631.PhPy8EG_tW_DS_dyn_incl_top.deriv.DAOD_PHYSLITE.e8482_s3681_r13145_r13146_p6697",
+        # centralpage --scope=mc23_13p6TeV --physlite Top SingleTop Systematic PowhegPythia8-tW_DS
+        "mc23_13p6TeV.601627.PhPy8EG_tW_DS_dyn_incl_antitop.deriv.DAOD_PHYSLITE.e8549_s4162_r15540_p6697",
+        "mc23_13p6TeV.601627.PhPy8EG_tW_DS_dyn_incl_antitop.deriv.DAOD_PHYSLITE.e8549_s4159_r15530_p6697",
+        "mc23_13p6TeV.601627.PhPy8EG_tW_DS_dyn_incl_antitop.deriv.DAOD_PHYSLITE.e8549_s4369_r16083_p6697",
+        "mc23_13p6TeV.601631.PhPy8EG_tW_DS_dyn_incl_top.deriv.DAOD_PHYSLITE.e8549_s4162_r15540_p6697",
+        "mc23_13p6TeV.601631.PhPy8EG_tW_DS_dyn_incl_top.deriv.DAOD_PHYSLITE.e8549_s4159_r15530_p6697",
+        "mc23_13p6TeV.601631.PhPy8EG_tW_DS_dyn_incl_top.deriv.DAOD_PHYSLITE.e8549_s4369_r16083_p6697",
+    ],
+    "Wt_H7": [
+        # centralpage --scope=mc20_13TeV --physlite Top SingleTop Systematic PowhegHerwig7-DynScale-Wt
+        "mc20_13TeV.602235.PhH7EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8547_a907_r14859_p6697",
+        "mc20_13TeV.602235.PhH7EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8547_a907_r14860_p6697",
+        "mc20_13TeV.602235.PhH7EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8547_a907_r14861_p6697",
+        "mc20_13TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8547_a907_r14859_p6697",
+        "mc20_13TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8547_a907_r14860_p6697",
+        "mc20_13TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8547_a907_r14861_p6697",
+        # centralpage --scope=mc23_13p6TeV --physlite Top SingleTop Systematic PowhegHerwig7-tW
+        "mc23_13p6TeV.602235.PhH7EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8551_a910_r15540_p6697",
+        "mc23_13p6TeV.602235.PhH7EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8551_a911_r15530_p6697",
+        "mc23_13p6TeV.602235.PhH7EG_tW_dyn_DR_incl_top.deriv.DAOD_PHYSLITE.e8551_a934_r16083_p6697",
+        "mc23_13p6TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_a910_r15540_p6697",
+        "mc23_13p6TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_a911_r15530_p6697",
+        "mc23_13p6TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_a934_r16083_p6697",
+    ],
+    "Wt_pthard": [
+        # TODO (low priority) incomplete in mc23
+        # centralpage --scope=mc20_13TeV --physlite Top SingleTop Systematic pthard1-DynScale-Wt
+        # centralpage --scope=mc23_13p6TeV --physlite Top SingleTop Systematic PowhegPythia8-tW_pTHard1
+    ],
 
     #
     # ttV
@@ -216,14 +253,9 @@ containers = {
         "mc23_13p6TeV.525955.aMCPy8EG_tWZ_Ztoll_DR1.deriv.DAOD_PHYSLITE.e8558_s4162_r14622_p6697",
         "mc23_13p6TeV.525955.aMCPy8EG_tWZ_Ztoll_DR1.deriv.DAOD_PHYSLITE.e8558_s4159_r15224_p6697",
         "mc23_13p6TeV.525955.aMCPy8EG_tWZ_Ztoll_DR1.deriv.DAOD_PHYSLITE.e8558_s4369_r16083_p6697",
+        # TODO (low priority) 4top incomplete in m23e and NLO vs LO
         # centralpage --scope=mc20_13TeV --physlite Top RareTop Baseline MadGraphPythia-tttt
-        "mc20_13TeV.412043.aMcAtNloPythia8EvtGen_A14NNPDF31_SM4topsNLO.deriv.DAOD_PHYSLITE.e7101_a907_r14859_p6697",
-        "mc20_13TeV.412043.aMcAtNloPythia8EvtGen_A14NNPDF31_SM4topsNLO.deriv.DAOD_PHYSLITE.e7101_a907_r14860_p6697",
-        "mc20_13TeV.412043.aMcAtNloPythia8EvtGen_A14NNPDF31_SM4topsNLO.deriv.DAOD_PHYSLITE.e7101_a907_r14861_p6697",
         # centralpage --scope=mc23_13p6TeV --physlite Top RareTop Baseline aMcAtNloPythia-tttt
-        # TODO (low priority) this is missing mc23e and is NLO vs LO in mc20
-        "mc23_13p6TeV.523243.aMCPy8EG_SM4topsNLO.deriv.DAOD_PHYSLITE.e8559_s4162_r15540_p6697",
-        "mc23_13p6TeV.523243.aMCPy8EG_SM4topsNLO.deriv.DAOD_PHYSLITE.e8559_s4159_r15530_p6697",
     ],
 
     #
@@ -231,6 +263,7 @@ containers = {
     #
     "wjets": [
         # centralpage --scope=mc20_13TeV --physlite WeakBoson Wjets_lv Baseline Sherpa_2211_W
+        # hadronic tau decays removed
         "mc20_13TeV.700338.Sh_2211_Wenu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697",
         "mc20_13TeV.700338.Sh_2211_Wenu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697",
         "mc20_13TeV.700338.Sh_2211_Wenu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697",
@@ -258,15 +291,6 @@ containers = {
         "mc20_13TeV.700346.Sh_2211_Wtaunu_L_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697",
         "mc20_13TeV.700346.Sh_2211_Wtaunu_L_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697",
         "mc20_13TeV.700346.Sh_2211_Wtaunu_L_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697",
-        "mc20_13TeV.700347.Sh_2211_Wtaunu_H_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697",
-        "mc20_13TeV.700347.Sh_2211_Wtaunu_H_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697",
-        "mc20_13TeV.700347.Sh_2211_Wtaunu_H_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697",
-        "mc20_13TeV.700348.Sh_2211_Wtaunu_H_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697",
-        "mc20_13TeV.700348.Sh_2211_Wtaunu_H_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697",
-        "mc20_13TeV.700348.Sh_2211_Wtaunu_H_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697",
-        "mc20_13TeV.700349.Sh_2211_Wtaunu_H_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697",
-        "mc20_13TeV.700349.Sh_2211_Wtaunu_H_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697",
-        "mc20_13TeV.700349.Sh_2211_Wtaunu_H_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697",
         # centralpage --scope=mc23_13p6TeV --physlite WeakBoson Vjets Baseline Sherpa_2214
         # this includes both Z+jets and W+jets
         # dropping mW_105_ECMS samples
@@ -304,7 +328,7 @@ containers = {
     #
     "zjets": [
         # centralpage --scope=mc20_13TeV --physlite WeakBoson Zjets_ll Baseline Sherpa_2211_Z
-        # TODO (low priority) check that this is sufficiently consistent with mc23 (missing taus)
+        # Z>nunu removed
         "mc20_13TeV.700320.Sh_2211_Zee_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697",
         "mc20_13TeV.700320.Sh_2211_Zee_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697",
         "mc20_13TeV.700320.Sh_2211_Zee_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697",
@@ -323,18 +347,19 @@ containers = {
         "mc20_13TeV.700325.Sh_2211_Zmumu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697",
         "mc20_13TeV.700325.Sh_2211_Zmumu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697",
         "mc20_13TeV.700325.Sh_2211_Zmumu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697",
-        "mc20_13TeV.700335.Sh_2211_Znunu_pTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697",
-        "mc20_13TeV.700335.Sh_2211_Znunu_pTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697",
-        "mc20_13TeV.700335.Sh_2211_Znunu_pTV2_BFilter.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697",
-        "mc20_13TeV.700336.Sh_2211_Znunu_pTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697",
-        "mc20_13TeV.700336.Sh_2211_Znunu_pTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697",
-        "mc20_13TeV.700336.Sh_2211_Znunu_pTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697",
-        "mc20_13TeV.700337.Sh_2211_Znunu_pTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13167_r13146_p6697",
-        "mc20_13TeV.700337.Sh_2211_Znunu_pTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697",
-        "mc20_13TeV.700337.Sh_2211_Znunu_pTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697",
+        # centralpage --scope=mc20_13TeV --physlite WeakBoson Zjets_ll Baseline Sherpa_2214_Z
+        "mc20_13TeV.700792.Sh_2214_Ztautau_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8527_s3797_r13167_p7018",
+        "mc20_13TeV.700792.Sh_2214_Ztautau_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8527_s3797_r13144_p6697",
+        "mc20_13TeV.700792.Sh_2214_Ztautau_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8527_s3797_r13145_p6697",
+        "mc20_13TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13167_p7018",
+        "mc20_13TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13144_p7018",
+        "mc20_13TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13145_p6697",
+        "mc20_13TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13167_p7018",
+        "mc20_13TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13144_p7018",
+        "mc20_13TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8527_s3681_r13145_r13146_p6697",
         # centralpage --scope=mc23_13p6TeV --physlite WeakBoson Vjets Baseline Sherpa_2214
         # this includes both Z+jets and W+jets
-        # dropping mZ_105_ECMS and Mll10_40 samples
+        # dropping mZ_105_ECMS and Mll10_40 samples, as well as Z>nunu
         "mc23_13p6TeV.700786.Sh_2214_Zee_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697",
         "mc23_13p6TeV.700786.Sh_2214_Zee_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697",
         "mc23_13p6TeV.700786.Sh_2214_Zee_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697",
@@ -362,15 +387,6 @@ containers = {
         "mc23_13p6TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697",
         "mc23_13p6TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697",
         "mc23_13p6TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697",
-        "mc23_13p6TeV.700795.Sh_2214_Znunu_pTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697",
-        "mc23_13p6TeV.700795.Sh_2214_Znunu_pTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697",
-        "mc23_13p6TeV.700795.Sh_2214_Znunu_pTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697",
-        "mc23_13p6TeV.700796.Sh_2214_Znunu_pTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697",
-        "mc23_13p6TeV.700796.Sh_2214_Znunu_pTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15224_p6697",
-        "mc23_13p6TeV.700796.Sh_2214_Znunu_pTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697",
-        "mc23_13p6TeV.700797.Sh_2214_Znunu_pTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697",
-        "mc23_13p6TeV.700797.Sh_2214_Znunu_pTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697",
-        "mc23_13p6TeV.700797.Sh_2214_Znunu_pTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697",
     ],
 
     #
