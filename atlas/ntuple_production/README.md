@@ -1,5 +1,41 @@
 # ntuple production information
 
+Tutorial: https://topcptoolkit.docs.cern.ch/latest/tutorials/setup/
+
+Get a ttbar sample to test with:
+- `centralpage --scope=mc23_13p6TeV --physlite Top TTbar Baseline PowhegPythia` (`-l` to help navigate)
+- `mc23_13p6TeV.601229.PhPy8EG_A14_ttbar_hdamp258p75_SingleLep.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6697`, download smallest file `mc23_13p6TeV:DAOD_PHYSLITE.43700597._000010.pool.root.1` (10k events)
+
+Basic setup:
+
+```bash
+git clone ssh://git@gitlab.cern.ch:7999/atlasphys-top/reco/TopCPToolkit.git
+cd TopCPToolkit
+git checkout v2.22.0
+setupATLAS
+asetup AnalysisBase,25.2.66
+cmake -S source -B build
+cmake --build build --parallel 4
+source build/*/setup.sh
+mkdir -p run
+cd run/
+```
+
+Restore later on:
+
+```bash
+setupATLAS
+asetup --restore
+source build/*/setup.sh
+cd run/
+```
+
+To run:
+
+```bash
+runTop_el.py -h
+```
+
 - Central page resources:
     - https://twiki.cern.ch/twiki/bin/view/AtlasProtected/CentralMC20ProductionListNew
     - https://twiki.cern.ch/twiki/bin/view/AtlasProtected/CentralMC23ProductionListNew
