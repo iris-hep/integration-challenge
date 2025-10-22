@@ -48,6 +48,7 @@ class Dataset:
     process: str
     variation: str
     cross_sections: List[float]
+    is_data: bool = False
     events: Optional[List[Tuple[Any, Dict]]] = field(default=None)
 
     def __repr__(self) -> str:
@@ -183,6 +184,22 @@ class ConfigurableDatasetManager:
         if process not in self.datasets:
             raise KeyError(f"Process '{process}' not found in dataset configuration")
         return self.datasets[process].redirector
+
+    def is_data_dataset(self, process: str) -> bool:
+        """
+        Check if a process represents real data (not MC).
+
+        Parameters
+        ----------
+        process : str
+            Process name
+
+        Returns
+        -------
+        bool
+            True if this is a data dataset, False for MC
+        """
+        return self.datasets[process].is_data
 
     def list_processes(self) -> List[str]:
         """

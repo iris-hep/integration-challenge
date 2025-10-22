@@ -307,6 +307,14 @@ class DatasetConfig(SubscriptableModel):
     tree_name: Annotated[str, Field(default="Events", description="ROOT tree name")]
     weight_branch: Annotated[Optional[str], Field(default="genWeight", description="Branch name for event weights")]
     redirector: Annotated[Optional[str], Field(default=None, description="redirector to prefix ROOT file-paths")]
+    is_data: Annotated[bool, Field(default=False, description="Flag indicating whether dataset represents real data")]
+    lumi_mask: Annotated[
+        Optional[FunctorConfig],
+        Field(
+            default=None,
+            description="Optional lumi mask configuration applied to data datasets",
+        ),
+    ]
 
 class DatasetManagerConfig(SubscriptableModel):
     """Top-level dataset management configuration"""
@@ -348,52 +356,6 @@ class DatasetManagerConfig(SubscriptableModel):
 # ------------------------
 # Skimming configuration
 # ------------------------
-class SkimOutputConfig(SubscriptableModel):
-    """Configuration for a single skimmed output artifact."""
-
-    format: Annotated[
-        Literal["parquet", "root_ttree", "rntuple", "safetensors"],
-        Field(default="parquet", description="Output format for skimmed events"),
-    ]
-    local: Annotated[
-        bool,
-        Field(
-            default=True,
-            description="When True, outputs are written to the local filesystem.",
-        ),
-    ]
-    base_uri: Annotated[
-        Optional[str],
-        Field(
-            default=None,
-            description=(
-                "Optional base URI or directory when writing to remote storage. "
-                "If omitted, remote outputs fall back to the local skim directory."
-            ),
-        ),
-    ]
-    to_kwargs: Annotated[
-        Dict[str, Any],
-        Field(
-            default_factory=dict,
-            description=(
-                "Additional keyword arguments forwarded to the writer "
-                "function (e.g., ak.to_parquet)."
-            ),
-        ),
-    ]
-    from_kwargs: Annotated[
-        Dict[str, Any],
-        Field(
-            default_factory=dict,
-            description=(
-                "Additional keyword arguments forwarded to the reader "
-                "function (e.g., ak.from_parquet)."
-            ),
-        ),
-    ]
-
-
 class SkimmingConfig(FunctorConfig):
     """Configuration for workitem-based skimming selections and output"""
 
