@@ -61,9 +61,6 @@ class WorkerEval:
         return f"WorkerEval({self.func!r})"
 
 
-_UNSET = object()
-
-
 class SubscriptableModel(BaseModel):
     """A Pydantic BaseModel that supports dictionary-style item access."""
 

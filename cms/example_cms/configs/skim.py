@@ -7,11 +7,13 @@ This module contains all skimming-related configuration including:
 - Skimming configuration parameters
 """
 import json
+import os
 from pathlib import Path
 from typing import List, Tuple
 
 from coffea.analysis_tools import PackedSelection
 from cuts import lumi_mask
+from utils.schema import WorkerEval
 
 
 def get_cross_sections_for_datasets(
@@ -266,4 +268,30 @@ skimming_config = {
     "use": [("PuppiMET", None), ("HLT", None)],
     "chunk_size": 100_000,
     "tree_name": "Events",
+    "output": {
+        "format": "parquet",
+        "protocol": "s3",  # Change to "local" for local filesystem
+        "base_uri": "s3://",  # S3 endpoint
+        # To switch to local Ceph: change endpoint_url to
+        # "http://rook-ceph-rgw-my-store.rook-ceph.svc/triton-116ed3e4-b173-48c1-aea0-affee451feda"
+        "to_kwargs": {
+            "compression": "zstd",
+            "storage_options": {
+                "key": WorkerEval(lambda: os.environ['AWS_ACCESS_KEY_ID']),
+                "secret": WorkerEval(lambda: os.environ['AWS_SECRET_ACCESS_KEY']),
+                "client_kwargs": {
+                    "endpoint_url": 'https://red-s3.unl.edu/cmsaf-test-oshadura'
+                }
+            }
+        },
+        "from_kwargs": {
+            "storage_options": {
+                "key": WorkerEval(lambda: os.environ['AWS_ACCESS_KEY_ID']),
+                "secret": WorkerEval(lambda: os.environ['AWS_SECRET_ACCESS_KEY']),
+                "client_kwargs": {
+                    "endpoint_url": 'https://red-s3.unl.edu/cmsaf-test-oshadura'
+                }
+            }
+        }
+    }
 }
