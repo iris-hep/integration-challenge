@@ -34,6 +34,7 @@ To run:
 
 ```bash
 runTop_el.py -h
+runTop_el.py -i inp.txt -o output -t integration-challenge -e 1000
 ```
 
 - Central page resources:
@@ -41,8 +42,14 @@ runTop_el.py -h
     - https://twiki.cern.ch/twiki/bin/view/AtlasProtected/CentralMC23ProductionListNew
 
 - p-tags: https://twiki.cern.ch/twiki/bin/viewauth/AtlasProtected/DerivationProductionTeam#p_tags
+- r-tags: https://twiki.cern.ch/twiki/bin/view/AtlasProtected/AtlasProductionGroup#Specific_Information_on_MC_campa
 
-- TopCPToolkit grid submission: https://topcptoolkit.docs.cern.ch/latest/tutorials/submit_grid/
+- TopCPToolkit
+    - grid submission: https://topcptoolkit.docs.cern.ch/latest/tutorials/submit_grid/
+        - add "--no-systematics" for data
+    - example config https://gitlab.cern.ch/atlasphys-top/reco/TopCPToolkit/-/blob/main/source/TopCPToolkit/share/configs/exampleTtbarLjets/reco.yaml
+
+- recommendations: https://atlas-topq.docs.cern.ch/Reco/Recommendations/
 
 data input files:
 ```
