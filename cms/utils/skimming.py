@@ -221,21 +221,67 @@ def _resolve_output_path(
 
     suffix = _build_output_path(dataset, file_index, part_index, output_cfg.format)
 
-    if output_cfg.protocol == "local":
+    if output_cfg.protocol == "local" or not output_cfg.base_uri:
         base_dir = Path(output_manager.get_skimmed_dir())
         return base_dir / suffix, True
-
-    base_uri = (output_cfg.base_uri or "").rstrip("/")
-    if not base_uri:
-        raise ValueError(
-            f"Skim output protocol '{output_cfg.protocol}' requires a base_uri"
-        )
-    return f"{base_uri}/{suffix}", output_cfg.protocol == "local"
+    else:
+        base_uri = (output_cfg.base_uri or "").rstrip("/")
+        path = f"{base_uri}/{suffix}"
+        return path, output_cfg.protocol == "local"
 
 
 # =============================================================================
 # Output Persistence
 # =============================================================================
+
+def _resolve_lazy_values(obj):
+    """
+    Recursively resolve WorkerEval-wrapped callables in nested dicts/lists.
+
+    Only evaluates objects explicitly marked with WorkerEval. Other callables
+    are passed through unchanged, allowing writer functions to receive callable
+    arguments when needed.
+
+    This enables configuration values to be computed on workers (e.g., reading
+    environment variables that exist on workers but not client) while preserving
+    legitimate callable arguments.
+
+    Parameters
+    ----------
+    obj : Any
+        Configuration object potentially containing WorkerEval instances
+
+    Returns
+    -------
+    Any
+        Configuration with WorkerEval instances evaluated to their values
+
+    Examples
+    --------
+    >>> from utils.schema import WorkerEval
+    >>> import os
+    >>> config = {
+    ...     "key": WorkerEval(lambda: os.environ['AWS_KEY']),
+    ...     "compression": my_compressor_func,  # Not evaluated
+    ... }
+    >>> resolved = _resolve_lazy_values(config)
+    # config["key"] is now the env var value
+    # config["compression"] is still my_compressor_func
+    """
+    from utils.schema import WorkerEval
+
+    if isinstance(obj, WorkerEval):
+        return obj()
+    elif isinstance(obj, dict):
+        return {k: _resolve_lazy_values(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_resolve_lazy_values(item) for item in obj]
+    elif isinstance(obj, tuple):
+        return tuple(_resolve_lazy_values(item) for item in obj)
+    else:
+        # Pass through everything else unchanged (including callables)
+        return obj
+
 
 def _save_workitem_output(
     events: Any,
@@ -262,7 +308,10 @@ def _save_workitem_output(
     """
     output_cfg = config.output
     path_str = str(output_file)
-    writer_kwargs = output_cfg.to_kwargs or {}
+
+    # Resolve any lazy callables (WorkerEval) on worker before passing to writer
+    writer_kwargs = _resolve_lazy_values(output_cfg.to_kwargs or {})
+
     branches_to_keep = _build_branches_to_keep(configuration, is_mc)
     output_columns = _extract_output_columns(events, branches_to_keep)
 
@@ -1071,7 +1120,8 @@ def process_and_load_events(
                     "is not implemented."
                 )
 
-            load_kwargs = dict(skimming_config.output.from_kwargs or {})
+            # Resolve any lazy callables (WorkerEval) before passing to reader
+            load_kwargs = _resolve_lazy_values(skimming_config.output.from_kwargs or {})
             load_kwargs.setdefault("schemaclass", NanoAODSchema)
 
             for file_path in output_files:

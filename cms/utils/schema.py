@@ -20,6 +20,47 @@ from pydantic import BaseModel, Field, model_validator
 ObjVar = Tuple[str, Optional[str]]
 
 
+class WorkerEval:
+    """
+    Marker for lazy evaluation on distributed workers.
+
+    Wraps a callable to indicate it should be evaluated on the worker
+    rather than passed through. This distinguishes between:
+    - Values computed from worker environment: WorkerEval(lambda: os.environ['KEY'])
+    - Actual callable arguments: my_compression_func (passed through as-is)
+
+    Useful when configuration values need to access environment variables
+    that exist on workers but not on the client side (e.g., in dask distributed).
+
+    Parameters
+    ----------
+    func : Callable
+        Function to evaluate on the worker. Should take no arguments.
+
+    Examples
+    --------
+    >>> import os
+    >>> # Resolved on worker:
+    >>> key = WorkerEval(lambda: os.environ['AWS_ACCESS_KEY_ID'])
+    >>>
+    >>> # Passed through as callable:
+    >>> compression = my_custom_compressor
+    """
+    __slots__ = ('func',)
+
+    def __init__(self, func):
+        if not callable(func):
+            raise TypeError(f"WorkerEval requires a callable, got {type(func)}")
+        self.func = func
+
+    def __call__(self):
+        """Evaluate the wrapped function."""
+        return self.func()
+
+    def __repr__(self):
+        return f"WorkerEval({self.func!r})"
+
+
 class SubscriptableModel(BaseModel):
     """A Pydantic BaseModel that supports dictionary-style item access."""
 
