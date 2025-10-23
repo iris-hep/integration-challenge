@@ -7,28 +7,23 @@ from coffea.analysis_tools import PackedSelection
 # Select good run data
 # ===================
 def lumi_mask(
-    lumifile: str, run: ak.Array, lumiBlock: ak.Array, jax: bool = False
-) -> ak.Array:
+     run: ak.Array, lumiBlock: ak.Array, lumifile: str = "") -> ak.Array:
     """
     Create a boolean mask selecting events that pass the good run/lumi criteria.
     https://github.com/cms-opendata-workshop/workshop2024-lesson-event-selection/blob/main/instructors/dpoa_workshop_utilities.py
 
     This function compares the `(run, lumiBlock)` pairs in the dataset to the
     certified good luminosity sections provided in a JSON file (e.g., from
-    CMS Golden JSON). It supports both CPU and JAX backends.
+    CMS Golden JSON).
 
     Parameters
     ----------
-    lumifile : str
-        Path to the JSON file defining the certified good lumi sections.
     run : ak.Array
         Run numbers for each event in the dataset.
     lumiBlock : ak.Array
         Luminosity block numbers for each event in the dataset.
-    verbose : bool, optional
-        If True, prints additional debug information.
-    jax : bool, optional
-        If True, converts result to JAX backend after masking.
+    lumifile : str
+        Path to the JSON file defining the certified good lumi sections.
 
     Returns
     -------
@@ -49,7 +44,7 @@ def lumi_mask(
     good_blocks = [
         good_lumi_sections[field] for field in good_lumi_sections.fields
     ]
-    all_good_blocks = ak.to_backend(ak.Array(good_blocks), ak.backend(run))
+    all_good_blocks = ak.Array(good_blocks)
 
     # -----------------------------
     # Match run numbers to good runs
@@ -71,25 +66,16 @@ def lumi_mask(
         # Build result array
         out = np.full(len(arr2_np), -1, dtype=int)
         out[valid] = sorter[pos[valid]]
-        return ak.to_backend(ak.Array(out), ak.backend(arr2))
+        return ak.Array(out)
 
     good_run_indices = find_indices(good_runs, run)
 
     # -----------------------------
     # Compute per-event lumi block diffs
     # -----------------------------
-    # Optionally convert inputs to CPU before difference
-    if jax:
-        lumiBlock = ak.to_backend(lumiBlock, "cpu")
-        all_good_blocks = ak.to_backend(all_good_blocks, "cpu")
-        good_run_indices = ak.to_backend(good_run_indices, "cpu")
 
     # Calculate (event lumi - good lumi) for matched run
     diff = lumiBlock - all_good_blocks[good_run_indices]
-
-    # Optionally switch back to JAX backend
-    if jax:
-        diff = ak.to_backend(diff, "jax")
 
     # -----------------------------
     # Evaluate mask from differences
@@ -149,7 +135,7 @@ def Zprime_hardcuts(
     muons: ak.Array, jets: ak.Array, fatjets: ak.Array
 ) -> PackedSelection:
     """
-    Define non-optimizable kinematic cuts (used in JAX analysis)
+    Define non-optimizable kinematic cuts.
     These hard cuts + baseline cuts ensure observable calculations
     can work without errors.
 
@@ -192,7 +178,7 @@ def Zprime_hardcuts_no_fj(
     jets: ak.Array,
 ) -> PackedSelection:
     """
-    Define non-optimizable kinematic cuts (used in JAX analysis)
+    Define non-optimizable kinematic cuts.
     These hard cuts + baseline cuts ensure observable calculations
     can work without errors.
 

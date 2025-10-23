@@ -50,7 +50,7 @@ class OutputDirectoryManager:
         if cache_dir:
             self.cache_dir = Path(cache_dir).expanduser().resolve()
         else:
-            self.cache_dir = Path(tempfile.gettempdir()) / "graep"
+            self.cache_dir = Path(tempfile.gettempdir()) / "integration-challenge-cms"
 
         # User-specified directories (if provided) - normalize paths
         self._user_metadata_dir = Path(metadata_dir).expanduser().resolve() if metadata_dir else None
@@ -86,41 +86,6 @@ class OutputDirectoryManager:
 
     def get_metadata_dir(self) -> Path:
         """
-        Get the metadata directory with fallback logic.
-
-        Returns
-        -------
-        Path
-            Path to metadata directory
-
-        Raises
-        ------
-        FileNotFoundError
-            If directory doesn't exist and no user-specified path
-        """
-        if self._user_metadata_dir:
-            # User specified a metadata directory - check if it exists and is a directory
-            if not self._user_metadata_dir.exists():
-                raise FileNotFoundError(
-                    f"Metadata path not found: {self._user_metadata_dir}"
-                )
-            if not self._user_metadata_dir.is_dir():
-                raise NotADirectoryError(
-                    f"Metadata path is not a directory: {self._user_metadata_dir}"
-                )
-            return self._user_metadata_dir
-        else:
-            # Use standard location under root
-            metadata_dir = self.root_output_dir / self._subdirs["metadata"]
-            if not metadata_dir.exists():
-                raise FileNotFoundError(
-                    f"Metadata directory does not exist: {metadata_dir}. "
-                    f"Either run metadata generation or specify an existing metadata directory."
-                )
-            return metadata_dir
-
-    def get_metadata_dir_for_writing(self) -> Path:
-        """
         Get the metadata directory for writing (creates if needed).
 
         Returns
@@ -136,42 +101,8 @@ class OutputDirectoryManager:
         metadata_dir.mkdir(parents=True, exist_ok=True)
         return metadata_dir
 
+
     def get_skimmed_dir(self) -> Path:
-        """
-        Get the skimmed files directory with fallback logic.
-
-        Returns
-        -------
-        Path
-            Path to skimmed files directory
-
-        Raises
-        ------
-        FileNotFoundError
-            If directory doesn't exist and no user-specified path
-        """
-        if self._user_skimmed_dir:
-            # User specified a skimmed directory - check if it exists and is a directory
-            if not self._user_skimmed_dir.exists():
-                raise FileNotFoundError(
-                    f"Skimmed path not found: {self._user_skimmed_dir}"
-                )
-            if not self._user_skimmed_dir.is_dir():
-                raise NotADirectoryError(
-                    f"Skimmed path is not a directory: {self._user_skimmed_dir}"
-                )
-            return self._user_skimmed_dir
-        else:
-            # Use standard location under root
-            skimmed_dir = self.root_output_dir / self._subdirs["skimmed"]
-            if not skimmed_dir.exists():
-                raise FileNotFoundError(
-                    f"Skimmed directory does not exist: {skimmed_dir}. "
-                    f"Either run skimming or specify an existing skimmed directory."
-                )
-            return skimmed_dir
-
-    def get_skimmed_dir_for_writing(self) -> Path:
         """
         Get the skimmed files directory for writing (creates if needed).
 

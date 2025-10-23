@@ -158,14 +158,17 @@ class BaseNetwork(ABC):
         features_dict = {}
         for feature_cfg in feature_configs:
             # Extract input arguments from object collections
-            args = get_function_arguments(
+            args, static_kwargs = get_function_arguments(
                 feature_cfg.use,
                 object_collections,
                 function_name=feature_cfg.function.__name__,
+                static_kwargs=feature_cfg.get("static_kwargs"),
             )
 
             # Compute raw feature values
-            feature_values_unscaled = feature_cfg.function(*args)
+            feature_values_unscaled = feature_cfg.function(
+                *args, **static_kwargs
+            )
 
             # Apply scaling if configured
             if feature_cfg.scale is not None:
