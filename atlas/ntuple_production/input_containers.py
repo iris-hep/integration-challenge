@@ -348,14 +348,14 @@ containers = {
         "mc20_13TeV.700325.Sh_2211_Zmumu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13144_r13146_p6697",
         "mc20_13TeV.700325.Sh_2211_Zmumu_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8351_s3681_r13145_r13146_p6697",
         # centralpage --scope=mc20_13TeV --physlite WeakBoson Zjets_ll Baseline Sherpa_2214_Z
-        "mc20_13TeV.700792.Sh_2214_Ztautau_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8527_s3797_r13167_p7018",
+        "mc20_13TeV.700792.Sh_2214_Ztautau_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8527_s3797_r13167_p6697",
         "mc20_13TeV.700792.Sh_2214_Ztautau_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8527_s3797_r13144_p6697",
         "mc20_13TeV.700792.Sh_2214_Ztautau_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8527_s3797_r13145_p6697",
-        "mc20_13TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13167_p7018",
-        "mc20_13TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13144_p7018",
+        "mc20_13TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13167_p6697",
+        "mc20_13TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13144_p6697",
         "mc20_13TeV.700793.Sh_2214_Ztautau_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13145_p6697",
-        "mc20_13TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13167_p7018",
-        "mc20_13TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13144_p7018",
+        "mc20_13TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13167_p6697",
+        "mc20_13TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8527_s3797_r13144_p6697",
         "mc20_13TeV.700794.Sh_2214_Ztautau_maxHTpTV2_CVetoBVeto.deriv.DAOD_PHYSLITE.e8527_s3681_r13145_r13146_p6697",
         # centralpage --scope=mc23_13p6TeV --physlite WeakBoson Vjets Baseline Sherpa_2214
         # this includes both Z+jets and W+jets
@@ -506,3 +506,12 @@ containers = {
         "mc23_13p6TeV.701125.Sh_2214_WlvWqq.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697",
     ]
 }
+
+try:
+    import GridSubmission.grid
+
+    for category in containers.keys():
+        GridSubmission.grid.Add(category).datasets = containers[category]
+
+except:
+    pass

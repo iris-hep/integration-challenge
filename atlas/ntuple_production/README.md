@@ -30,6 +30,14 @@ source build/*/setup.sh
 cd run/
 ```
 
+Extra for submission:
+
+```bash
+lsetup "rucio -w"
+lsetup panda pyami
+voms-proxy-init -voms atlas
+```
+
 To run:
 
 ```bash

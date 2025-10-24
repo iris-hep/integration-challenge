@@ -4,20 +4,24 @@ import GridSubmission.ami
 import input_containers
 
 config = GridSubmission.grid.Config()
-config.code = "runTop_el.py -t integration-challenge" # --no-systematics
 config.outputName = "output"
 config.gridUsername = "alheld"
-config.suffix = "test-v1"
+config.suffix = "IC-v1"
 config.excludedSites = ""
 config.noSubmit = False
 config.mergeType = "Default"
 config.destSE = "NET2_LOCALGROUPDISK"
 # config.otherOptions = ""
-# config.maxNFilesPerJob = "4"
 
-names = ["mctest", "datatest"]
-samples = GridSubmission.grid.Samples(names)
-GridSubmission.ami.check_sample_status(
-    samples, False
-)  # (samples, True) to halt on error
+# data submission
+config.code = "runTop_el.py -t integration-challenge --no-systematics"
+samples = GridSubmission.grid.Samples(["data"])
 GridSubmission.grid.submit(config, samples)
+
+# # MC submission
+# config.code = "runTop_el.py -t integration-challenge"
+# config.maxNFilesPerJob = "4"
+# names = [k for k in input_containers.containers.keys() if k != "data"]
+# samples = GridSubmission.grid.Samples(names)
+# GridSubmission.ami.check_sample_status(samples, True)  # stop on error
+# GridSubmission.grid.submit(config, samples)
