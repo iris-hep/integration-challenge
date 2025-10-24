@@ -1,6 +1,6 @@
 CommonServices:
     systematicsHistogram: 'listOfSystematics'
-    filterSystematics: "^(EG_|EL_|FT_|JET_|MET_).*$|^$"
+    filterSystematics: "^(EG_|EL_|MUON_|FT_|JET_|MET_).*$|^$"
     # onlySystematicsCategories:
     #   - jets
     #   - ftag
@@ -14,8 +14,15 @@ PileupReweighting: {}
 EventCleaning:
     runEventCleaning: True
     userGRLFiles:
+      # https://twiki.cern.ch/twiki/bin/view/AtlasProtected/GoodRunListsForAnalysisRun2
+      - 'GoodRunsLists/data15_13TeV/20170619/data15_13TeV.periodAllYear_DetStatus-v89-pro21-02_Unknown_PHYS_StandardGRL_All_Good_25ns.xml'
+      - 'GoodRunsLists/data16_13TeV/20180129/data16_13TeV.periodAllYear_DetStatus-v89-pro21-01_DQDefects-00-02-04_PHYS_StandardGRL_All_Good_25ns.xml'
+      - 'GoodRunsLists/data17_13TeV/20180619/data17_13TeV.periodAllYear_DetStatus-v99-pro22-01_Unknown_PHYS_StandardGRL_All_Good_25ns_Triggerno17e33prim.xml'
+      - 'GoodRunsLists/data18_13TeV/20190318/data18_13TeV.periodAllYear_DetStatus-v102-pro22-04_Unknown_PHYS_StandardGRL_All_Good_25ns_Triggerno17e33prim.xml'
+      # https://twiki.cern.ch/twiki/bin/view/AtlasProtected/GoodRunListsForAnalysisRun3
       - 'GoodRunsLists/data22_13p6TeV/20250321/data22_13p6TeV.periodAllYear_DetStatus-v134-pro28-09_MERGED_PHYS_StandardGRL_All_Good_25ns.xml'
-
+      - 'GoodRunsLists/data23_13p6TeV/20250321/data23_13p6TeV.periodAllYear_DetStatus-v133-pro31-11_MERGED_PHYS_StandardGRL_All_Good_25ns.xml'
+      - 'GoodRunsLists/data24_13p6TeV/20241118/physics_25ns_data24.xml'
 
 GeneratorLevelAnalysis: {}
 
@@ -27,65 +34,51 @@ Jets:
     runGhostMuonAssociation: True
     systematicsModelJES: 'Category'
     systematicsModelJER: 'Full'
-    JVT: {} 
+    JVT: {}
     PtEtaSelection:
-        minPt: 15000.0
-        maxEta: 2.8
+        minPt: 25000.0
+        maxEta: 2.5
     FlavourTagging:
-      - btagger: 'DL1dv01'
+      - btagger: 'GN2v01'
+        btagWP: 'FixedCutBEff_90'
+      - btagger: 'GN2v01'
         btagWP: 'FixedCutBEff_85'
-        bTagCalibFile: '/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/xAODBTaggingEfficiency/13TeV/2023-22-13TeV-MC20-CDI-2023-09-13_v1.root'
-      - btagger: 'DL1dv01'
+      - btagger: 'GN2v01'
         btagWP: 'FixedCutBEff_77'
-        bTagCalibFile: '/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/xAODBTaggingEfficiency/13TeV/2023-22-13TeV-MC20-CDI-2023-09-13_v1.root'
-      - btagger: 'DL1dv01'
+      - btagger: 'GN2v01'
         btagWP: 'FixedCutBEff_70'
-        bTagCalibFile: '/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/xAODBTaggingEfficiency/13TeV/2023-22-13TeV-MC20-CDI-2023-09-13_v1.root'
-      - btagger: 'DL1dv01'
+      - btagger: 'GN2v01'
+        btagWP: 'FixedCutBEff_65'
+      - btagger: 'GN2v01'
         btagWP: 'Continuous'
-        bTagCalibFile: '/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/xAODBTaggingEfficiency/13TeV/2023-22-13TeV-MC20-CDI-2023-09-13_v1.root'
     FlavourTaggingEventSF:
       - containerName: 'AnaJets.baselineJvt'
-        btagger: 'DL1dv01'
+        btagger: 'GN2v01'
         btagWP: 'Continuous'
-        generator: 'default'  # https://topcptoolkit.docs.cern.ch/latest/settings/jets/#ftagjetsfblock
-        # https://ftag.docs.cern.ch/recommendations/superseded/#dl1dv01-pcbt-september-2023
-        bTagCalibFile: '/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/xAODBTaggingEfficiency/13TeV/2023-22-13TeV-MC20-CDI-2023-09-13_v1.root'
 
 Electrons:
   - containerName: 'AnaElectrons'
     crackVeto: True
     IFFClassification: {}
     WorkingPoint:
-      - selectionName: 'loose'
-        identificationWP: 'TightLH'
-        isolationWP: 'NonIso'
-        noEffSF: True
       - selectionName: 'tight'
         identificationWP: 'TightLH'
         isolationWP: 'Tight_VarRad'
-        noEffSF: True
     PtEtaSelection:
-        minPt: 15000.
+        minPt: 25000.
+        maxEta: 2.47
         useClusterEta: True
-        maxEta: 2.8
 
 Muons:
   - containerName: 'AnaMuons'
     IFFClassification: {}
     WorkingPoint:
-      - selectionName: 'loose'
-        quality: 'Medium'
-        isolation: 'NonIso'
-        saveCombinedSF: True
       - selectionName: 'tight'
         quality: 'Medium'
         isolation: 'Tight_VarRad'
-        saveCombinedSF: True
     PtEtaSelection:
-        minPt: 15000.0
-        maxEta: 2.8
-
+        minPt: 25000.0
+        maxEta: 2.5
 
 MissingET:
   - containerName: 'AnaMET'
@@ -93,19 +86,20 @@ MissingET:
     jets: 'AnaJets'
     electrons: 'AnaElectrons.tight'
     muons: 'AnaMuons.tight'
-    setMuonJetEMScale: False
 
 # containerName and postfix must be defined in their respective blocks
 OverlapRemoval:
-  inputLabel: 'preselectOR'
-  outputLabel: 'passesOR'
-  # Format should follow Object: '<containerName>.<postfix>'
-  jets: 'AnaJets.baselineJvt'
-  electrons: 'AnaElectrons.tight'
-  muons: 'AnaMuons.tight'
+    inputLabel: 'preselectOR'
+    outputLabel: 'passesOR'
+    # Format should follow Object: '<containerName>.<postfix>'
+    jets: 'AnaJets.baselineJvt'
+    electrons: 'AnaElectrons.tight'
+    muons: 'AnaMuons.tight'
 
 # ObjectCutFlow:
 #   - containerName: 'AnaElectrons'
+#     selectionName: 'tight'
+#   - containerName: 'AnaMuons'
 #     selectionName: 'tight'
 #   - containerName: 'AnaJets'
 #     selectionName: 'baselineJvt'
@@ -116,52 +110,56 @@ Thinning:
     selectionName: 'baselineJvt'
   - containerName: 'AnaElectrons'
     outputName: 'OutElectrons'
-    selectionName: 'tight||loose'
+    selectionName: 'tight'
   - containerName: 'AnaMuons'
     outputName: 'OutMuons'
-    selectionName: 'tight||loose'
+    selectionName: 'tight'
+
+LeptonSF:
+  - electrons: 'AnaElectrons.tight'
+    muons: 'AnaMuons.tight'
+  # photons: 'AnaPhotons.tight'
+    lepton_postfix: 'tight'
 
 Trigger:
-  triggerChainsPerYear:  # https://twiki.cern.ch/twiki/bin/viewauth/Atlas/LowestUnprescaled
-    '2015':
-      - 'HLT_e24_lhmedium_L1EM20VH || HLT_e60_lhmedium || HLT_e120_lhloose'
-      #- 'HLT_mu20_iloose_L1MU15 || HLT_mu50' #Triggerchain not found trigger is unavailable, returns efficiency = 0
-    '2016':
-      - 'HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e140_lhloose_nod0'
-      - 'HLT_mu26_ivarmedium || HLT_mu50'
-    '2017':
-      - 'HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e140_lhloose_nod0'
-      - 'HLT_mu26_ivarmedium || HLT_mu50'
-    '2018':
-      - 'HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e140_lhloose_nod0'
-      - 'HLT_mu26_ivarmedium || HLT_mu50'
-    #Run3 recomendations: https://twiki.cern.ch/twiki/bin/view/Atlas/TrigEgammaRecommendationsRun3
-    '2022':
-      - 'HLT_e26_lhtight_ivarloose_L1EM22VHI || HLT_e60_lhmedium_L1EM22VHI || HLT_e140_lhloose_L1EM22VHI'
-      - 'HLT_mu24_ivarmedium_L1MU14FCH || HLT_mu50_L1MU14FCH'
+    triggerChainsPerYear:  # https://twiki.cern.ch/twiki/bin/viewauth/Atlas/LowestUnprescaled
+      '2015':
+        - 'HLT_e24_lhmedium_L1EM20VH || HLT_e60_lhmedium || HLT_e120_lhloose'
+        - 'HLT_mu20_iloose_L1MU15 || HLT_mu40'
+      '2016':
+        - 'HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e140_lhloose_nod0'
+        - 'HLT_mu26_ivarmedium || HLT_mu50'
+      '2017':
+        - 'HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e140_lhloose_nod0'
+        - 'HLT_mu26_ivarmedium || HLT_mu50'
+      '2018':
+        - 'HLT_e26_lhtight_nod0_ivarloose || HLT_e60_lhmedium_nod0 || HLT_e140_lhloose_nod0'
+        - 'HLT_mu26_ivarmedium || HLT_mu50'
+      # Run-3 recomendations: https://twiki.cern.ch/twiki/bin/view/Atlas/  TrigEgammaRecommendationsRun3
+      '2022':
+        - 'HLT_e26_lhtight_ivarloose_L1EM22VHI || HLT_e60_lhmedium_L1EM22VHI || HLT_e140_lhloose_L1EM22VHI'
+        - 'HLT_mu24_ivarmedium_L1MU14FCH || HLT_mu50_L1MU14FCH'
+      '2023':
+        - 'HLT_e26_lhtight_ivarloose_L1eEM26M || HLT_e60_lhmedium_L1eEM26M || HLT_e140_lhloose_L1eEM26M'
+        - 'HLT_mu24_ivarmedium_L1MU14FCH || HLT_mu50_L1MU14FCH'
+      '2024':
+        - 'HLT_e26_lhtight_ivarloose_L1eEM26M || HLT_e60_lhmedium_L1eEM26M || HLT_e140_lhloose_L1eEM26M'
+        - 'HLT_mu24_ivarmedium_L1MU14FCH || HLT_mu50_L1MU14FCH'
 
-    '2023':
-      - 'HLT_e26_lhtight_ivarloose_L1eEM26M || HLT_e60_lhmedium_L1eEM26M || HLT_e140_lhloose_L1eEM26M'
-      - 'HLT_mu24_ivarmedium_L1MU14FCH || HLT_mu50_L1MU14FCH'
+    noFilter: False
+    postfix: '_emu'
+    electrons: 'AnaElectrons.tight'
+    muons: 'AnaMuons.tight'
+    electronID: 'Tight'
+    electronIsol: 'Tight_VarRad'
+    muonID: 'Medium'
 
-  
-  noFilter: False
-  postfix: '_emu'
-  electrons: 'AnaElectrons.loose'
-  electronID: 'Tight'
-  electronIsol: 'Tight_VarRad'
-  muons: 'AnaMuons.loose'
-  muonID: 'Medium'
-
-
-
-#Loose preselection
 EventSelection:
-  - electrons: 'AnaElectrons.loose'
-    muons: 'AnaMuons.loose'
+  - electrons: 'AnaElectrons.tight'
+    muons: 'AnaMuons.tight'
     jets: 'AnaJets.baselineJvt'
     met: 'AnaMET'
-    btagDecoration: 'ftag_select_DL1dv01_FixedCutBEff_77'
+    btagDecoration: 'ftag_select_GN2v01_FixedCutBEff_85'
     noFilter: False
     cutFlowHistograms: True
     selectionCutsDict:
@@ -170,12 +168,12 @@ EventSelection:
         JET_N 25000 >= 2
         JET_N_BTAG >= 1
         SAVE
-      'fourjetoneb_el': |
+      'ejets': |
         IMPORT SUBcommon
         EL_N 27000 >= 1
         JET_N 25000 >= 4
         SAVE
-      'fourjetoneb_mu': |
+      'mujets': |
         IMPORT SUBcommon
         MU_N 27000 >= 1
         JET_N 25000 >= 4
@@ -189,10 +187,10 @@ Output:
   containers:
       # Format should follow: '<suffix>:<output container>'
       el_: 'OutElectrons'
+      mu_: 'OutMuons'
       jet_: 'OutJets'
       met_: 'AnaMET'
       '': 'EventInfo'
-      mu_: 'OutMuons'
   commands:
       # Turn output branches on and off with 'enable' and 'disable'
       - disable jet_jvtEfficiency.*
