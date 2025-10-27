@@ -55,6 +55,7 @@ Jets:
       - containerName: 'AnaJets.baselineJvt'
         btagger: 'GN2v01'
         btagWP: 'Continuous'
+        # generator: 'default'  # for v1.1
 
 Electrons:
   - containerName: 'AnaElectrons'
@@ -64,6 +65,10 @@ Electrons:
       - selectionName: 'tight'
         identificationWP: 'TightLH'
         isolationWP: 'Tight_VarRad'
+        # correlationModelId: 'TOTAL'
+        # correlationModelIso: 'TOTAL'
+        # correlationModelReco: 'TOTAL'
+        # forceFullSimConfig: True  # for v1.1
     PtEtaSelection:
         minPt: 25000.
         maxEta: 2.47
