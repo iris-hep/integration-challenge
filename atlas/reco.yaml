@@ -55,7 +55,7 @@ Jets:
       - containerName: 'AnaJets.baselineJvt'
         btagger: 'GN2v01'
         btagWP: 'Continuous'
-        # generator: 'default'  # for v1.1
+        # generator: 'default'  # for v1.2
 
 Electrons:
   - containerName: 'AnaElectrons'
