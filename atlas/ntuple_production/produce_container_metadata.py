@@ -65,7 +65,7 @@ def rucio_container_metadata(name):
         if nevts:
             nevts = int(nevts[0])
         else:
-            nevts = None  # unkonwn for output containers
+            nevts = None  # unknown for output containers
     except:
         print(f"parsing failed for {name}:\n{out_tail}")
 
