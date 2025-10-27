@@ -212,3 +212,6 @@ __marimo__/
 # NEVER CHANGE
 # CMS Internal files are not supposed to be published
 DONT_EXPOSE_CMS_INTERNAL/
+
+# ATLAS setup
+atlas/ntuple_production/production_status.json
