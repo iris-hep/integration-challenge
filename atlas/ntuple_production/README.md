@@ -41,6 +41,12 @@
     voms-proxy-init -voms atlas
     ```
 
+## Notes for first and potential second production
+
+- workaround for electron efficiency in Run-3 fastsim for v1.1 production: `forceFullSimConfig: True`
+- MCMC SFs for 545027/8 in v1.2: `generator: 'default'`, should be fixed for next production via https://gitlab.cern.ch/atlas/athena/-/merge_requests/82736
+- electron efficiency: use (and test first) `correlationModelId` / `correlationModelIso` / `correlationModelReco` set to `TOTAL` for less NPs
+
 ## More information
 
 - Central page resources:
