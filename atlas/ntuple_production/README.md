@@ -31,7 +31,7 @@
     runTop_el.py -i inp.txt -o output -t integration-challenge -e 1000
     ```
 
-- Structure for grid submission: `grid/` subfolder in `run/`, needs `input_containers.py` and `submitToGrid.py`. Data needs no systematics via `--no-systematics`.
+- Structure for grid submission: `grid/` subfolder in `run/`, needs `input_containers.py` and `submit_to_grid.py`. Data needs no systematics via `--no-systematics`.
 
 - Extra environment setup for submission:
 
@@ -40,6 +40,8 @@
     lsetup panda pyami
     voms-proxy-init -voms atlas
     ```
+
+- After ntuple production: `write_ntuple_metadata.py` saves relevant metadata of input and output containers plus xrootd ntuple file paths to disk.
 
 ## Notes for first and potential second production
 
