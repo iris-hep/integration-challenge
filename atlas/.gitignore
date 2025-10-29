@@ -208,3 +208,7 @@ __marimo__/
 .asetup.save
 *.out
 *.err
+# bigpanda status
+ntuple_production/production_status.json
+# preprocess json
+preprocess_output.json
