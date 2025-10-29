@@ -149,5 +149,5 @@ if __name__ == "__main__":
     get_job_json(username, production_tag, fname_bigpanda)
     production_map = parse_job_json(fname_bigpanda)
 
-    fname_full = "ntuple_metadata.json.gz"
+    fname_full = "file_metadata.json.gz"
     metadata = save_full_metadata(production_map, fname_full)
