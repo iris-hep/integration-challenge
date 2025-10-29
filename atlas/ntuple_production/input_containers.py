@@ -506,42 +506,43 @@ containers = {
         "mc23_13p6TeV.701125.Sh_2214_WlvWqq.deriv.DAOD_PHYSLITE.e8543_s4369_r16083_p6697",
     ],
 
-    #Signal ttbar->WH+->nlcs 
-    # rucio list-dids mc20_13TeV:*ttbar_Hplus_cs_mhc*PHYSLITE*
-    "Hplus_cs": [
-        #Run2
-        #20 GeV H+
-        "mc20_13TeV:mc20_13TeV.561488.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc20.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
-        "mc20_13TeV:mc20_13TeV.561488.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc20.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
-        "mc20_13TeV:mc20_13TeV.561488.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc20.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
-        #30 GeV H+
-        "mc20_13TeV:mc20_13TeV.561490.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc30.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
-        "mc20_13TeV:mc20_13TeV.561490.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc30.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
-        "mc20_13TeV:mc20_13TeV.561490.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc30.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
-        #45 GeV H+
-        "mc20_13TeV:mc20_13TeV.561494.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc60.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
-        "mc20_13TeV:mc20_13TeV.561494.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc60.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
-        "mc20_13TeV:mc20_13TeV.561494.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc60.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
-        #60 GeV H+
-        "mc20_13TeV:mc20_13TeV.561494.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc60.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
-        "mc20_13TeV:mc20_13TeV.561494.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc60.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
-        "mc20_13TeV:mc20_13TeV.561494.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc60.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
-        #80 GeV H+
-        "mc20_13TeV:mc20_13TeV.561496.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc80.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
-        "mc20_13TeV:mc20_13TeV.561496.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc80.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
-        "mc20_13TeV:mc20_13TeV.561496.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc80.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
-        #100 GeV H+
-        "mc20_13TeV:mc20_13TeV.561498.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc100.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
-        "mc20_13TeV:mc20_13TeV.561498.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc100.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
-        "mc20_13TeV:mc20_13TeV.561498.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc100.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
-        #120 GeV H+
-        "mc20_13TeV:mc20_13TeV.561500.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc120.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
-        "mc20_13TeV:mc20_13TeV.561500.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc120.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
-        "mc20_13TeV:mc20_13TeV.561500.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc120.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
-        #130 GeV H+
-        "mc20_13TeV:mc20_13TeV.561502.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc130.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
-        "mc20_13TeV:mc20_13TeV.561502.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc130.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",                        
-        "mc20_13TeV:mc20_13TeV.561502.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc130.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
+    #
+    # signal ttbar->WH+->nlcs
+    #
+    "signal_hplus": [
+        # rucio list-dids mc20_13TeV:*ttbar_Hplus_cs_mhc*PHYSLITE*
+        # 20 GeV H+
+        "mc20_13TeV.561488.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc20.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
+        "mc20_13TeV.561488.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc20.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
+        "mc20_13TeV.561488.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc20.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
+        # 30 GeV H+
+        "mc20_13TeV.561490.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc30.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
+        "mc20_13TeV.561490.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc30.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
+        "mc20_13TeV.561490.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc30.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
+        # 45 GeV H+
+        "mc20_13TeV.561492.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc45.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
+        "mc20_13TeV.561492.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc45.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
+        "mc20_13TeV.561492.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc45.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
+        # 60 GeV H+
+        "mc20_13TeV.561494.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc60.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
+        "mc20_13TeV.561494.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc60.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
+        "mc20_13TeV.561494.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc60.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
+        # 80 GeV H+
+        "mc20_13TeV.561496.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc80.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
+        "mc20_13TeV.561496.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc80.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
+        "mc20_13TeV.561496.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc80.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
+        # 100 GeV H+
+        "mc20_13TeV.561498.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc100.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
+        "mc20_13TeV.561498.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc100.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
+        "mc20_13TeV.561498.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc100.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
+        # 120 GeV H+
+        "mc20_13TeV.561500.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc120.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
+        "mc20_13TeV.561500.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc120.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
+        "mc20_13TeV.561500.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc120.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
+        # 130 GeV H+
+        "mc20_13TeV.561502.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc130.deriv.DAOD_PHYSLITE.e8579_a907_r14859_p6697",
+        "mc20_13TeV.561502.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc130.deriv.DAOD_PHYSLITE.e8579_a907_r14860_p6697",
+        "mc20_13TeV.561502.aMCPy8EG_NNPDF30NLO_ttbar_Hplus_cs_mhc130.deriv.DAOD_PHYSLITE.e8579_a907_r14861_p6697",
     ],
     
     "Hplus_cb": [
