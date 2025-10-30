@@ -41,7 +41,7 @@
     voms-proxy-init -voms atlas
     ```
 
-- After ntuple production: `write_ntuple_metadata.py` saves relevant metadata of input and output containers plus xrootd ntuple file paths to disk.
+- After ntuple production: `collect_file_metadata.py` saves relevant metadata of input and output containers plus xrootd ntuple file paths to disk.
 
 ## Notes for first and potential second production
 
