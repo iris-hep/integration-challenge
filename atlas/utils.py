@@ -38,7 +38,7 @@ def dsid_rtag_campaign(name: str) -> tuple[str, str, str]:
     """extract information from container name"""
     data_tag = re.findall(r":(data\d+)_", name)
     if data_tag:
-        return None, None, data_tag[0]
+        return "data", None, data_tag[0]
 
     dsid = re.findall(r".(\d{6}).", name)[0]
     rtag = re.findall(r"_(r\d+)_", name)[0]
@@ -62,17 +62,24 @@ def dsid_rtag_campaign(name: str) -> tuple[str, str, str]:
     return dsid, rtag, campaign
 
 
-def integrated_luminosity(campaign: str) -> float:
+def integrated_luminosity(campaign: str, total=False) -> float:
     """get integrated luminosity in pb for each MC campaign"""
-    lumi = {
+    if "data" in campaign:
+        return 1.0
+
+    lumi_dict = {
         "mc20a": 3244.54 + 33402.2,
         "mc20d": 44630.6,
         "mc20e": 58791.6,
         "mc23a": 26328.8,
         "mc23d": 25204.3,
-        "mc23e": 109376.0
-    }[campaign]
-    return lumi
+        "mc23e": 109376.0,
+    }
+
+    if total:
+        return sum(lumi_dict.values())
+
+    return lumi_dict[campaign]
 
 
 # cache for large x-sec information dicts
@@ -106,8 +113,11 @@ def sample_xs(campaign: str, dsid: str) -> float:
 
         xsec_dict = MC23_XSEC_DICT
 
+    elif "data" in campaign:
+        return 1.0
+
     else:
-        raise ValueError("cannot parse campaign")
+        raise ValueError(f"cannot parse campaign {campaign}")
 
     # return x-sec [pb] * filter efficiency * k-factor
     return float(xsec_dict[dsid][0]) * float(xsec_dict[dsid][1]) * float(xsec_dict[dsid][2])
