@@ -17,7 +17,7 @@ from itertools import chain
 from sklearn.model_selection import train_test_split
 
 # Local application imports
-from utils.tools import get_function_arguments
+from intccms.utils.tools import get_function_arguments
 
 # Initialize logger
 logger = logging.getLogger(__name__)

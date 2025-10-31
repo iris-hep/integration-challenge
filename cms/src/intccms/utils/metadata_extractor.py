@@ -38,7 +38,7 @@ from coffea.processor.executor import WorkItem
 from rich.pretty import pretty_repr
 
 # Local application imports
-from utils.datasets import ConfigurableDatasetManager, Dataset
+from intccms.utils.datasets import ConfigurableDatasetManager, Dataset
 
 
 # Configure module-level logger

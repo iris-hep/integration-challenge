@@ -4,7 +4,6 @@ from . import metadata_extractor
 #from . import mva
 #from . import plot
 from . import schema
-from . import skimming
 from . import stats
 from . import tools
 
@@ -15,7 +14,6 @@ __all__ = [
     "mva",
     "plot",
     "schema",
-    "skimming",
     "stats",
     "tools",
 ]

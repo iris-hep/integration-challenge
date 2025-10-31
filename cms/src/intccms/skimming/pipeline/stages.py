@@ -5,12 +5,69 @@ loading events, applying selections, extracting columns, and saving results.
 """
 
 import logging
-from typing import Dict, Callable, Tuple, Any, Optional
+from typing import Dict, Callable, Tuple, Any, Optional, List
 import awkward as ak
 
 from intccms.skimming.io.protocols import EventReader, EventWriter
 
 logger = logging.getLogger(__name__)
+
+
+def build_column_list(
+    branches: Dict[str, List[str]],
+    mc_branches: Optional[Dict[str, List[str]]] = None,
+    is_data: bool = False
+) -> Tuple[List[str], List[str]]:
+    """Build list of columns to extract and MC-only columns from config.
+
+    Args:
+        branches: Dictionary mapping collection names to branch lists
+        mc_branches: Dictionary mapping collection names to MC-only branch lists
+        is_data: If True, exclude MC-only branches from column list
+
+    Returns:
+        Tuple of (columns_to_keep, mc_only_columns) where both are flat lists
+
+    Examples:
+        >>> branches = {"event": ["run", "luminosityBlock"], "Muon": ["pt", "eta"]}
+        >>> mc_branches = {"event": ["genWeight"]}
+        >>> cols, mc_cols = build_column_list(branches, mc_branches, is_data=False)
+        >>> cols
+        ['run', 'luminosityBlock', 'Muon.pt', 'Muon.eta', 'genWeight']
+        >>> mc_cols
+        ['genWeight']
+    """
+    if mc_branches is None:
+        mc_branches = {}
+
+    columns_to_keep = []
+    mc_only_columns = []
+
+    # Build MC-only column list
+    for obj, obj_branches in mc_branches.items():
+        if obj == "event":
+            mc_only_columns.extend(obj_branches)
+        else:
+            mc_only_columns.extend(f"{obj}.{br}" for br in obj_branches)
+
+    # Build full column list
+    for obj, obj_branches in branches.items():
+        if obj == "event":
+            # Top-level event branches
+            for br in obj_branches:
+                # Skip MC-only for data
+                if is_data and br in mc_branches.get(obj, []):
+                    continue
+                columns_to_keep.append(br)
+        else:
+            # Object collection branches (e.g., "Muon.pt")
+            for br in obj_branches:
+                # Skip MC-only for data
+                if is_data and br in mc_branches.get(obj, []):
+                    continue
+                columns_to_keep.append(f"{obj}.{br}")
+
+    return columns_to_keep, mc_only_columns
 
 
 def load_events(
@@ -112,6 +169,7 @@ def apply_selection(
 def extract_columns(
     events: ak.Array,
     columns_to_keep: list[str],
+    mc_only_columns: Optional[list[str]] = None,
     is_data: bool = False
 ) -> Dict[str, ak.Array]:
     """Extract specified columns from events.
@@ -121,7 +179,8 @@ def extract_columns(
     Args:
         events: Input events as awkward array with NanoAOD schema
         columns_to_keep: List of column names to extract (e.g., ["Muon.pt", "run"])
-        is_data: If True, skip MC-only columns (those containing "gen")
+        mc_only_columns: List of MC-only column names to exclude for data
+        is_data: If True, skip columns in mc_only_columns list
 
     Returns:
         Dictionary mapping column names to awkward arrays
@@ -129,17 +188,21 @@ def extract_columns(
     Examples:
         >>> columns = extract_columns(
         ...     events,
-        ...     ["Muon.pt", "Muon.eta", "run", "event"],
-        ...     is_data=False
+        ...     ["Muon.pt", "Muon.eta", "run", "event", "genWeight"],
+        ...     mc_only_columns=["genWeight"],
+        ...     is_data=True
         ... )
         >>> columns.keys()
         dict_keys(['Muon_pt', 'Muon_eta', 'run', 'event'])
     """
+    if mc_only_columns is None:
+        mc_only_columns = []
+
     output_columns = {}
 
     for col in columns_to_keep:
         # Skip MC-only columns for data
-        if is_data and "gen" in col.lower():
+        if is_data and col in mc_only_columns:
             continue
 
         # Handle nested fields (e.g., "Muon.pt" -> events.Muon.pt)

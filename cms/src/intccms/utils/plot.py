@@ -19,7 +19,7 @@ from matplotlib import rcParams
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import ScalarFormatter
 
-from utils.logging import setup_logging
+from intccms.utils.logging import setup_logging
 
 # Configure matplotlib global settings
 rcParams.update(

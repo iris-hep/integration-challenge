@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from utils.schema import DatasetConfig, DatasetManagerConfig
+from intccms.utils.schema import DatasetConfig, DatasetManagerConfig
 
 logger = logging.getLogger(__name__)
 
