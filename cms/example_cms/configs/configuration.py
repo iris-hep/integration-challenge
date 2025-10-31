@@ -5,14 +5,14 @@ This example assumes you are running from the `cms/` directory.
 '''
 import numpy as np
 
-from cuts import (
+from .cuts import (
     Zprime_hardcuts,
     Zprime_hardcuts_no_fj,
     Zprime_workshop_cuts,
 )
-from observables import get_mtt, get_mva_vars
-from systematics import jet_pt_resolution, jet_pt_scale
-from skim import dataset_manager_config, skimming_config
+from .observables import get_mtt, get_mva_vars
+from .systematics import jet_pt_resolution, jet_pt_scale
+from .skim import dataset_manager_config, skimming_config
 
 
 
