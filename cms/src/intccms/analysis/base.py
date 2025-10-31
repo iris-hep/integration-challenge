@@ -19,9 +19,9 @@ import vector
 from coffea.nanoevents import NanoAODSchema
 from correctionlib import Correction, CorrectionSet
 
-from utils.schema import GoodObjectMasksConfig
-from utils.tools import get_function_arguments
-from utils.output_manager import OutputDirectoryManager
+from intccms.utils.schema import GoodObjectMasksConfig
+from intccms.utils.tools import get_function_arguments
+from intccms.utils.output_manager import OutputDirectoryManager
 
 # -----------------------------
 # Register backends
