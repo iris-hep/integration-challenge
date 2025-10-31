@@ -343,7 +343,7 @@ def _write_root_ttree(
     Parameters
     ----------
     output_columns : Dict[str, Any]
-        Mapping of branch names to awkward/numpy arrays.
+        Mapping of branch names to awkward arrays.
     output_path : str
         Destination ROOT file path.
     tree_name : str
