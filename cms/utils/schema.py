@@ -61,6 +61,9 @@ class WorkerEval:
         return f"WorkerEval({self.func!r})"
 
 
+_UNSET = object()
+
+
 class SubscriptableModel(BaseModel):
     """A Pydantic BaseModel that supports dictionary-style item access."""
 
@@ -358,7 +361,7 @@ class SkimOutputConfig(SubscriptableModel):
 
     format: Annotated[
         Literal["parquet", "root_ttree", "rntuple", "safetensors"],
-        Field(description="Output format for skimmed events"),
+        Field(default="parquet", description="Output format for skimmed events"),
     ]
     protocol: Annotated[
         Literal["local", "s3", "xrootd", "http"],
@@ -378,9 +381,9 @@ class SkimOutputConfig(SubscriptableModel):
         ),
     ]
     to_kwargs: Annotated[
-        Optional[Dict[str, Any]],
+        Dict[str, Any],
         Field(
-            default=None,
+            default_factory=dict,
             description=(
                 "Additional keyword arguments forwarded to the writer "
                 "function (e.g., ak.to_parquet)."
@@ -388,9 +391,9 @@ class SkimOutputConfig(SubscriptableModel):
         ),
     ]
     from_kwargs: Annotated[
-        Optional[Dict[str, Any]],
+        Dict[str, Any],
         Field(
-            default=None,
+            default_factory=dict,
             description=(
                 "Additional keyword arguments forwarded to the reader "
                 "function (e.g., ak.from_parquet)."
@@ -420,7 +423,7 @@ class SkimmingConfig(FunctorConfig):
     output: Annotated[
         SkimOutputConfig,
         Field(
-            default_factory=lambda: SkimOutputConfig(format="parquet"),
+            default_factory=SkimOutputConfig,
             description="Output format and destination for skimmed data",
         ),
     ]
