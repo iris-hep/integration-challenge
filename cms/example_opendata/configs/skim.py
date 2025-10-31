@@ -8,6 +8,7 @@ This module contains all skimming-related configuration including:
 """
 
 from coffea.analysis_tools import PackedSelection
+from .cuts import lumi_mask
 
 
 # ==============================================================================
@@ -17,51 +18,63 @@ from coffea.analysis_tools import PackedSelection
 datasets_config = [
     {
         "name": "signal",
-        "directory": "example/datasets/signal/m2000_w20/",
-        "cross_section": 1.0,
+        "directories": "example_opendata/datasets/signal/m2000_w20/",
+        "cross_sections": 1.0,
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight"
+        "weight_branch": "genWeight",
+        "redirector": "",
     },
     {
         "name": "ttbar_semilep",
-        "directory": "example/datasets/ttbar_semilep/",
-        "cross_section": 831.76 * 0.438,  # 364.35
+        "directories": "example_opendata/datasets/ttbar_semilep/",
+        "cross_sections": 831.76 * 0.438,  # 364.35
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight"
+        "weight_branch": "genWeight",
+        "redirector": "",
     },
     {
         "name": "ttbar_had",
-        "directory": "example/datasets/ttbar_had/",
-        "cross_section": 831.76 * 0.457,  # 380.11
+        "directories": "example_opendata/datasets/ttbar_had/",
+        "cross_sections": 831.76 * 0.457,  # 380.11
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight"
+        "weight_branch": "genWeight",
+        "redirector": "",
     },
     {
         "name": "ttbar_lep",
-        "directory": "example/datasets/ttbar_lep/",
-        "cross_section": 831.76 * 0.105,  # 87.33
+        "directories": "example_opendata/datasets/ttbar_lep/",
+        "cross_sections": 831.76 * 0.105,  # 87.33
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight"
+        "weight_branch": "genWeight",
+        "redirector": "",
     },
     {
         "name": "wjets",
-        "directory": "example/datasets/wjets/",
-        "cross_section": 61526.7,
+        "directories": "example_opendata/datasets/wjets/",
+        "cross_sections": 61526.7,
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight"
+        "weight_branch": "genWeight",
+        "redirector": "",
     },
     {
         "name": "data",
-        "directory": "example/datasets/data/",
-        "cross_section": 1.0,
+        "directories": "example_opendata/datasets/data/",
+        "cross_sections": 1.0,
         "file_pattern": "*.txt",
         "tree_name": "Events",
-        "weight_branch": "genWeight"
+        "weight_branch": None,
+        "redirector": "",
+        "is_data": True,
+        "lumi_mask": {
+            "function": lumi_mask,
+            "use": [("event", "run"), ("event", "luminosityBlock")],
+            "static_kwargs": {"lumifile": "./example_opendata/corrections/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt"},
+        },
     }
 ]
 
@@ -79,7 +92,7 @@ dataset_manager_config = {
 # ==============================================================================
 
 
-def default_skim_selection(muons, puppimet, hlt):
+def default_skim_selection(puppimet, hlt):
     """
     Default skimming selection function.
 
@@ -100,8 +113,8 @@ def default_skim_selection(muons, puppimet, hlt):
 
 
 skimming_config = {
-    "selection_function": default_skim_selection,
-    "selection_use": [("PuppiMET", None), ("HLT", None)],
+    "function": default_skim_selection,
+    "use": [("PuppiMET", None), ("HLT", None)],
     "chunk_size": 100_000,
     "tree_name": "Events",
 }

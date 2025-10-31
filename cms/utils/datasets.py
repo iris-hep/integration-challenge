@@ -8,12 +8,56 @@ and maintainable.
 
 import json
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from utils.schema import DatasetConfig, DatasetManagerConfig
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class Dataset:
+    """
+    Represents a logical dataset that may span multiple fileset entries.
+
+    A Dataset encapsulates all information about a physics process, including
+    its fileset keys and cross-sections. When multiple directories are provided,
+    events are processed separately but histograms naturally accumulate.
+
+    Attributes
+    ----------
+    name : str
+        Logical name of the dataset (e.g., "signal", "ttbar_semilep")
+    fileset_keys : List[str]
+        List of fileset keys this dataset spans
+        (e.g., ["signal_0__nominal", "signal_1__nominal", "signal_2__nominal"])
+    process : str
+        Process name (e.g., "signal")
+    variation : str
+        Systematic variation label (e.g., "nominal")
+    cross_sections : List[float]
+        Cross-section in picobarns for each fileset entry
+    events : Optional[List[Tuple[Any, Dict]]]
+        Processed events from skimming, added after skimming completes.
+        Each tuple contains (events_array, metadata_dict) for one fileset entry.
+    """
+    name: str
+    fileset_keys: List[str]
+    process: str
+    variation: str
+    cross_sections: List[float]
+    is_data: bool = False
+    events: Optional[List[Tuple[Any, Dict]]] = field(default=None)
+
+    def __repr__(self) -> str:
+        """String representation for debugging."""
+        events_info = f"{len(self.events)} splits" if self.events else "no events"
+        return (
+            f"Dataset(name={self.name}, fileset_keys={self.fileset_keys}, "
+            f"{events_info})"
+        )
 
 
 class ConfigurableDatasetManager:
@@ -37,9 +81,9 @@ class ConfigurableDatasetManager:
         self.datasets = {ds.name: ds for ds in config.datasets}
         logger.info(f"Initialized dataset manager with {len(self.datasets)} datasets")
 
-    def get_cross_section(self, process: str) -> float:
+    def get_cross_section(self, process: str) -> List[float]:
         """
-        Get cross-section from config instead of hardcoded map.
+        Get cross-section(s) from config as a list.
 
         Parameters
         ----------
@@ -48,8 +92,10 @@ class ConfigurableDatasetManager:
 
         Returns
         -------
-        float
-            Cross-section in picobarns
+        List[float]
+            List of cross-section(s) in picobarns. Always returns a list.
+            If a single cross-section is configured but multiple directories exist,
+            the cross-section is replicated for each directory.
 
         Raises
         ------
@@ -58,11 +104,30 @@ class ConfigurableDatasetManager:
         """
         if process not in self.datasets:
             raise KeyError(f"Process '{process}' not found in dataset configuration")
-        return self.datasets[process].cross_section
 
-    def get_dataset_directory(self, process: str) -> Path:
+        xsecs = self.datasets[process].cross_sections
+        dirs = self.datasets[process].directories
+
+        # Normalize to lists
+        if isinstance(xsecs, float):
+            xsecs = [xsecs]
+        else:
+            xsecs = list(xsecs)
+
+        if isinstance(dirs, str):
+            num_dirs = 1
+        else:
+            num_dirs = len(dirs)
+
+        # If single xsec but multiple directories, replicate the xsec
+        if len(xsecs) == 1 and num_dirs > 1:
+            xsecs = xsecs * num_dirs
+
+        return xsecs
+
+    def get_dataset_directories(self, process: str) -> List[Path]:
         """
-        Get dataset directory containing text files with file lists.
+        Get dataset directory/directories containing text files with file lists.
 
         Parameters
         ----------
@@ -71,12 +136,18 @@ class ConfigurableDatasetManager:
 
         Returns
         -------
-        Path
-            Path to directory containing .txt files with file lists
+        List[Path]
+            List of Path(s) to directory/directories containing .txt files with file lists.
+            Always returns a list.
         """
         if process not in self.datasets:
             raise KeyError(f"Process '{process}' not found in dataset configuration")
-        return Path(self.datasets[process].directory)
+
+        dirs = self.datasets[process].directories
+        if isinstance(dirs, str):
+            return [Path(dirs)]
+        else:
+            return [Path(directory) for directory in dirs]
 
     def get_tree_name(self, process: str) -> str:
         """
@@ -95,32 +166,40 @@ class ConfigurableDatasetManager:
         if process not in self.datasets:
             raise KeyError(f"Process '{process}' not found in dataset configuration")
         return self.datasets[process].tree_name
-
-    def get_cross_section_map(self) -> Dict[str, float]:
+    
+    def get_redirector(self, process: str) -> str:
         """
-        Get a dictionary mapping all process names to their cross-sections.
+        Get ROOT file redirector (prefix)
 
-        This provides backward compatibility with code expecting a cross-section map.
+        Parameters
+        ----------
+        process : str
+            Process name
 
         Returns
         -------
-        dict
-            Mapping of process names to cross-sections
+        str
+            ROOT file redirector (prefix)
         """
-        return {name: ds.cross_section for name, ds in self.datasets.items()}
+        if process not in self.datasets:
+            raise KeyError(f"Process '{process}' not found in dataset configuration")
+        return self.datasets[process].redirector
 
-    def get_dataset_directories_map(self) -> Dict[str, Path]:
+    def is_data_dataset(self, process: str) -> bool:
         """
-        Get a dictionary mapping all process names to their directories.
+        Check if a process represents real data (not MC).
 
-        This provides backward compatibility with code expecting a directory map.
+        Parameters
+        ----------
+        process : str
+            Process name
 
         Returns
         -------
-        dict
-            Mapping of process names to directory paths containing .txt files
+        bool
+            True if this is a data dataset, False for MC
         """
-        return {name: Path(ds.directory) for name, ds in self.datasets.items()}
+        return self.datasets[process].is_data
 
     def list_processes(self) -> List[str]:
         """
