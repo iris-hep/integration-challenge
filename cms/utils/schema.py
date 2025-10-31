@@ -61,6 +61,9 @@ class WorkerEval:
         return f"WorkerEval({self.func!r})"
 
 
+_UNSET = object()
+
+
 class SubscriptableModel(BaseModel):
     """A Pydantic BaseModel that supports dictionary-style item access."""
 
@@ -79,6 +82,24 @@ class SubscriptableModel(BaseModel):
     def get(self, key, default=None):
         """Allows `.get(key, default)` method."""
         return getattr(self, key, default)
+
+    def pop(self, key, default=_UNSET):
+        """
+        Remove a field from the model and return its value.
+
+        Mirrors dict.pop semantics: raises KeyError if missing and no default
+        is provided, otherwise returns the default.
+        """
+        if hasattr(self, key):
+            value = getattr(self, key)
+            self.__dict__.pop(key, None)
+            fields_set = getattr(self, "model_fields_set", None)
+            if fields_set is not None:
+                fields_set.discard(key)
+            return value
+        if default is _UNSET:
+            raise KeyError(key)
+        return default
 
 
 class FunctorConfig(SubscriptableModel):
@@ -340,7 +361,7 @@ class SkimOutputConfig(SubscriptableModel):
 
     format: Annotated[
         Literal["parquet", "root_ttree", "rntuple", "safetensors"],
-        Field(description="Output format for skimmed events"),
+        Field(default="parquet", description="Output format for skimmed events"),
     ]
     protocol: Annotated[
         Literal["local", "s3", "xrootd", "http"],
@@ -360,9 +381,9 @@ class SkimOutputConfig(SubscriptableModel):
         ),
     ]
     to_kwargs: Annotated[
-        Optional[Dict[str, Any]],
+        Dict[str, Any],
         Field(
-            default=None,
+            default_factory=dict,
             description=(
                 "Additional keyword arguments forwarded to the writer "
                 "function (e.g., ak.to_parquet)."
@@ -370,9 +391,9 @@ class SkimOutputConfig(SubscriptableModel):
         ),
     ]
     from_kwargs: Annotated[
-        Optional[Dict[str, Any]],
+        Dict[str, Any],
         Field(
-            default=None,
+            default_factory=dict,
             description=(
                 "Additional keyword arguments forwarded to the reader "
                 "function (e.g., ak.from_parquet)."
@@ -402,7 +423,7 @@ class SkimmingConfig(FunctorConfig):
     output: Annotated[
         SkimOutputConfig,
         Field(
-            default_factory=lambda: SkimOutputConfig(format="parquet"),
+            default_factory=SkimOutputConfig,
             description="Output format and destination for skimmed data",
         ),
     ]
