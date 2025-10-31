@@ -34,6 +34,11 @@ ipykernel = ">=6.30.1,<7"
 ipywidgets = ">=8.1.7,<9"
 nbstripout = ">=0.8.1,<0.9"
 
+[feature.dev.dependencies]
+scikit-hep-testdata = ">=0.4.0"
+pytest = ">=8.0.0"
+pytest-cov = ">=4.0.0"
+
 [feature.lab.dependencies]
 notebook = ">=7.5.0,<8"
 jupyterlab = ">=4.5.0,<5"
@@ -48,6 +53,8 @@ depends-on = ["lab"]
 
 [environments]
 lab = ["lab"]
+dev = ["dev"]
 
 [pypi-dependencies]
 rucio = ">=37.7.1, <38"
+intccms = { path = ".", editable = true }
