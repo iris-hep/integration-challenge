@@ -210,7 +210,7 @@ def _resolve_output_path(
     Resolve output path/URI for a skimmed workitem file.
 
     Constructs hierarchical keys for file/part lookups in counter dictionaries.
-    Returns either local Path or remote URI string based on protocol configuration.
+    Returns either local Path or remote URI string based on local flag.
     """
     dataset = workitem.dataset
     # Build hierarchical keys: file_key identifies source file, part_key identifies chunk
@@ -221,13 +221,13 @@ def _resolve_output_path(
 
     suffix = _build_output_path(dataset, file_index, part_index, output_cfg.format)
 
-    if output_cfg.protocol == "local" or not output_cfg.base_uri:
+    if output_cfg.local or not output_cfg.base_uri:
         base_dir = Path(output_manager.get_skimmed_dir())
         return base_dir / suffix, True
     else:
         base_uri = (output_cfg.base_uri or "").rstrip("/")
         path = f"{base_uri}/{suffix}"
-        return path, output_cfg.protocol == "local"
+        return path, output_cfg.local
 
 
 # =============================================================================

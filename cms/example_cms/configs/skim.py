@@ -270,7 +270,7 @@ skimming_config = {
     "tree_name": "Events",
     "output": {
         "format": "parquet",
-        "protocol": "s3",  # Change to "local" for local filesystem
+        "local": False,  # Set to True for local filesystem
         "base_uri": "s3://",  # S3 endpoint
         # To switch to local Ceph: change endpoint_url to
         # "http://rook-ceph-rgw-my-store.rook-ceph.svc/triton-116ed3e4-b173-48c1-aea0-affee451feda"
