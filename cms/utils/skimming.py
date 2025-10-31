@@ -322,13 +322,93 @@ def _save_workitem_output(
             return
         ak.to_parquet(payload, path_str, **writer_kwargs)
     elif output_cfg.format == "root_ttree":
-        raise NotImplementedError("ROOT TTree output is not yet implemented.")
+        _write_root_ttree(output_columns, path_str, config.tree_name, writer_kwargs)
     elif output_cfg.format == "rntuple":
         raise NotImplementedError("RNTuple output is not yet implemented.")
     elif output_cfg.format == "safetensors":
         raise NotImplementedError("safetensors output is not yet implemented.")
     else:
         raise ValueError(f"Unsupported skim output format: {output_cfg.format}")
+
+
+def _write_root_ttree(
+    output_columns: Dict[str, Any],
+    output_path: str,
+    tree_name: str,
+    writer_kwargs: Optional[Dict[str, Any]],
+) -> None:
+    """
+    Persist skimmed events to a ROOT TTree using uproot.
+
+    Parameters
+    ----------
+    output_columns : Dict[str, Any]
+        Mapping of branch names to awkward arrays.
+    output_path : str
+        Destination ROOT file path.
+    tree_name : str
+        Name of the output TTree.
+    writer_kwargs : Optional[Dict[str, Any]]
+        Keyword arguments forwarded to uproot.recreate. Unsupported options
+        specific to tree/branch creation are currently ignored.
+    """
+    if not output_columns:
+        logger.warning("No branches extracted for ROOT output; skipping write.")
+        return
+
+    # Materialize arrays to ensure uproot receives concrete data buffers.
+    file_kwargs: Dict[str, Any] = dict(writer_kwargs or {})
+    tree_kwargs: Dict[str, Any] = file_kwargs.pop("tree_kwargs", {})
+
+    branch_types = {k: v.type for k, v in output_columns.items()}
+
+    with uproot.recreate(output_path, **file_kwargs) as root_file:
+        tree = root_file.mktree(tree_name, branch_types, **tree_kwargs)
+        tree.extend(output_columns)
+
+
+def _load_skimmed_events(
+    file_path: Union[str, Path],
+    config: SkimmingConfig,
+    reader_kwargs: Optional[Dict[str, Any]] = None,
+) -> Any:
+    """
+    Load events from a single skimmed file using the configured format.
+
+    Parameters
+    ----------
+    file_path : Union[str, Path]
+        Path to the skimmed output file.
+    config : SkimmingConfig
+        Skimming configuration describing output format and reader kwargs.
+
+    Returns
+    -------
+    Any
+        Events object produced by the appropriate NanoEventsFactory reader.
+    """
+    output_cfg = config.output
+    kwargs = dict(reader_kwargs or {})
+    fmt = output_cfg.format
+
+    if fmt == "parquet":
+        kwargs.setdefault("schemaclass", NanoAODSchema)
+        reader = NanoEventsFactory.from_parquet(str(file_path), **kwargs)
+        return reader.events()
+    elif fmt == "root_ttree":
+        kwargs.setdefault("schemaclass", NanoAODSchema)
+        tree_name = kwargs.pop("treename", config.tree_name)
+        reader = NanoEventsFactory.from_root(
+            {str(file_path): tree_name},
+            **kwargs,
+        )
+        return reader.events()
+    elif fmt == "rntuple":
+        raise NotImplementedError("Reading skim output format 'rntuple' is not yet implemented.")
+    elif fmt == "safetensors":
+        raise NotImplementedError("Reading skim output format 'safetensors' is not yet implemented.")
+    else:
+        raise ValueError(f"Unsupported skim output format: {fmt}")
 
 
 # =============================================================================
@@ -1114,23 +1194,15 @@ def process_and_load_events(
             all_events = []
             total_events_loaded = 0
 
-            if skimming_config.output.format != "parquet":
-                raise NotImplementedError(
-                    f"Reading skim output format '{skimming_config.output.format}' "
-                    "is not implemented."
-                )
-
             # Resolve any lazy callables (WorkerEval) before passing to reader
-            load_kwargs = _resolve_lazy_values(skimming_config.output.from_kwargs or {})
-            load_kwargs.setdefault("schemaclass", NanoAODSchema)
-
+            reader_kwargs = _resolve_lazy_values(skimming_config.output.from_kwargs or {})
             for file_path in output_files:
                 try:
-                    reader = NanoEventsFactory.from_parquet(
-                        str(file_path), **load_kwargs
+                    events = _load_skimmed_events(
+                        file_path,
+                        skimming_config,
+                        reader_kwargs,
                     )
-                    events = reader.events()
-                    # Note: ak.materialize() causes errors with NanoEventsFactory parquet sources
                     all_events.append(events)
                     total_events_loaded += len(events)
                 except Exception as e:
