@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 
 import awkward as ak
 from coffea.processor.executor import WorkItem
+from coffea.nanoevents import NanoAODSchema
 
 from intccms.utils.schema import SkimmingConfig
 from intccms.skimming.dask import WorkitemSkimmingManager
@@ -22,6 +23,9 @@ from intccms.skimming.cacher import (
 from intccms.skimming.pipeline.stages import load_events
 from intccms.skimming.io.readers import get_reader
 from intccms.skimming.workitem import resolve_lazy_values
+
+# Suppress NanoAOD cross-reference warnings
+NanoAODSchema.warn_missing_crossrefs = False
 
 logger = logging.getLogger(__name__)
 
