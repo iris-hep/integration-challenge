@@ -322,13 +322,49 @@ def _save_workitem_output(
             return
         ak.to_parquet(payload, path_str, **writer_kwargs)
     elif output_cfg.format == "root_ttree":
-        raise NotImplementedError("ROOT TTree output is not yet implemented.")
+        _write_root_ttree(output_columns, path_str, config.tree_name, writer_kwargs)
     elif output_cfg.format == "rntuple":
         raise NotImplementedError("RNTuple output is not yet implemented.")
     elif output_cfg.format == "safetensors":
         raise NotImplementedError("safetensors output is not yet implemented.")
     else:
         raise ValueError(f"Unsupported skim output format: {output_cfg.format}")
+
+
+def _write_root_ttree(
+    output_columns: Dict[str, Any],
+    output_path: str,
+    tree_name: str,
+    writer_kwargs: Optional[Dict[str, Any]],
+) -> None:
+    """
+    Persist skimmed events to a ROOT TTree using uproot.
+
+    Parameters
+    ----------
+    output_columns : Dict[str, Any]
+        Mapping of branch names to awkward/numpy arrays.
+    output_path : str
+        Destination ROOT file path.
+    tree_name : str
+        Name of the output TTree.
+    writer_kwargs : Optional[Dict[str, Any]]
+        Keyword arguments forwarded to uproot.recreate. Unsupported options
+        specific to tree/branch creation are currently ignored.
+    """
+    if not output_columns:
+        logger.warning("No branches extracted for ROOT output; skipping write.")
+        return
+
+    # Materialize arrays to ensure uproot receives concrete data buffers.
+    file_kwargs: Dict[str, Any] = dict(writer_kwargs or {})
+    tree_kwargs: Dict[str, Any] = file_kwargs.pop("tree_kwargs", {})
+
+    branch_types = {k: v.type for k, v in output_columns.items()}
+
+    with uproot.recreate(output_path, **file_kwargs) as root_file:
+        tree = root_file.mktree(tree_name, branch_types, **tree_kwargs)
+        tree.extend(output_columns)
 
 
 def _load_skimmed_events(
