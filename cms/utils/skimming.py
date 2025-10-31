@@ -21,6 +21,7 @@ import hashlib
 import logging
 import os
 from pathlib import Path
+import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
 from collections import defaultdict
 
@@ -34,7 +35,7 @@ from coffea.nanoevents import NanoAODSchema, NanoEventsFactory
 from coffea.processor.executor import WorkItem
 from tabulate import tabulate
 
-from utils.schema import SkimmingConfig, SkimOutputConfig
+from utils.schema import SkimmingConfig, SkimOutputConfig, WorkerEval
 from utils.tools import get_function_arguments
 from utils.logging import setup_logging
 
@@ -223,12 +224,15 @@ def _resolve_output_path(
 
     if output_cfg.local or not output_cfg.base_uri:
         base_dir = Path(output_manager.get_skimmed_dir())
-        return base_dir / suffix, True
+        return  str(base_dir / suffix), True
     else:
         base_uri = (output_cfg.base_uri or "").rstrip("/")
-        path = f"{base_uri}/{suffix}"
-        return path, output_cfg.local
-
+        if base_uri == "":
+            base_dir = Path(output_manager.get_skimmed_dir())
+            return str(base_dir / suffix), output_cfg.local
+        else:
+            path = f"{base_uri}/{suffix}"
+            return path, output_cfg.local
 
 # =============================================================================
 # Output Persistence
@@ -268,8 +272,6 @@ def _resolve_lazy_values(obj):
     # config["key"] is now the env var value
     # config["compression"] is still my_compressor_func
     """
-    from utils.schema import WorkerEval
-
     if isinstance(obj, WorkerEval):
         return obj()
     elif isinstance(obj, dict):
@@ -321,7 +323,7 @@ def _save_workitem_output(
             logger.warning("No branches extracted for parquet output; skipping write.")
             return
         ak.to_parquet(payload, path_str, **writer_kwargs)
-    elif output_cfg.format == "root_ttree":
+    elif output_cfg.format == "root_ttree": 
         _write_root_ttree(output_columns, path_str, config.tree_name, writer_kwargs)
     elif output_cfg.format == "rntuple":
         raise NotImplementedError("RNTuple output is not yet implemented.")
@@ -499,15 +501,16 @@ def process_workitem(
             dummy_values = [500.0] * min(processed_events, 100)
             dummy_hist.fill(dummy_values)
 
-        output_path, is_local = _resolve_output_path(
+        output_path, like_local = _resolve_output_path(
             workitem,
             config.output,
             output_manager,
             file_counters,
             part_counters,
         )
-        if is_local:
-            output_path.parent.mkdir(parents=True, exist_ok=True)
+        if like_local:
+            Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+        
         _save_workitem_output(
             filtered_events, output_path, config, configuration, is_mc
         )
@@ -728,8 +731,6 @@ class WorkitemSkimmingManager:
                 self._log_failure_summary(workitems, result["failure_infos"])
 
             retry_count += 1
-
-            retry_count += 1
         
         # Final logging
         if remaining_workitems:
@@ -773,7 +774,7 @@ class WorkitemSkimmingManager:
         file_counters, part_counters = self._compute_counters(workitems)
 
         for workitem in workitems:
-            resolved_path, is_local = _resolve_output_path(
+            resolved_path, like_local = _resolve_output_path(
                 workitem,
                 self.config.output,
                 self.output_manager,
@@ -781,15 +782,15 @@ class WorkitemSkimmingManager:
                 part_counters,
             )
 
-            if not is_local:
-                continue
-
-            path_obj = Path(resolved_path)
-            if path_obj.exists():
-                output_files.append(str(path_obj))
-
-                dataset = workitem.dataset
-                dataset_counts[dataset] = dataset_counts.get(dataset, 0) + 1
+            if like_local:
+                if Path(resolved_path).exists:
+                    output_files.append(resolved_path)
+            else:
+                # TODO:: consistent way to check existence for non-local paths
+                output_files.append(resolved_path)
+                
+            dataset = workitem.dataset
+            dataset_counts[dataset] = dataset_counts.get(dataset, 0) + 1
 
         # Log with dataset breakdown
         if dataset_counts:
