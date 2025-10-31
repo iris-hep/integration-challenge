@@ -1,9 +1,10 @@
 """WorkItem processing for parallel skimming operations.
 
 This module handles processing of individual coffea WorkItems, including output path
-resolution, counter management, and integration with the pipeline stages.
+resolution and integration with the pipeline stages.
 """
 
+import hashlib
 import logging
 from pathlib import Path
 from typing import Dict, Any, Tuple, Union, Optional, List, Callable
@@ -22,10 +23,6 @@ from intccms.skimming.pipeline.stages import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Counter delimiters for hierarchical keys
-COUNTER_DELIMITER = "::"
-ENTRY_RANGE_DELIMITER = "_"
 
 
 def resolve_lazy_values(obj: Any) -> Any:
@@ -63,23 +60,22 @@ def resolve_lazy_values(obj: Any) -> Any:
 
 
 def build_output_path(
-    dataset: str,
-    file_index: int,
-    part_index: int,
+    workitem: WorkItem,
     fmt: str,
-) -> str:
-    """Build relative output path for a skimmed file chunk.
+) -> Tuple[str, Dict[str, Any]]:
+    """Build unique output path using hash of workitem metadata.
 
-    Constructs standardized directory structure: {dataset}/file_{N}/part_{M}.{ext}
+    Creates deterministic paths based on source filename and entry range,
+    with a short hash for uniqueness. Also returns metadata for manifest.
 
     Args:
-        dataset: Dataset name
-        file_index: File number within dataset
-        part_index: Part (chunk) number within file
+        workitem: coffea WorkItem with file metadata and entry ranges
         fmt: Output format (parquet, root_ttree)
 
     Returns:
-        Relative path string
+        Tuple of (relative_path, metadata_dict)
+        - relative_path: Path string like "dataset/abc12345_0_1000.parquet"
+        - metadata_dict: Manifest entry with source file info
 
     Raises:
         ValueError: If format is unsupported
@@ -95,56 +91,60 @@ def build_output_path(
     except KeyError as exc:
         raise ValueError(f"Unsupported output format '{fmt}'.") from exc
 
-    return f"{dataset}/file_{file_index}/part_{part_index}{extension}"
+    # Create short hash from filename for stable file identifier
+    file_hash = hashlib.md5(workitem.filename.encode()).hexdigest()[:8]
+
+    # Build path with hash and entry range
+    filename = f"{file_hash}_{workitem.entrystart}_{workitem.entrystop}{extension}"
+    path = f"{workitem.dataset}/{filename}"
+
+    # Create metadata for manifest
+    metadata = {
+        "source_file": workitem.filename,
+        "entrystart": workitem.entrystart,
+        "entrystop": workitem.entrystop,
+        "dataset": workitem.dataset,
+        "treename": workitem.treename,
+    }
+
+    return path, metadata
 
 
 def resolve_output_path(
     workitem: WorkItem,
     output_cfg: Any,  # SkimOutputConfig
     output_manager: Any,  # OutputDirectoryManager
-    file_counters: Dict[str, int],
-    part_counters: Dict[str, int],
-) -> Tuple[str, bool]:
+) -> Tuple[str, bool, Dict[str, Any]]:
     """Resolve output path/URI for a skimmed workitem file.
 
-    Constructs hierarchical keys for file/part lookups in counter dictionaries.
+    Uses hash-based naming for unique, deterministic paths without counters.
 
     Args:
         workitem: coffea WorkItem with file metadata and entry ranges
         output_cfg: SkimOutputConfig with format and URI settings
         output_manager: OutputDirectoryManager for directory resolution
-        file_counters: Mapping of file keys to file numbers
-        part_counters: Mapping of part keys to part numbers
 
     Returns:
-        Tuple of (path_string, is_local_path)
+        Tuple of (path_string, is_local_path, metadata_dict)
+        - path_string: Full path or URI to output file
+        - is_local_path: True if local filesystem, False for remote
+        - metadata_dict: Manifest entry for this workitem
     """
-    dataset = workitem.dataset
-
-    # Build hierarchical keys
-    file_key = f"{dataset}{COUNTER_DELIMITER}{workitem.filename}"
-    file_index = file_counters[file_key]
-
-    part_key = (
-        f"{file_key}{COUNTER_DELIMITER}"
-        f"{workitem.entrystart}{ENTRY_RANGE_DELIMITER}{workitem.entrystop}"
-    )
-    part_index = part_counters[part_key]
-
-    suffix = build_output_path(dataset, file_index, part_index, output_cfg.format)
+    # Build path and get metadata
+    relative_path, metadata = build_output_path(workitem, output_cfg.format)
 
     # Determine if local or remote
     if output_cfg.local or not output_cfg.base_uri:
         base_dir = Path(output_manager.get_skimmed_dir())
-        return str(base_dir / suffix), True
+        return str(base_dir / relative_path), True, metadata
     else:
         base_uri = (output_cfg.base_uri or "").rstrip("/")
         if base_uri == "":
             base_dir = Path(output_manager.get_skimmed_dir())
-            return str(base_dir / suffix), output_cfg.local
+            return str(base_dir / relative_path), output_cfg.local, metadata
         else:
-            path = f"{base_uri}/{suffix}"
-            return path, output_cfg.local
+            path = f"{base_uri}/{relative_path}"
+            return path, output_cfg.local, metadata
 
 
 def process_workitem(
@@ -152,8 +152,6 @@ def process_workitem(
     config: SkimmingConfig,
     configuration: Any,
     output_manager: Any,
-    file_counters: Dict[str, int],
-    part_counters: Dict[str, int],
     is_mc: bool = True,
 ) -> Dict[str, Any]:
     """Process a single WorkItem: load, filter, extract, and save events.
@@ -163,8 +161,6 @@ def process_workitem(
         config: Skimming configuration with selection functions and output settings
         configuration: Main analysis configuration with branch selections
         output_manager: OutputDirectoryManager
-        file_counters: Pre-computed mapping of file keys to file numbers
-        part_counters: Pre-computed mapping of part keys to part numbers
         is_mc: Whether the workitem represents Monte Carlo data
 
     Returns:
@@ -173,6 +169,7 @@ def process_workitem(
             - 'failed_items': Set of failed workitems (empty on success)
             - 'processed_events': Number of events processed
             - 'output_files': List of created output files
+            - 'manifest_entries': List of manifest metadata dictionaries
     """
     from intccms.utils.schema import default_histogram
 
@@ -241,13 +238,11 @@ def process_workitem(
             is_data=not is_mc,
         )
 
-        # Resolve output path
-        output_path, like_local = resolve_output_path(
+        # Resolve output path and get manifest metadata
+        output_path, like_local, manifest_metadata = resolve_output_path(
             workitem,
             config.output,
             output_manager,
-            file_counters,
-            part_counters,
         )
 
         # Stage 4: Save events
@@ -263,6 +258,11 @@ def process_workitem(
         save_events(writer, output_columns, output_path, **writer_kwargs)
         output_files.append(output_path)
 
+        # Add output path to manifest metadata
+        manifest_metadata["output_file"] = output_path
+        manifest_metadata["processed_events"] = processed_events
+        manifest_metadata["total_events"] = total_events
+
         logger.info(
             f"Processed workitem: {dataset} | {filename} | "
             f"entries [{entry_start}:{entry_stop}] | "
@@ -275,6 +275,7 @@ def process_workitem(
             "failed_items": set(),
             "processed_events": processed_events,
             "output_files": output_files,
+            "manifest_entries": [manifest_metadata],
         }
 
     except Exception as exc:
@@ -284,4 +285,5 @@ def process_workitem(
             "failed_items": {workitem},
             "processed_events": 0,
             "output_files": [],
+            "manifest_entries": [],
         }

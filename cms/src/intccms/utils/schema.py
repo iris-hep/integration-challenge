@@ -12,6 +12,7 @@ import copy
 from enum import Enum
 from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 
+import hist
 from omegaconf import OmegaConf, DictConfig
 from pydantic import BaseModel, Field, model_validator
 
@@ -1336,3 +1337,18 @@ def load_config_with_restricted_cli(
             base_copy[k] = updated_subsections[k]
 
     return base_copy
+
+
+def default_histogram() -> hist.Hist:
+    """Create a default histogram for tracking processing success/failure.
+
+    This histogram serves as a dummy placeholder to track whether workitems
+    were processed successfully. The actual analysis histograms are created
+    separately during the analysis phase.
+
+    Returns
+    -------
+    hist.Hist
+        A simple histogram with regular binning for tracking purposes
+    """
+    return hist.Hist.new.Regular(10, 0, 1000).Weight()
