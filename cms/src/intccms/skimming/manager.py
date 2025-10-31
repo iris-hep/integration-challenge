@@ -72,6 +72,7 @@ class SkimmingManager:
         datasets: List[Any],
         skip_skimming: bool = False,
         use_cache: bool = True,
+        nanoaods_summary: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> List[Any]:
         """Execute the complete skimming workflow.
 
@@ -86,6 +87,7 @@ class SkimmingManager:
             datasets: Dataset objects with metadata (fileset_keys, cross_sections, etc.)
             skip_skimming: If True, skip skimming and load existing files
             use_cache: If True, use cached merged events when available
+            nanoaods_summary: Optional summary with nevts_total per dataset/variation
 
         Returns:
             List of Dataset objects with events loaded and metadata attached
@@ -99,7 +101,7 @@ class SkimmingManager:
 
         # Phase 2: Loading and merging
         logger.info("=== Phase 2: Loading and Merging ===")
-        self._load_and_merge(workitems, configuration, datasets, use_cache)
+        self._load_and_merge(workitems, configuration, datasets, use_cache, nanoaods_summary)
 
         return datasets
 
@@ -139,6 +141,7 @@ class SkimmingManager:
         configuration: Any,
         datasets: List[Any],
         use_cache: bool,
+        nanoaods_summary: Optional[Dict[str, Dict[str, Any]]],
     ) -> None:
         """Load and merge skimmed files per dataset.
 
@@ -150,6 +153,7 @@ class SkimmingManager:
             configuration: Main analysis configuration object
             datasets: Dataset objects to populate with events
             use_cache: Whether to use cached merged events
+            nanoaods_summary: Optional summary with nevts_total per dataset/variation
         """
         # Group workitems by dataset/fileset_key
         workitems_by_dataset = self._group_workitems_by_dataset(workitems)
@@ -198,7 +202,7 @@ class SkimmingManager:
 
             # Build metadata for this fileset
             metadata = self._build_metadata(
-                fileset_key, dataset_obj, configuration
+                fileset_key, dataset_obj, configuration, nanoaods_summary
             )
 
             # Load and merge events (with caching)
@@ -356,6 +360,7 @@ class SkimmingManager:
         fileset_key: str,
         dataset_obj: Any,
         configuration: Any,
+        nanoaods_summary: Optional[Dict[str, Dict[str, Any]]],
     ) -> Dict[str, Any]:
         """Build metadata dictionary for a dataset.
 
@@ -363,6 +368,7 @@ class SkimmingManager:
             fileset_key: Dataset/fileset identifier
             dataset_obj: Dataset object with metadata
             configuration: Main analysis configuration
+            nanoaods_summary: Optional summary with nevts_total per dataset/variation
 
         Returns:
             Dictionary with dataset metadata (xsec, nevts, is_data, etc.)
@@ -385,6 +391,23 @@ class SkimmingManager:
             else None
         )
 
+        # Extract nevts from NanoAODs summary if available
+        # The analysis code expects 'nevts' field for normalization
+        nevts = 0
+        if nanoaods_summary:
+            # Extract dataset name from fileset_key (format: "datasetname__variation")
+            # This handles multi-directory datasets where dataset name includes
+            # directory index (e.g., signal_0, signal_1)
+            dataset_name_from_key = fileset_key.rsplit('__', 1)[0]  # Remove variation suffix
+            if dataset_name_from_key in nanoaods_summary:
+                if dataset_obj.variation in nanoaods_summary[dataset_name_from_key]:
+                    nevts = nanoaods_summary[dataset_name_from_key][dataset_obj.variation].get(
+                        'nevts_total', 0
+                    )
+
+        if nevts == 0:
+            logger.warning(f"No nevts found for {fileset_key}, using 0")
+
         metadata = {
             "dataset": fileset_key,
             "process": dataset_obj.process,
@@ -392,11 +415,8 @@ class SkimmingManager:
             "xsec": xsec,
             "is_data": dataset_obj.is_data,
             "lumi_mask_config": lumi_mask_config,
+            "nevts": nevts,
         }
-
-        # Add nevts if available
-        # TODO: Extract from NanoAODs summary when available
-        metadata["nevts"] = 0
 
         return metadata
 

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import List, Tuple
 
 from coffea.analysis_tools import PackedSelection
-from utils.schema import WorkerEval
+from intccms.utils.schema import WorkerEval
 from .cuts import lumi_mask
 
 

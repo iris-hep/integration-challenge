@@ -11,15 +11,15 @@ import numpy as np
 import vector
 from coffea.analysis_tools import PackedSelection
 
-from analysis.base import Analysis
-from utils.output_files import (
+from intccms.analysis.base import Analysis
+from intccms.utils.output_files import (
     save_histograms_to_pickle,
     save_histograms_to_root,
 )
-from utils.output_manager import OutputDirectoryManager
-from utils.stats import get_cabinetry_rebinning_router
-from utils.tools import get_function_arguments
-from utils.logging import setup_logging
+from intccms.utils.output_manager import OutputDirectoryManager
+from intccms.utils.stats import get_cabinetry_rebinning_router
+from intccms.utils.tools import get_function_arguments
+from intccms.utils.logging import setup_logging
 
 # -----------------------------
 # Register backends

@@ -9,14 +9,14 @@ import logging
 import sys
 import warnings
 
-from analysis.nondiff import NonDiffAnalysis
+from intccms.analysis.nondiff import NonDiffAnalysis
 from example_opendata.configs.configuration import config as ZprimeConfig
-from utils.datasets import ConfigurableDatasetManager
-from utils.logging import setup_logging, log_banner
-from utils.schema import Config, load_config_with_restricted_cli
-from utils.metadata_extractor import NanoAODMetadataGenerator
-from utils.skimming import process_and_load_events
-from utils.output_manager import OutputDirectoryManager
+from intccms.utils.datasets import ConfigurableDatasetManager
+from intccms.utils.logging import setup_logging, log_banner
+from intccms.utils.schema import Config, load_config_with_restricted_cli
+from intccms.utils.metadata_extractor import NanoAODMetadataGenerator
+from intccms.skimming.manager import SkimmingManager
+from intccms.utils.output_manager import OutputDirectoryManager
 
 # -----------------------------
 # Logging Configuration
@@ -69,7 +69,18 @@ def main():
     logger.info(f"Processing {len(workitems)} workitems across {len(datasets)} datasets")
 
     # Process workitems and populate Dataset objects with events
-    datasets = process_and_load_events(workitems, config, output_manager, datasets, generator.nanoaods_summary)
+    skimming_manager = SkimmingManager(
+        config=config.preprocess.skimming,
+        output_manager=output_manager,
+    )
+    datasets = skimming_manager.run(
+        workitems=workitems,
+        configuration=config,
+        datasets=datasets,
+        skip_skimming=not config.general.run_skimming,
+        use_cache=config.general.read_from_cache,
+        nanoaods_summary=generator.nanoaods_summary,
+    )
 
 
     analysis_mode = config.general.analysis
