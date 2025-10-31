@@ -363,11 +363,11 @@ class SkimOutputConfig(SubscriptableModel):
         Literal["parquet", "root_ttree", "rntuple", "safetensors"],
         Field(default="parquet", description="Output format for skimmed events"),
     ]
-    protocol: Annotated[
-        Literal["local", "s3", "xrootd", "http"],
+    local: Annotated[
+        bool,
         Field(
-            default="local",
-            description="Storage protocol used to write and read the output.",
+            default=True,
+            description="When True, outputs are written to the local filesystem.",
         ),
     ]
     base_uri: Annotated[
@@ -375,8 +375,8 @@ class SkimOutputConfig(SubscriptableModel):
         Field(
             default=None,
             description=(
-                "Base URI or directory for non-local outputs. "
-                "Required when protocol is not 'local'."
+                "Optional base URI or directory when writing to remote storage. "
+                "If omitted, remote outputs fall back to the local skim directory."
             ),
         ),
     ]

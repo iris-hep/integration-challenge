@@ -36,16 +36,16 @@ preprocess = {
         "use": [("PuppiMET", None), ("HLT", None)],
         "output": {
             "format": "parquet",          # other options: root_ttree, rntuple, safetensors (stubs)
-            "protocol": "local",          # or "s3", "xrootd", ...
-            "base_uri": "s3://bucket",    # used when protocol != "local"
+            "local": True,
+            "base_uri": "s3://bucket",    # optional override for remote storage
             "to_kwargs": {"compression": "zstd"},   # forwarded to ak.to_parquet
-            "from_kwargs": {"storage_options": {...}}  # forwarded to NanoEventsFacotry.from_parquet
+            "from_kwargs": {"storage_options": {...}}  # forwarded to NanoEventsFactory.from_parquet
         },
     },
 }
 ```
 
-The file suffix is fixed to `{dataset}/file_{index}/part_{chunk}.{ext}`, so switching between local and remote storage only requires changing `protocol`/`base_uri`.
+The file suffix is fixed to `{dataset}/file_{index}/part_{chunk}.{ext}`, so switching between local and remote storage only requires changing the `local` flag and optional `base_uri`.
 
 - Set `general.run_skimming=True` to regenerate skims. Use `datasets.max_files` to limit input size when experimenting.
 - Downstream steps load the same path, so no separate cache copy is needed; cached Awkward objects are still produced automatically for faster reruns.
