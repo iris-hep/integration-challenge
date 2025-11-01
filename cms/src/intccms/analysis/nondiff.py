@@ -155,7 +155,7 @@ class NonDiffAnalysis(Analysis):
             if (req_channels := self.config.general.channels) is not None:
                 if channel_name not in req_channels:
                     continue
-            logger.info(f"Applying selection for {channel_name} in {process} "
+            logger.debug(f"Applying selection for {channel_name} in {process} "
                          f"with variation {variation}")
             mask = 1
             if (selection_funciton := channel.selection.function) is not None:
@@ -202,15 +202,15 @@ class NonDiffAnalysis(Analysis):
                     weights, event_syst, direction, object_copies_channel
                 )
 
-            logger.info(
+            logger.debug(
                 f"Number of weighted events in {channel_name}: {ak.sum(weights):.2f}"
             )
-            logger.info(
+            logger.debug(
                 f"Number of raw events in {channel_name}: {ak.sum(mask)}"
             )
             for observable in channel.observables:
                 observable_name = observable.name
-                logger.info(f"Computing observable {observable_name}")
+                logger.debug(f"Computing observable {observable_name}")
                 observable_args, observable_static_kwargs = get_function_arguments(
                     observable.use,
                     object_copies_channel,
@@ -309,17 +309,18 @@ class NonDiffAnalysis(Analysis):
         )
 
         # apply selection and fill histograms
-        self.histogramming(
-            obj_copies_corrected,
-            events,
-            process,
-            "nominal",
-            xsec_weight,
-            analysis,
-            is_data=is_data,
-        )
+        if self.config.general.run_histogramming:
+            self.histogramming(
+                obj_copies_corrected,
+                events,
+                process,
+                "nominal",
+                xsec_weight,
+                analysis,
+                is_data=is_data,
+            )
 
-        if self.config.general.run_systematics:
+        if self.config.general.run_systematics and self.config.general.run_histogramming:
             # Systematic variations
             for syst in self.systematics + self.corrections:
                 if syst.name == "nominal":

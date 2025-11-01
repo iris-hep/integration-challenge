@@ -182,6 +182,13 @@ class GeneralConfig(SubscriptableModel):
             description="If True, run the initial NanoAOD skimming and filtering step.",
         ),
     ]
+    run_analysis: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="If True, run the analysis step (object selection, corrections, observables).",
+        ),
+    ]
     run_histogramming: Annotated[
         bool,
         Field(
