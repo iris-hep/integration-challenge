@@ -1,6 +1,5 @@
 from . import datasets
 from . import logging
-from . import metadata_extractor
 #from . import mva
 #from . import plot
 from . import schema
@@ -10,7 +9,6 @@ from . import tools
 __all__ = [
     "datasets",
     "logging",
-    "metadata_extractor",
     "mva",
     "plot",
     "schema",
