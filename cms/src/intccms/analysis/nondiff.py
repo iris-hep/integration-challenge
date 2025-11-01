@@ -37,22 +37,26 @@ logging.getLogger("jax._src.xla_bridge").setLevel(logging.ERROR)
 # ZprimeAnalysis Class Definition
 # -----------------------------
 class NonDiffAnalysis(Analysis):
+    """Non-differentiable analysis implementation.
 
-    def __init__(self, config: dict[str, Any], datasets: List, output_manager: OutputDirectoryManager) -> None:
+    This class is designed to work with UnifiedProcessor for distributed processing.
+    The processor calls process() method per-chunk, and histograms accumulate
+    via coffea's merge mechanism.
+    """
+
+    def __init__(self, config: dict[str, Any], output_manager: OutputDirectoryManager) -> None:
         """
-        Initialize NonDiffAnalysis with configuration and Dataset objects.
+        Initialize NonDiffAnalysis with configuration.
 
         Parameters
         ----------
         config : dict
             Configuration dictionary with 'systematics', 'corrections', 'channels',
             and 'general'.
-        datasets : List[Dataset]
-            List of Dataset objects with populated events from skimming (required)
         output_manager : OutputDirectoryManager
             Centralized output directory manager (required)
         """
-        super().__init__(config, datasets, output_manager)
+        super().__init__(config, output_manager)
         self.nD_hists_per_region = self._init_histograms()
 
 
@@ -381,71 +385,62 @@ class NonDiffAnalysis(Analysis):
 
         return data, results, prefit_prediction, postfit_prediction
 
-    def run_analysis_chain(self):
+    def run_statistics(self, cabinetry_config_path: str) -> None:
         """
-        Run the complete non-differentiable analysis chain using Dataset objects.
+        Run statistical analysis and create visualizations.
 
-        Each fileset_key is processed separately with its own xsec and nevts.
-        Histograms naturally accumulate across fileset_keys for the same process.
+        This method should be called after histograms have been filled
+        (either via processor workflow or directly). It runs the cabinetry
+        fit and creates visualization plots.
+
+        Parameters
+        ----------
+        cabinetry_config_path : str
+            Path to cabinetry configuration file
+
+        Examples
+        --------
+        >>> # After processor completes and histograms are filled
+        >>> analysis = NonDiffAnalysis(config, [], output_manager)
+        >>> analysis.nD_hists_per_region = output["histograms"]  # From processor
+        >>> analysis.run_statistics(config.statistics.cabinetry_config)
         """
-        config = self.config
+        logger.info("Running statistical analysis and visualization")
 
-        if not self.datasets:
-            raise ValueError("No datasets provided to analysis")
+        # Load cabinetry configuration
+        cabinetry_config = cabinetry.configuration.load(cabinetry_config_path)
 
-        # Loop over Dataset objects
-        for dataset in self.datasets:
-            logger.info("========================================")
-            logger.info(f"🚀 Processing dataset: {dataset.name}")
+        # Run the fit
+        data, fit_results, prefit_prediction, postfit_prediction = (
+            self.run_fit(cabinetry_config=cabinetry_config)
+        )
 
-            if not dataset.events:
-                logger.warning(f"No events found for dataset {dataset.name}, skipping")
-                continue
+        # Create visualizations
+        stats_dir = self.output_manager.get_statistics_dir()
 
-            # Process each fileset_key with its own metadata
-            if config.general.run_histogramming:
-                for events, metadata in dataset.events:
-                    logger.info(f"📘 Processing {metadata['dataset']} ({len(events)} events)")
-                    logger.info("📈 Processing for non-differentiable analysis")
-                    self.process(events, metadata)
-                    logger.info("📈 Non-differentiable histogram-filling complete.")
+        logger.info("Creating pre-fit data/MC plots")
+        cabinetry.visualize.data_mc(
+            prefit_prediction,
+            data,
+            close_figure=False,
+            config=cabinetry_config,
+            figure_folder=stats_dir,
+        )
 
-            logger.info(f"🏁 Finished dataset: {dataset.name}\n")
+        logger.info("Creating post-fit data/MC plots")
+        cabinetry.visualize.data_mc(
+            postfit_prediction,
+            data,
+            close_figure=False,
+            config=cabinetry_config,
+            figure_folder=stats_dir,
+        )
 
-        # Report end of processing
-        logger.info("✅ All datasets processed.")
+        logger.info("Creating pull plots")
+        cabinetry.visualize.pulls(
+            fit_results,
+            close_figure=False,
+            figure_folder=stats_dir,
+        )
 
-        # Save histograms for non-differentiable analysis
-        if config.general.run_histogramming:
-            save_histograms_to_root(
-                self.nD_hists_per_region,
-                output_file=self.output_manager.get_histograms_dir() / "histograms.root",
-            )
-            save_histograms_to_pickle(
-                self.nD_hists_per_region,
-                output_file=self.output_manager.get_histograms_dir() / "histograms.pkl",
-            )
-        # Run statistics for non-differentiable analysis
-        if config.general.run_statistics:
-            cabinetry_config = cabinetry.configuration.load(
-                config.statistics.cabinetry_config
-            )
-            data, fit_results, pre_fit_predictions, postfit_predictions = (
-                self.run_fit(cabinetry_config=cabinetry_config)
-            )
-            cabinetry.visualize.data_mc(
-                pre_fit_predictions,
-                data,
-                close_figure=False,
-                config=cabinetry_config,
-                figure_folder=self.output_manager.get_statistics_dir(),
-
-            )
-            cabinetry.visualize.data_mc(
-                postfit_predictions,
-                data,
-                close_figure=False,
-                config=cabinetry_config,
-                figure_folder=self.output_manager.get_statistics_dir(),
-            )
-            cabinetry.visualize.pulls(fit_results, close_figure=False, figure_folder=self.output_manager.get_statistics_dir(),)
+        logger.info(f"✅ Statistical analysis complete. Plots saved to {stats_dir}")
