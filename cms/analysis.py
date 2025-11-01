@@ -14,7 +14,7 @@ from example_opendata.configs.configuration import config as ZprimeConfig
 from intccms.utils.datasets import ConfigurableDatasetManager
 from intccms.utils.logging import setup_logging, log_banner
 from intccms.utils.schema import Config, load_config_with_restricted_cli
-from intccms.utils.metadata_extractor import NanoAODMetadataGenerator
+from intccms.metadata_extractor import DatasetMetadataManager
 from intccms.skimming.manager import SkimmingManager
 from intccms.utils.output_manager import OutputDirectoryManager
 
@@ -54,7 +54,7 @@ def main():
 
     logger.info(log_banner("metadata and workitems extraction"))
     # Generate metadata and fileset from NanoAODs
-    generator = NanoAODMetadataGenerator(dataset_manager=dataset_manager, output_manager=output_manager)
+    generator = DatasetMetadataManager(dataset_manager=dataset_manager, output_manager=output_manager)
     generator.run(generate_metadata=config.general.run_metadata_generation)
     datasets = generator.datasets
     workitems = generator.workitems
@@ -64,6 +64,9 @@ def main():
     if not datasets:
         logger.error("No datasets available. Please ensure metadata generation completed successfully.")
         sys.exit(1)
+
+    # Build metadata lookup for downstream processing
+    metadata_lookup = generator.build_metadata_lookup()
 
     logger.info(log_banner("SKIMMING AND PROCESSING"))
     logger.info(f"Processing {len(workitems)} workitems across {len(datasets)} datasets")
@@ -77,9 +80,9 @@ def main():
         workitems=workitems,
         configuration=config,
         datasets=datasets,
+        metadata_lookup=metadata_lookup,
         skip_skimming=not config.general.run_skimming,
         use_cache=config.general.read_from_cache,
-        nanoaods_summary=generator.nanoaods_summary,
     )
 
 
@@ -91,8 +94,33 @@ def main():
         return
     elif analysis_mode == "nondiff":
         logger.info(log_banner("Running Non-Differentiable Analysis"))
-        nondiff_analysis = NonDiffAnalysis(config, datasets, output_manager)
-        nondiff_analysis.run_analysis_chain()
+        from intccms.utils.output_files import save_histograms_to_root
+
+        nondiff_analysis = NonDiffAnalysis(config, output_manager)
+        logger.info(f"Analysis initialized for {len(datasets)} datasets")
+
+        # Process each dataset through the analysis pipeline
+        histogram_count = 0
+        for dataset in datasets:
+            if dataset.events:
+                for events, metadata in dataset.events:
+                    logger.info(f"Processing {len(events)} events for {metadata['process']}")
+                    nondiff_analysis.process(events, metadata)
+                    histogram_count += 1
+
+        # Save histograms to ROOT file
+        if config.general.run_histogramming:
+            histograms_output = output_manager.get_histograms_dir() / "histograms.root"
+            save_histograms_to_root(
+                nondiff_analysis.nD_hists_per_region,
+                output_file=histograms_output,
+            )
+            logger.info(f"✅ Histograms saved to: {histograms_output}")
+            logger.info(f"📈 Generated histograms for channels: {[ch.name for ch in config.channels]}")
+            logger.info(f"📊 Processed {histogram_count} dataset chunks")
+
+        logger.info(log_banner("ANALYSIS COMPLETE"))
+        logger.info("✅ Non-differentiable analysis completed successfully!")
 
 
 if __name__ == "__main__":
