@@ -11,5 +11,8 @@ The refactored architecture emphasizes modularity, testability, and extensibilit
 # Version info
 __version__ = "2.0.0"  # Refactored version
 
-# Main exports will be added as modules are completed
-__all__ = []
+# Main exports
+from intccms.skimming.manager import SkimmingManager
+from intccms.skimming.fileset_manager import FilesetManager
+
+__all__ = ["SkimmingManager", "FilesetManager"]

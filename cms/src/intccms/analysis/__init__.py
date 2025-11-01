@@ -2,11 +2,17 @@ import logging
 
 from . import base as base
 from . import nondiff as nondiff
+from .base import Analysis
+from .nondiff import NonDiffAnalysis
+from .processor import UnifiedProcessor
 
 
 __all__ = [
     "base",
     "nondiff",
+    "Analysis",
+    "NonDiffAnalysis",
+    "UnifiedProcessor",
 ]
 
 

@@ -936,3 +936,48 @@ class NanoAODMetadataGenerator:
             json.dump(serializable, f, indent=4)
 
         logger.info(f"WorkItems metadata saved to {workitems_path}")
+
+    def get_coffea_fileset(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get coffea-compatible fileset from NanoAOD files.
+
+        Returns the fileset built from original NanoAOD files (not skimmed files).
+        This is used when running the processor in modes that start from NanoAODs:
+        - mode="skim_then_analyze": Read NanoAODs → skim in-memory → analyze
+        - mode="skim_only": Read NanoAODs → skim → save files
+
+        The fileset has the structure coffea expects:
+        {
+            "dataset_name": {
+                "files": {file_path: tree_name, ...},
+                ...
+            }
+        }
+
+        Returns
+        -------
+        Dict[str, Dict[str, Any]]
+            Coffea-compatible fileset dictionary
+
+        Raises
+        ------
+        ValueError
+            If fileset hasn't been generated yet (call run() first)
+
+        Examples
+        --------
+        >>> generator = NanoAODMetadataGenerator(...)
+        >>> generator.run(generate_metadata=True)
+        >>> fileset = generator.get_coffea_fileset()
+        >>> # Use with coffea Runner
+        >>> runner = Runner(...)
+        >>> output = runner(fileset, "Events", processor_instance=processor)
+        """
+        if self.fileset is None:
+            raise ValueError(
+                "Fileset has not been generated yet. "
+                "Call run(generate_metadata=True) first to generate metadata."
+            )
+
+        logger.info(f"Returning coffea fileset with {len(self.fileset)} datasets")
+        return self.fileset

@@ -63,7 +63,6 @@ class Analysis:
     def __init__(
         self,
         config: Dict[str, Any],
-        datasets: List,
         output_manager: OutputDirectoryManager,
     ) -> None:
         """
@@ -78,8 +77,6 @@ class Analysis:
             - 'corrections': Correction configurations
             - 'channels': Analysis channel definitions
             - 'general': General settings including output directory
-        datasets : List[Dataset]
-            List of Dataset objects with populated events from skimming (required)
         output_manager : OutputDirectoryManager
             Centralized output directory manager (required)
         """
@@ -87,7 +84,6 @@ class Analysis:
         self.channels = config.channels
         self.systematics = config.systematics
         self.corrections = config.corrections
-        self.datasets = datasets
         self.output_manager = output_manager
         self.corrlib_evaluators = self._load_correctionlib()
 
