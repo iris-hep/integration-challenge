@@ -9,6 +9,7 @@ import base64
 import dataclasses
 import json
 import logging
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Union
 
@@ -193,8 +194,6 @@ def deserialize_workitems(serialized_data: List[Dict[str, Any]]) -> List[WorkIte
     >>> data = load_json(Path("workitems.json"))
     >>> workitems = deserialize_workitems(data)
     """
-    import uuid
-
     workitems = []
 
     for wi_dict in serialized_data:

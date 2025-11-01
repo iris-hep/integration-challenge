@@ -5,15 +5,27 @@ and analysis into a single distributed coffea-based workflow. The processor
 respects configuration flags to control which stages run.
 """
 
+import hashlib
 import logging
+import uuid
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import awkward as ak
 from coffea.processor import ProcessorABC
 
 from intccms.analysis.nondiff import NonDiffAnalysis
-from intccms.utils.schema import Config
+from intccms.skimming.io.writers import get_writer
+from intccms.skimming.pipeline.stages import (
+    apply_selection,
+    build_column_list,
+    extract_columns,
+    save_events,
+)
+from intccms.skimming.workitem import resolve_lazy_values
 from intccms.utils.output_manager import OutputDirectoryManager
+from intccms.utils.schema import Config
+from intccms.utils.tools import get_function_arguments
 
 logger = logging.getLogger(__name__)
 
@@ -115,10 +127,6 @@ class UnifiedProcessor(ProcessorABC):
 
     def _init_skimming_components(self):
         """Initialize skimming pipeline components."""
-        from intccms.skimming.pipeline.stages import build_column_list
-        from intccms.skimming.io.writers import get_writer
-        from intccms.skimming.workitem import resolve_lazy_values
-
         self.skim_config = self.config.preprocess.skimming
 
         # Pre-build column lists
@@ -225,9 +233,6 @@ class UnifiedProcessor(ProcessorABC):
         ak.Array
             Filtered events after skim selection
         """
-        from intccms.skimming.pipeline.stages import apply_selection
-        from intccms.utils.tools import get_function_arguments
-
         selection_func = self.skim_config.function
         selection_use = self.skim_config.use
 
@@ -258,11 +263,6 @@ class UnifiedProcessor(ProcessorABC):
         metadata : dict
             Metadata dict with process, variation, dataset info
         """
-        from intccms.skimming.pipeline.stages import extract_columns, save_events
-        from pathlib import Path
-        import hashlib
-        import uuid
-
         # Extract columns based on is_data flag
         is_data = metadata.get("is_data", False)
         output_columns = extract_columns(

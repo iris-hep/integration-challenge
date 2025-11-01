@@ -7,20 +7,21 @@ resolution and integration with the pipeline stages.
 import hashlib
 import logging
 from pathlib import Path
-from typing import Dict, Any, Tuple, Union, Optional, List, Callable
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
 from coffea.processor.executor import WorkItem
 
-from intccms.utils.schema import WorkerEval, SkimmingConfig
-from intccms.utils.tools import get_function_arguments
 from intccms.skimming.io.readers import get_reader
 from intccms.skimming.io.writers import get_writer
 from intccms.skimming.pipeline.stages import (
-    load_events,
     apply_selection,
-    extract_columns,
-    save_events,
     build_column_list,
+    extract_columns,
+    load_events,
+    save_events,
 )
+from intccms.utils.schema import SkimmingConfig, WorkerEval, default_histogram
+from intccms.utils.tools import get_function_arguments
 
 logger = logging.getLogger(__name__)
 
@@ -171,8 +172,6 @@ def process_workitem(
             - 'output_files': List of created output files
             - 'manifest_entries': List of manifest metadata dictionaries
     """
-    from intccms.utils.schema import default_histogram
-
     dummy_hist = default_histogram()
 
     try:
