@@ -39,6 +39,10 @@ class Dataset:
         Systematic variation label (e.g., "nominal")
     cross_sections : List[float]
         Cross-section in picobarns for each fileset entry
+    is_data : bool
+        Flag indicating whether dataset represents real data
+    lumi_mask_config : Optional[Any]
+        Luminosity mask configuration for data (FunctorConfig), None for MC
     events : Optional[List[Tuple[Any, Dict]]]
         Processed events from skimming, added after skimming completes.
         Each tuple contains (events_array, metadata_dict) for one fileset entry.
@@ -49,6 +53,7 @@ class Dataset:
     variation: str
     cross_sections: List[float]
     is_data: bool = False
+    lumi_mask_config: Optional[Any] = None
     events: Optional[List[Tuple[Any, Dict]]] = field(default=None)
 
     def __repr__(self) -> str:
@@ -200,6 +205,25 @@ class ConfigurableDatasetManager:
             True if this is a data dataset, False for MC
         """
         return self.datasets[process].is_data
+
+    def get_lumi_mask_config(self, process: str) -> Optional[Any]:
+        """
+        Get luminosity mask configuration for a process.
+
+        Parameters
+        ----------
+        process : str
+            Process name
+
+        Returns
+        -------
+        Optional[Any]
+            Luminosity mask FunctorConfig for data, None for MC or if not configured
+        """
+        dataset_config = self.datasets[process]
+        if dataset_config.is_data:
+            return dataset_config.lumi_mask
+        return None
 
     def list_processes(self) -> List[str]:
         """

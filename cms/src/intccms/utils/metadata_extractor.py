@@ -243,6 +243,7 @@ class FilesetBuilder:
                 # Process each directory-cross-section pair
                 # Always create separate entries when multiple directories exist
                 is_data = self.dataset_manager.is_data_dataset(process_name)
+                lumi_mask_config = self.dataset_manager.get_lumi_mask_config(process_name)
 
                 for idx, (listing_dir, xsec) in enumerate(zip(listing_dirs, cross_sections)):
                     # Collect ROOT file paths from this directory
@@ -288,6 +289,7 @@ class FilesetBuilder:
                     variation=variation_label,
                     cross_sections=cross_sections,
                     is_data=is_data,
+                    lumi_mask_config=lumi_mask_config,
                     events=None  # Will be populated during skimming
                 )
                 datasets.append(dataset)
@@ -981,3 +983,86 @@ class NanoAODMetadataGenerator:
 
         logger.info(f"Returning coffea fileset with {len(self.fileset)} datasets")
         return self.fileset
+
+    def build_metadata_lookup(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Build metadata lookup dictionary from Dataset objects and nanoaods_summary.
+
+        Creates a mapping from fileset_key to metadata dict containing process,
+        variation, cross-section, event counts, data/MC flag, and lumi mask config.
+        This lookup is used by analysis code for MC normalization and sample identification.
+
+        The nevts field is extracted from self.nanoaods_summary which contains
+        pre-skimming event counts from NanoAOD files.
+
+        Returns
+        -------
+        Dict[str, Dict[str, Any]]
+            Mapping of fileset_key -> {process, variation, xsec, nevts, is_data, lumi_mask_config, dataset}
+
+        Raises
+        ------
+        ValueError
+            If datasets or nanoaods_summary haven't been generated yet
+
+        Examples
+        --------
+        >>> generator = NanoAODMetadataGenerator(...)
+        >>> generator.run(generate_metadata=True)
+        >>> metadata_lookup = generator.build_metadata_lookup()
+        >>> # Use in analysis for normalization
+        >>> metadata = metadata_lookup["signal__nominal"]
+        >>> xsec_weight = metadata["xsec"] * lumi / metadata["nevts"]
+        """
+        if self.datasets is None:
+            raise ValueError(
+                "Datasets have not been generated yet. "
+                "Call run(generate_metadata=True) first to generate datasets."
+            )
+
+        if self.nanoaods_summary is None:
+            logger.warning(
+                "nanoaods_summary is None. Event counts (nevts) will be set to 0. "
+                "This may affect MC normalization."
+            )
+
+        lookup = {}
+
+        for dataset in self.datasets:
+            for fileset_key in dataset.fileset_keys:
+                # Get cross-section for this specific fileset_key
+                try:
+                    idx = dataset.fileset_keys.index(fileset_key)
+                    xsec = dataset.cross_sections[idx]
+                except (ValueError, IndexError) as e:
+                    logger.error(f"Failed to get cross-section for {fileset_key}: {e}")
+                    xsec = 1.0
+
+                # Extract nevts from NanoAODs summary
+                nevts = 0
+                if self.nanoaods_summary:
+                    # Extract dataset name from fileset_key (format: "datasetname__variation")
+                    # This handles multi-directory datasets where dataset name includes
+                    # directory index (e.g., signal_0, signal_1)
+                    dataset_name_from_key = fileset_key.rsplit("__", 1)[0]
+                    if dataset_name_from_key in self.nanoaods_summary:
+                        if dataset.variation in self.nanoaods_summary[dataset_name_from_key]:
+                            nevts = self.nanoaods_summary[dataset_name_from_key][
+                                dataset.variation
+                            ].get("nevts_total", 0)
+
+                if nevts == 0:
+                    logger.warning(f"No nevts found for {fileset_key}, using 0")
+
+                lookup[fileset_key] = {
+                    "process": dataset.process,
+                    "variation": dataset.variation,
+                    "xsec": xsec,
+                    "nevts": nevts,
+                    "is_data": dataset.is_data,
+                    "lumi_mask_config": dataset.lumi_mask_config,
+                    "dataset": fileset_key,
+                }
+
+        logger.info(f"Built metadata lookup for {len(lookup)} fileset keys")
+        return lookup

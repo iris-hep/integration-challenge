@@ -74,9 +74,9 @@ class SkimmingManager:
         workitems: List[WorkItem],
         configuration: Any,
         datasets: List[Any],
+        metadata_lookup: Dict[str, Dict[str, Any]],
         skip_skimming: bool = False,
         use_cache: bool = True,
-        nanoaods_summary: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> List[Any]:
         """Execute the complete skimming workflow.
 
@@ -89,9 +89,10 @@ class SkimmingManager:
             workitems: List of WorkItems to process (if skimming)
             configuration: Main analysis configuration object
             datasets: Dataset objects with metadata (fileset_keys, cross_sections, etc.)
+            metadata_lookup: Pre-built metadata lookup from NanoAODMetadataGenerator.build_metadata_lookup()
+                Maps fileset_key -> {process, variation, xsec, nevts, is_data, dataset} (REQUIRED)
             skip_skimming: If True, skip skimming and load existing files
             use_cache: If True, use cached merged events when available
-            nanoaods_summary: Optional summary with nevts_total per dataset/variation
 
         Returns:
             List of Dataset objects with events loaded and metadata attached
@@ -105,7 +106,7 @@ class SkimmingManager:
 
         # Phase 2: Loading and merging
         logger.info("=== Phase 2: Loading and Merging ===")
-        self._load_and_merge(workitems, configuration, datasets, use_cache, nanoaods_summary)
+        self._load_and_merge(workitems, configuration, datasets, use_cache, metadata_lookup)
 
         return datasets
 
@@ -145,7 +146,7 @@ class SkimmingManager:
         configuration: Any,
         datasets: List[Any],
         use_cache: bool,
-        nanoaods_summary: Optional[Dict[str, Dict[str, Any]]],
+        metadata_lookup: Dict[str, Dict[str, Any]],
     ) -> None:
         """Load and merge skimmed files per dataset.
 
@@ -157,7 +158,7 @@ class SkimmingManager:
             configuration: Main analysis configuration object
             datasets: Dataset objects to populate with events
             use_cache: Whether to use cached merged events
-            nanoaods_summary: Optional summary with nevts_total per dataset/variation
+            metadata_lookup: Pre-built metadata lookup mapping fileset_key to metadata dict (REQUIRED)
         """
         # Group workitems by dataset/fileset_key
         workitems_by_dataset = self._group_workitems_by_dataset(workitems)
@@ -204,10 +205,15 @@ class SkimmingManager:
                 logger.warning(f"No output files found for {fileset_key}")
                 continue
 
-            # Build metadata for this fileset
-            metadata = self._build_metadata(
-                fileset_key, dataset_obj, configuration, nanoaods_summary
-            )
+            # Get metadata for this fileset
+            if fileset_key not in metadata_lookup:
+                raise ValueError(
+                    f"Fileset key '{fileset_key}' not found in metadata_lookup. "
+                    "Ensure NanoAODMetadataGenerator.build_metadata_lookup() was called "
+                    "and passed to SkimmingManager.run()."
+                )
+
+            metadata = metadata_lookup[fileset_key].copy()
 
             # Load and merge events (with caching)
             merged_events = self._load_and_merge_with_cache(
@@ -359,91 +365,3 @@ class SkimmingManager:
                 return dataset_obj.process not in configuration.general.processes
         return False
 
-    def _build_metadata(
-        self,
-        fileset_key: str,
-        dataset_obj: Any,
-        configuration: Any,
-        nanoaods_summary: Optional[Dict[str, Dict[str, Any]]],
-    ) -> Dict[str, Any]:
-        """Build metadata dictionary for a dataset.
-
-        Args:
-            fileset_key: Dataset/fileset identifier
-            dataset_obj: Dataset object with metadata
-            configuration: Main analysis configuration
-            nanoaods_summary: Optional summary with nevts_total per dataset/variation
-
-        Returns:
-            Dictionary with dataset metadata (xsec, nevts, is_data, etc.)
-        """
-        # Get cross-section for this specific fileset_key
-        try:
-            idx = dataset_obj.fileset_keys.index(fileset_key)
-            xsec = dataset_obj.cross_sections[idx]
-        except (ValueError, IndexError) as e:
-            logger.error(f"Failed to get cross-section for {fileset_key}: {e}")
-            xsec = 1.0
-
-        # Get dataset configuration for lumi mask
-        dataset_config = self._get_dataset_config_by_name(
-            dataset_obj.process, configuration
-        )
-        lumi_mask_config = (
-            dataset_config.lumi_mask
-            if dataset_config and dataset_obj.is_data
-            else None
-        )
-
-        # Extract nevts from NanoAODs summary if available
-        # The analysis code expects 'nevts' field for normalization
-        nevts = 0
-        if nanoaods_summary:
-            # Extract dataset name from fileset_key (format: "datasetname__variation")
-            # This handles multi-directory datasets where dataset name includes
-            # directory index (e.g., signal_0, signal_1)
-            dataset_name_from_key = fileset_key.rsplit('__', 1)[0]  # Remove variation suffix
-            if dataset_name_from_key in nanoaods_summary:
-                if dataset_obj.variation in nanoaods_summary[dataset_name_from_key]:
-                    nevts = nanoaods_summary[dataset_name_from_key][dataset_obj.variation].get(
-                        'nevts_total', 0
-                    )
-
-        if nevts == 0:
-            logger.warning(f"No nevts found for {fileset_key}, using 0")
-
-        metadata = {
-            "dataset": fileset_key,
-            "process": dataset_obj.process,
-            "variation": dataset_obj.variation,
-            "xsec": xsec,
-            "is_data": dataset_obj.is_data,
-            "lumi_mask_config": lumi_mask_config,
-            "nevts": nevts,
-        }
-
-        return metadata
-
-    def _get_dataset_config_by_name(
-        self, dataset_name: str, configuration: Any
-    ) -> Optional[Any]:
-        """Retrieve dataset configuration by name.
-
-        Args:
-            dataset_name: Name of the dataset/process
-            configuration: Main analysis configuration
-
-        Returns:
-            Dataset configuration if found, None otherwise
-        """
-        dataset_manager = getattr(configuration, "datasets", None)
-        dataset_configs = (
-            getattr(dataset_manager, "datasets", [])
-            if dataset_manager
-            else []
-        )
-
-        for dataset_config in dataset_configs:
-            if dataset_config.name == dataset_name:
-                return dataset_config
-        return None
