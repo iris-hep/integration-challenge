@@ -14,7 +14,6 @@ from coffea.processor import ProcessorABC
 from intccms.analysis.nondiff import NonDiffAnalysis
 from intccms.utils.schema import Config
 from intccms.utils.output_manager import OutputDirectoryManager
-from intccms.utils.metadata import build_dataset_metadata_lookup
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +41,8 @@ class UnifiedProcessor(ProcessorABC):
         Full analysis configuration
     output_manager : OutputDirectoryManager
         Manager for output directory paths
-    datasets_metadata : List[Dataset]
-        Dataset metadata for xsec, nevts, is_data, etc.
+    metadata_lookup : Dict[str, Dict[str, Any]]
+        Pre-built metadata lookup mapping fileset_key to metadata dict
 
     Examples
     --------
@@ -51,10 +50,16 @@ class UnifiedProcessor(ProcessorABC):
     >>> from coffea.processor import Runner, IterativeExecutor
     >>> from intccms.analysis import UnifiedProcessor
     >>>
+    >>> # Generate metadata first
+    >>> generator = NanoAODMetadataGenerator(...)
+    >>> generator.run(generate_metadata=True)
+    >>> metadata_lookup = generator.build_metadata_lookup()
+    >>> fileset = generator.get_coffea_fileset()
+    >>>
     >>> processor = UnifiedProcessor(
     ...     config=config,
     ...     output_manager=output_manager,
-    ...     datasets_metadata=datasets,
+    ...     metadata_lookup=metadata_lookup,
     ... )
     >>>
     >>> runner = Runner(executor=IterativeExecutor(), schema=NanoAODSchema)
@@ -68,8 +73,7 @@ class UnifiedProcessor(ProcessorABC):
         self,
         config: Config,
         output_manager: OutputDirectoryManager,
-        datasets_metadata: List[Any],
-        nanoaods_summary: Optional[Dict[str, Dict[str, Any]]] = None,
+        metadata_lookup: Dict[str, Dict[str, Any]],
     ):
         """Initialize UnifiedProcessor.
 
@@ -79,18 +83,13 @@ class UnifiedProcessor(ProcessorABC):
             Full analysis configuration with general.run_* flags
         output_manager : OutputDirectoryManager
             For resolving output paths
-        datasets_metadata : List[Dataset]
-            Dataset objects with metadata (xsec, nevts, is_data, etc.)
-        nanoaods_summary : dict, optional
-            Summary with nevts_total per dataset/variation from metadata generation
+        metadata_lookup : Dict[str, Dict[str, Any]]
+            Pre-built metadata lookup from NanoAODMetadataGenerator.build_metadata_lookup()
+            Maps fileset_key -> {process, variation, xsec, nevts, is_data, dataset}
         """
         self.config = config
         self.output_manager = output_manager
-        self.datasets_metadata = datasets_metadata
-        self.nanoaods_summary = nanoaods_summary or {}
-
-        # Build metadata lookup: dataset_name -> metadata dict
-        self._metadata_lookup = self._build_metadata_lookup()
+        self.metadata_lookup = metadata_lookup
 
         # Initialize components based on enabled stages
         if config.general.run_skimming:
@@ -112,44 +111,6 @@ class UnifiedProcessor(ProcessorABC):
             f"systematics={config.general.run_systematics}"
         )
 
-    def _build_metadata_lookup(self) -> Dict[str, Dict[str, Any]]:
-        """Build mapping from dataset name to metadata dict.
-
-        Extracts nevts from nanoaods_summary (same logic as SkimmingManager).
-
-        Returns
-        -------
-        dict
-            Mapping of dataset_name -> {process, variation, xsec, nevts, is_data, ...}
-        """
-        lookup = {}
-        for dataset in self.datasets_metadata:
-            for fileset_key in dataset.fileset_keys:
-                idx = dataset.fileset_keys.index(fileset_key)
-
-                # Extract nevts from NanoAODs summary
-                nevts = 0
-                if self.nanoaods_summary:
-                    # Extract dataset name from fileset_key (format: "datasetname__variation")
-                    dataset_name_from_key = fileset_key.rsplit("__", 1)[0]
-                    if dataset_name_from_key in self.nanoaods_summary:
-                        if dataset.variation in self.nanoaods_summary[dataset_name_from_key]:
-                            nevts = self.nanoaods_summary[dataset_name_from_key][
-                                dataset.variation
-                            ].get("nevts_total", 0)
-
-                if nevts == 0:
-                    logger.warning(f"No nevts found for {fileset_key}, using 0")
-
-                lookup[fileset_key] = {
-                    "process": dataset.process,
-                    "variation": dataset.variation,
-                    "xsec": dataset.cross_sections[idx],
-                    "nevts": nevts,
-                    "is_data": dataset.is_data,
-                    "dataset": fileset_key,
-                }
-        return lookup
 
     def _init_skimming_components(self):
         """Initialize skimming pipeline components."""
@@ -206,7 +167,7 @@ class UnifiedProcessor(ProcessorABC):
 
         # Get chunk metadata
         dataset_name = events.metadata["dataset"]
-        metadata = self._metadata_lookup.get(dataset_name)
+        metadata = self.metadata_lookup.get(dataset_name)
 
         if not metadata:
             logger.warning(f"No metadata found for dataset {dataset_name}, skipping chunk")
