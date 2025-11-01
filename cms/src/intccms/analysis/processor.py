@@ -24,10 +24,13 @@ class UnifiedProcessor(ProcessorABC):
     This processor integrates the skimming pipeline with the analysis workflow,
     controlled by configuration flags. It delegates to existing implementations:
     - Skimming: Uses pipeline stages from intccms.skimming.pipeline
+      - Event selection filter ALWAYS applies
+      - When run_skimming=True: Saves filtered events to disk in configured format
+      - When run_skimming=False: No disk I/O (useful for analyzing pre-skimmed data)
     - Analysis: Delegates to NonDiffAnalysis.process()
 
     The processor respects these config.general flags:
-    - run_skimming: Apply event selection (skim)
+    - run_skimming: Save filtered events to disk (filter always applies)
     - run_analysis: Run analysis (object selection, corrections, observables)
     - run_histogramming: Fill histograms during analysis
     - run_systematics: Apply systematic variations
@@ -91,17 +94,15 @@ class UnifiedProcessor(ProcessorABC):
         self.output_manager = output_manager
         self.metadata_lookup = metadata_lookup
 
-        # Initialize components based on enabled stages
-        if config.general.run_skimming:
-            self._init_skimming_components()
+        # Initialize skimming components (always needed for filtering)
+        self._init_skimming_components()
 
-        if config.general.run_analysis:
-            # Create NonDiffAnalysis instance
-            # It handles run_histogramming and run_systematics internally
-            self.analysis = NonDiffAnalysis(
-                config=config,
-                output_manager=output_manager,
-            )
+        # Always create NonDiffAnalysis instance
+        # The run_analysis flag controls whether we execute its methods
+        self.analysis = NonDiffAnalysis(
+            config=config,
+            output_manager=output_manager,
+        )
 
         logger.info(
             f"Initialized UnifiedProcessor: "
@@ -115,6 +116,8 @@ class UnifiedProcessor(ProcessorABC):
     def _init_skimming_components(self):
         """Initialize skimming pipeline components."""
         from intccms.skimming.pipeline.stages import build_column_list
+        from intccms.skimming.io.writers import get_writer
+        from intccms.skimming.workitem import resolve_lazy_values
 
         self.skim_config = self.config.preprocess.skimming
 
@@ -125,6 +128,12 @@ class UnifiedProcessor(ProcessorABC):
             preprocess_cfg.get("mc_branches"),
             is_data=False,  # Will filter per-chunk
         )
+
+        # Initialize writer if we need to save to disk
+        self.writer = get_writer(self.skim_config.output.format)
+
+        # Resolve lazy values in writer kwargs
+        self.writer_kwargs = resolve_lazy_values(self.skim_config.output.to_kwargs or {})
 
     @property
     def accumulator(self):
@@ -137,7 +146,7 @@ class UnifiedProcessor(ProcessorABC):
         """
         acc = {"processed_events": 0}
 
-        if self.config.general.run_histogramming and hasattr(self, "analysis"):
+        if self.config.general.run_histogramming:
             # Use histograms from NonDiffAnalysis instance
             # Coffea will automatically merge these across chunks via hist.Hist.__add__
             acc["histograms"] = self.analysis.nD_hists_per_region
@@ -174,10 +183,16 @@ class UnifiedProcessor(ProcessorABC):
             output["processed_events"] = 0
             return output
 
-        # Step 1: Apply skimming if enabled
-        if self.config.general.run_skimming:
-            events = self._apply_skim_selection(events)
-            output["skimmed_events"] = len(events)
+        # Track total input events
+        input_events_count = len(events)
+
+        # Step 1: Apply skim selection (always applies filter)
+        events = self._apply_skim_selection(events)
+        output["skimmed_events"] = len(events)
+
+        # Save filtered events to disk only if run_skimming is enabled
+        if self.config.general.run_skimming and len(events) > 0:
+            self._save_skimmed_events(events, metadata)
 
         # Step 2: Run analysis if enabled
         if self.config.general.run_analysis and len(events) > 0:
@@ -187,12 +202,14 @@ class UnifiedProcessor(ProcessorABC):
             # - Systematics (if run_systematics=True)
             self.analysis.process(events=events, metadata=metadata)
 
+            # Step 3: Collect histograms if histogramming was enabled
             if self.config.general.run_histogramming:
                 # Histograms are filled in-place in self.analysis.nD_hists_per_region
                 # Coffea will merge them across chunks
                 output["histograms"] = self.analysis.nD_hists_per_region
 
-        output["processed_events"] = len(events)
+        # Track total events processed (input events, not after filtering)
+        output["processed_events"] = input_events_count
         return output
 
     def _apply_skim_selection(self, events: ak.Array) -> ak.Array:
@@ -230,6 +247,65 @@ class UnifiedProcessor(ProcessorABC):
         )
 
         return filtered_events
+
+    def _save_skimmed_events(self, events: ak.Array, metadata: Dict[str, Any]) -> None:
+        """Save filtered events to disk in the configured format.
+
+        Parameters
+        ----------
+        events : ak.Array
+            Filtered events to save
+        metadata : dict
+            Metadata dict with process, variation, dataset info
+        """
+        from intccms.skimming.pipeline.stages import extract_columns, save_events
+        from pathlib import Path
+        import hashlib
+        import uuid
+
+        # Extract columns based on is_data flag
+        is_data = metadata.get("is_data", False)
+        output_columns = extract_columns(
+            events,
+            self.columns_to_keep,
+            mc_only_columns=self.mc_only_columns,
+            is_data=is_data,
+        )
+
+        # Build output path
+        # Use dataset name + unique chunk identifier
+        dataset_name = metadata.get("dataset", "unknown")
+        process = metadata.get("process", "unknown")
+        variation = metadata.get("variation", "nominal")
+
+        # Generate unique chunk ID
+        chunk_id = hashlib.md5(str(uuid.uuid4()).encode()).hexdigest()[:8]
+
+        # Determine file extension
+        extension_map = {
+            "parquet": ".parquet",
+            "root_ttree": ".root",
+            "rntuple": ".ntuple",
+            "safetensors": ".safetensors",
+        }
+        extension = extension_map.get(self.skim_config.output.format, ".parquet")
+
+        # Build path: skimmed_dir/dataset/chunk_id.ext
+        output_dir = Path(self.output_manager.get_skimmed_dir()) / dataset_name
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / f"{chunk_id}{extension}"
+
+        # Prepare writer kwargs
+        writer_kwargs = self.writer_kwargs.copy()
+        if self.skim_config.output.format == "root_ttree":
+            writer_kwargs["tree_name"] = self.skim_config.tree_name
+
+        # Save events
+        save_events(self.writer, output_columns, str(output_path), **writer_kwargs)
+
+        logger.debug(
+            f"Saved {len(events)} events for {process}/{variation} to {output_path}"
+        )
 
     def postprocess(self, accumulator: Dict) -> Dict:
         """Finalize accumulator after all chunks processed.
