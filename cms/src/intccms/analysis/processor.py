@@ -23,6 +23,10 @@ from intccms.skimming.pipeline.stages import (
     save_events,
 )
 from intccms.skimming.workitem import resolve_lazy_values
+from intccms.utils.output_files import (
+    save_histograms_to_pickle,
+    save_histograms_to_root,
+)
 from intccms.utils.output_manager import OutputDirectoryManager
 from intccms.utils.schema import Config
 from intccms.utils.tools import get_function_arguments
@@ -311,6 +315,7 @@ class UnifiedProcessor(ProcessorABC):
         """Finalize accumulator after all chunks processed.
 
         Called once by coffea after all chunks are merged.
+        Saves histograms to disk for later use without re-running processor.
 
         Parameters
         ----------
@@ -322,9 +327,26 @@ class UnifiedProcessor(ProcessorABC):
         dict
             Final accumulator
         """
-        # For now, just return the merged accumulator
-        # Future: Could add post-processing logic here (e.g., normalization)
         logger.info(
             f"Postprocessing complete: {accumulator.get('processed_events', 0)} total events"
         )
+
+        # Save histograms to disk if they were produced
+        if self.config.general.run_histogramming and "histograms" in accumulator:
+            # Save pickle format (for loading when run_processor=False)
+            histograms_pkl = self.output_manager.get_histograms_dir() / "processor_histograms.pkl"
+            save_histograms_to_pickle(
+                accumulator["histograms"],
+                output_file=histograms_pkl,
+            )
+            logger.info(f"Saved processor histograms (pickle) to {histograms_pkl}")
+
+            # Save ROOT format (for downstream tools/visualization)
+            histograms_root = self.output_manager.get_histograms_dir() / "histograms.root"
+            save_histograms_to_root(
+                accumulator["histograms"],
+                output_file=histograms_root,
+            )
+            logger.info(f"Saved processor histograms (ROOT) to {histograms_root}")
+
         return accumulator
