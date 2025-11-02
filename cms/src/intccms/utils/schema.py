@@ -182,6 +182,13 @@ class GeneralConfig(SubscriptableModel):
             description="If True, run the initial NanoAOD skimming and filtering step.",
         ),
     ]
+    run_processor: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="If True, run the coffea processor over data. If False, load previously saved histograms from disk.",
+        ),
+    ]
     run_analysis: Annotated[
         bool,
         Field(

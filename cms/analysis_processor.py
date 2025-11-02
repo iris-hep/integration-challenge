@@ -13,14 +13,13 @@ import sys
 from coffea import processor
 from coffea.nanoevents import NanoAODSchema
 
-from intccms.analysis.processor import UnifiedProcessor
+from intccms.analysis import run_processor_workflow
 from example_opendata.configs.configuration import config as ZprimeConfig
 from intccms.utils.datasets import ConfigurableDatasetManager
 from intccms.utils.logging import setup_logging, log_banner
 from intccms.utils.schema import Config, load_config_with_restricted_cli
 from intccms.metadata_extractor import DatasetMetadataManager
 from intccms.utils.output_manager import OutputDirectoryManager
-from intccms.utils.output_files import save_histograms_to_root
 
 # -----------------------------
 # Logging Configuration
@@ -84,14 +83,8 @@ def main():
 
     logger.info(log_banner("PROCESSOR-BASED WORKFLOW"))
 
-    # Initialize the unified processor
-    unified_processor = UnifiedProcessor(
-        config=config,
-        output_manager=output_manager,
-        metadata_lookup=metadata_lookup,
-    )
-
-    logger.info("Initialized UnifiedProcessor with:")
+    logger.info(f"Workflow configuration:")
+    logger.info(f"  - run_processor: {config.general.run_processor}")
     logger.info(f"  - run_skimming: {config.general.run_skimming}")
     logger.info(f"  - run_analysis: {config.general.run_analysis}")
     logger.info(f"  - run_histogramming: {config.general.run_histogramming}")
@@ -111,35 +104,25 @@ def main():
         logger.info("Using FuturesExecutor (default)")
         executor = processor.FuturesExecutor()
 
-    # Create the processor runner
-    runner = processor.Runner(
+    # Run the processor workflow (or load saved histograms)
+    output = run_processor_workflow(
+        config=config,
+        output_manager=output_manager,
+        metadata_lookup=metadata_lookup,
+        workitems=generator.workitems,
         executor=executor,
         schema=NanoAODSchema,
-        chunksize=config.general.chunksize if hasattr(config.general, 'chunksize') else 100_000,
     )
 
-    # Run the processor over the fileset
-    logger.info("Running processor over fileset...")
-    output = runner(
-        fileset,
-        treename="Events",
-        processor_instance=unified_processor,
-    )
+    logger.info(log_banner("RESULTS"))
 
-    logger.info(log_banner("SAVING OUTPUTS"))
-
-    # Save histograms if they were produced
+    # Log summary (histograms auto-saved by processor)
     if output and "histograms" in output:
-        histograms_output = output_manager.get_histograms_dir() / "histograms.root"
-        save_histograms_to_root(
-            output["histograms"],
-            output_file=histograms_output,
-        )
-        logger.info(f"✅ Histograms saved to: {histograms_output}")
-
-        # Log summary
         num_histograms = sum(len(hists) for hists in output["histograms"].values())
         logger.info(f"📊 Total histograms produced: {num_histograms}")
+        logger.info(f"✅ Histograms auto-saved to: {output_manager.get_histograms_dir()}")
+        logger.info(f"   - processor_histograms.pkl (for loading with run_processor=False)")
+        logger.info(f"   - histograms.root (for downstream tools)")
     else:
         logger.info("No histograms produced (run_histogramming may be disabled)")
 

@@ -5,6 +5,7 @@ from . import nondiff as nondiff
 from .base import Analysis
 from .nondiff import NonDiffAnalysis
 from .processor import UnifiedProcessor
+from .runner import run_processor_workflow
 
 
 __all__ = [
@@ -13,6 +14,7 @@ __all__ = [
     "Analysis",
     "NonDiffAnalysis",
     "UnifiedProcessor",
+    "run_processor_workflow",
 ]
 
 
