@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from coffea.nanoevents import NanoAODSchema
-from coffea.processor import Runner, WorkItem
+from coffea.processor import Runner
+from coffea.processor.executor import WorkItem
 
 from intccms.analysis.processor import UnifiedProcessor
 from intccms.utils.output_files import load_histograms_from_pickle
