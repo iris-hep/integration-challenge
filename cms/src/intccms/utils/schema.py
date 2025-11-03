@@ -175,11 +175,28 @@ class GeneralConfig(SubscriptableModel):
         Field(default="nondiff",
               description="The analysis mode to run: 'nondiff' or 'skip' (skim-only mode)."),
     ]
+    use_skimmed_input: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="If True, read from pre-skimmed files instead of original NanoAOD. "
+            "Automatically builds fileset from skimmed_dir.",
+        ),
+    ]
+    save_skimmed_output: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="If True, save filtered events to disk in skimmed_dir. "
+            "Controls output behavior independent of input source.",
+        ),
+    ]
     run_skimming: Annotated[
         bool,
         Field(
             default=True,
-            description="If True, run the initial NanoAOD skimming and filtering step.",
+            description="DEPRECATED: Use save_skimmed_output instead. "
+            "If True, run the initial NanoAOD skimming and filtering step.",
         ),
     ]
     run_processor: Annotated[

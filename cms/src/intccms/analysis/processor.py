@@ -194,7 +194,7 @@ class UnifiedProcessor(ProcessorABC):
 
         logger.info(
             f"Initialized UnifiedProcessor: "
-            f"skimming={config.general.run_skimming}, "
+            f"save_skimmed_output={config.general.save_skimmed_output}, "
             f"analysis={config.general.run_analysis}, "
             f"histogramming={config.general.run_histogramming}, "
             f"systematics={config.general.run_systematics}"
@@ -235,7 +235,7 @@ class UnifiedProcessor(ProcessorABC):
             # Coffea will automatically merge these across chunks via hist.Hist.__add__
             acc["histograms"] = self.analysis.nD_hists_per_region
 
-        if self.config.general.run_skimming:
+        if self.config.general.save_skimmed_output:
             acc["skimmed_events"] = 0
 
         return acc
@@ -274,8 +274,8 @@ class UnifiedProcessor(ProcessorABC):
         events = self._apply_skim_selection(events)
         output["skimmed_events"] = len(events)
 
-        # Save filtered events to disk only if run_skimming is enabled
-        if self.config.general.run_skimming and len(events) > 0:
+        # Save filtered events to disk only if save_skimmed_output is enabled
+        if self.config.general.save_skimmed_output and len(events) > 0:
             self._save_skimmed_events(events, metadata)
 
         # Step 2: Run analysis if enabled

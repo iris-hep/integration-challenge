@@ -14,6 +14,7 @@ from coffea.processor import Runner
 from coffea.processor.executor import WorkItem
 
 from intccms.analysis.processor import UnifiedProcessor
+from intccms.skimming import FilesetManager
 from intccms.utils.output_files import load_histograms_from_pickle
 from intccms.utils.output_manager import OutputDirectoryManager
 from intccms.utils.schema import Config
@@ -25,8 +26,8 @@ def run_processor_workflow(
     config: Config,
     output_manager: OutputDirectoryManager,
     metadata_lookup: Dict[str, Dict[str, Any]],
-    workitems: List[WorkItem],
-    executor: Any,
+    workitems: Optional[List[WorkItem]] = None,
+    executor: Any = None,
     schema: Any = NanoAODSchema,
     chunksize: Optional[int] = None,
 ) -> Dict[str, Any]:
@@ -96,8 +97,44 @@ def run_processor_workflow(
     if config.general.run_processor:
         logger.info("Running processor over data...")
 
-        # Filter workitems by process if configured
-        if hasattr(config.general, 'processes') and config.general.processes:
+        # Auto-build fileset from skimmed files if use_skimmed_input=True
+        if config.general.use_skimmed_input:
+            logger.info("Auto-detecting skimmed files (use_skimmed_input=True)...")
+
+            skimmed_dir = Path(output_manager.get_skimmed_dir())
+            if not skimmed_dir.exists():
+                raise FileNotFoundError(
+                    f"Skimmed directory does not exist: {skimmed_dir}\n"
+                    "Run with use_skimmed_input=False and save_skimmed_output=True first "
+                    "to create skimmed files."
+                )
+
+            # Build fileset from skimmed files
+            fileset_manager = FilesetManager(
+                skimmed_dir=skimmed_dir,
+                format=config.preprocess.skimming.output.format
+            )
+
+            # Get datasets from metadata_lookup
+            datasets = list(set(md['dataset'] for md in metadata_lookup.values()))
+            fileset = fileset_manager.build_fileset(datasets)
+
+            logger.info(f"Built fileset from {len(fileset)} skimmed datasets")
+
+            # Convert fileset to coffea format and let coffea preprocess it
+            # We'll use runner.run() with fileset instead of workitems
+            use_fileset = True
+        else:
+            # Validate workitems exist when not using skimmed input
+            if workitems is None:
+                raise ValueError(
+                    "No workitems provided and use_skimmed_input=False. "
+                    "Either provide workitems or set use_skimmed_input=True."
+                )
+            use_fileset = False
+
+        # Filter workitems by process if configured (only for workitem-based workflow)
+        if not use_fileset and hasattr(config.general, 'processes') and config.general.processes:
             processes_filter = config.general.processes
             logger.info(f"Filtering workitems by processes: {processes_filter}")
             filtered_workitems = [
@@ -113,6 +150,10 @@ def run_processor_workflow(
             if not workitems:
                 logger.warning("No workitems remain after process filtering")
                 return {"histograms": {}, "processed_events": 0, "skimmed_events": 0}
+
+        # TODO: Implement process filtering for fileset-based workflow
+        if use_fileset and hasattr(config.general, 'processes') and config.general.processes:
+            logger.warning("Process filtering not yet implemented for fileset-based workflow")
 
         # Initialize UnifiedProcessor
         unified_processor = UnifiedProcessor(
@@ -132,12 +173,27 @@ def run_processor_workflow(
             chunksize=chunksize,
         )
 
-        # Run processor over workitems
-        logger.info(f"Processing {len(workitems)} work items with chunksize={chunksize}")
-        output = runner.run(
-            workitems,
-            processor_instance=unified_processor,
-        )
+        # Run processor over fileset or workitems
+        if use_fileset:
+            logger.info(f"Processing fileset with {len(fileset)} datasets, chunksize={chunksize}")
+            # Convert our fileset format to coffea format
+            coffea_fileset = {}
+            for dataset_name, dataset_info in fileset.items():
+                files = dataset_info["files"]
+                treename = dataset_info["metadata"].get("treename", "Events")
+                coffea_fileset[dataset_name] = {treename: files}
+
+            output = runner.run(
+                coffea_fileset,
+                treename="Events",  # Will be overridden by fileset structure
+                processor_instance=unified_processor,
+            )
+        else:
+            logger.info(f"Processing {len(workitems)} work items with chunksize={chunksize}")
+            output = runner.run(
+                workitems,
+                processor_instance=unified_processor,
+            )
 
         logger.info(
             f"Processor complete: {output.get('processed_events', 0):,} events processed, "
