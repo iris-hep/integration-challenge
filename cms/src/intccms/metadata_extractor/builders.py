@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from intccms.utils.datasets import ConfigurableDatasetManager, Dataset
+from intccms.datasets import DatasetManager, Dataset
 from intccms.metadata_extractor.core import (
     format_dataset_key,
     build_fileset_entry,
@@ -28,7 +28,7 @@ class FilesetBuilder:
 
     Attributes
     ----------
-    dataset_manager : ConfigurableDatasetManager
+    dataset_manager : DatasetManager
         Manages dataset configurations, including paths and tree names
     output_manager : OutputDirectoryManager
         Manages output directory paths
@@ -36,7 +36,7 @@ class FilesetBuilder:
 
     def __init__(
         self,
-        dataset_manager: ConfigurableDatasetManager,
+        dataset_manager: DatasetManager,
         output_manager: Any,
     ) -> None:
         """
@@ -44,7 +44,7 @@ class FilesetBuilder:
 
         Parameters
         ----------
-        dataset_manager : ConfigurableDatasetManager
+        dataset_manager : DatasetManager
             Dataset manager instance
         output_manager : OutputDirectoryManager
             Output directory manager

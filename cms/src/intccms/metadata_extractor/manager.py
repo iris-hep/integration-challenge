@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Union
 from rich.pretty import pretty_repr
 from coffea.processor.executor import WorkItem
 
-from intccms.utils.datasets import ConfigurableDatasetManager, Dataset
+from intccms.datasets import DatasetManager, Dataset
 from intccms.metadata_extractor.builders import FilesetBuilder
 from intccms.metadata_extractor.extractor import CoffeaMetadataExtractor
 from intccms.metadata_extractor.core import (
@@ -42,7 +42,7 @@ class DatasetMetadataManager:
 
     Attributes
     ----------
-    dataset_manager : ConfigurableDatasetManager
+    dataset_manager : DatasetManager
         Manages dataset configurations
     output_manager : OutputDirectoryManager
         Manages output directory paths
@@ -60,7 +60,7 @@ class DatasetMetadataManager:
 
     def __init__(
         self,
-        dataset_manager: ConfigurableDatasetManager,
+        dataset_manager: DatasetManager,
         output_manager: Any,
         executor: Any = None,
         schema: Any = None,
@@ -71,7 +71,7 @@ class DatasetMetadataManager:
 
         Parameters
         ----------
-        dataset_manager : ConfigurableDatasetManager
+        dataset_manager : DatasetManager
             Dataset manager instance
         output_manager : OutputDirectoryManager
             Output directory manager
