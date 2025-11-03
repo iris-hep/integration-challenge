@@ -14,6 +14,7 @@ from intccms.metadata_extractor.core import (
     build_fileset_entry,
 )
 from intccms.metadata_extractor.io import collect_file_paths, save_json
+from intccms.utils.filters import should_process
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +96,7 @@ class FilesetBuilder:
         # Iterate over each process configured in the dataset manager
         for process_name in self.dataset_manager.list_processes():
             # Check if processes filter is configured
-            if processes_filter and process_name not in processes_filter:
+            if not should_process(process_name, processes_filter):
                 logger.info(f"Skipping {process_name} (not in processes filter)")
                 continue
 
