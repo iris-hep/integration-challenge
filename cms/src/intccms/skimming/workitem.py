@@ -26,6 +26,31 @@ from intccms.utils.tools import get_function_arguments
 logger = logging.getLogger(__name__)
 
 
+def get_deterministic_fileuuid(file_path: str) -> bytes:
+    """Generate deterministic UUID from file path.
+
+    Uses MD5 hash of absolute path to create a stable 16-byte UUID.
+    Same file path will always produce the same UUID, ensuring deterministic
+    behavior for coffea's WorkItem processing, caching, and worker affinity.
+
+    Args:
+        file_path: Path to the file
+
+    Returns:
+        bytes: 16-byte UUID compatible with coffea's WorkItem
+
+    Examples:
+        >>> uuid1 = get_deterministic_fileuuid("/path/to/file.parquet")
+        >>> uuid2 = get_deterministic_fileuuid("/path/to/file.parquet")
+        >>> uuid1 == uuid2
+        True
+    """
+    # Normalize path and hash it
+    normalized_path = str(Path(file_path).resolve())
+    hash_bytes = hashlib.md5(normalized_path.encode()).digest()
+    return hash_bytes  # MD5 gives us exactly 16 bytes
+
+
 def resolve_lazy_values(obj: Any) -> Any:
     """Recursively resolve WorkerEval-wrapped callables in nested structures.
 

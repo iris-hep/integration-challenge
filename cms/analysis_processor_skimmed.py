@@ -115,8 +115,9 @@ def main():
 
     # Convert skimmed fileset to workitems
     # Extract file paths and build workitems from skimmed files
-    import uuid
     from coffea.processor.executor import WorkItem
+    from intccms.skimming import get_deterministic_fileuuid
+
     workitems = []
     for dataset_name, dataset_info in skimmed_fileset.items():
         files = dataset_info["files"]
@@ -126,6 +127,7 @@ def main():
         for file_path in files:
             # Create workitem for each skimmed file
             # Note: Skimmed files are typically smaller, so we can process entire files
+            # Use deterministic UUID based on file path for reproducibility
             workitems.append(
                 WorkItem(
                     dataset=dataset_name,
@@ -133,7 +135,7 @@ def main():
                     treename=treename,
                     entrystart=0,
                     entrystop=-1,  # Process entire file
-                    fileuuid=uuid.uuid4(),
+                    fileuuid=get_deterministic_fileuuid(file_path),
                 )
             )
 
