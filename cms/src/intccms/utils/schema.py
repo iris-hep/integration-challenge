@@ -324,10 +324,11 @@ class DatasetConfig(SubscriptableModel):
     redirector: Annotated[Optional[str], Field(default=None, description="redirector to prefix ROOT file-paths")]
     is_data: Annotated[bool, Field(default=False, description="Flag indicating whether dataset represents real data")]
     lumi_mask: Annotated[
-        Optional[FunctorConfig],
+        Optional[Union[FunctorConfig, Tuple[FunctorConfig, ...], List[FunctorConfig]]],
         Field(
             default=None,
-            description="Optional lumi mask configuration applied to data datasets",
+            description="Optional lumi mask configuration(s) applied to data datasets. "
+                        "Can be a single FunctorConfig or a sequence of FunctorConfig (one per directory).",
         ),
     ]
 
@@ -349,12 +350,16 @@ class DatasetManagerConfig(SubscriptableModel):
         for dataset_config in self.datasets:
             dirs = dataset_config.directories
             xss = dataset_config.cross_sections
+            lumi_masks = dataset_config.lumi_mask
 
             # Get the count of directories
             num_dirs = len(dirs) if isinstance(dirs, tuple) else 1
             # Get the count of cross-sections
             num_xss = len(xss) if isinstance(xss, tuple) else 1
+            # Get the count of lumi_masks (handle both tuple and list from OmegaConf)
+            num_lumi_masks = len(lumi_masks) if isinstance(lumi_masks, (tuple, list)) else (1 if lumi_masks is not None else 0)
 
+            # Validate cross-sections
             # Valid cases:
             # 1. Single dir, single xsec
             # 2. Multiple dirs, single xsec (will be replicated)
@@ -364,6 +369,18 @@ class DatasetManagerConfig(SubscriptableModel):
                     f"Dataset '{dataset_config.name}': You must provide either a single cross-section "
                     f"or an equal number of cross-sections ({num_dirs}) to match the number of directories. "
                     f"Got {num_dirs} directories and {num_xss} cross-sections."
+                )
+
+            # Validate lumi_masks
+            # Valid cases:
+            # 1. No lumi_mask (None)
+            # 2. Single lumi_mask (will be used for single dir or replicated for multiple dirs)
+            # 3. Multiple lumi_masks matching number of directories
+            if num_lumi_masks > 1 and num_lumi_masks != num_dirs:
+                raise ValueError(
+                    f"Dataset '{dataset_config.name}': You must provide either a single lumi_mask "
+                    f"or an equal number of lumi_masks ({num_dirs}) to match the number of directories. "
+                    f"Got {num_dirs} directories and {num_lumi_masks} lumi_masks."
                 )
 
         return self

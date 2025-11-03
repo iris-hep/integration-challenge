@@ -274,8 +274,11 @@ class DatasetMetadataManager:
         # Create Dataset objects
         self.datasets = []
         for process, data in process_groups.items():
-            # Get lumi_mask_config from dataset_manager
-            lumi_mask_config = self.dataset_manager.get_lumi_mask_config(process)
+            # Build list of lumi_mask_configs (one per fileset_key)
+            lumi_mask_configs = []
+            for idx in range(len(data["keys"])):
+                lumi_mask_config = self.dataset_manager.get_lumi_mask_config(process, directory_index=idx)
+                lumi_mask_configs.append(lumi_mask_config)
 
             dataset = Dataset(
                 name=process,
@@ -284,7 +287,7 @@ class DatasetMetadataManager:
                 variation=data["variation"],
                 cross_sections=data["xsecs"],
                 is_data=data["is_data"],
-                lumi_mask_config=lumi_mask_config,
+                lumi_mask_configs=lumi_mask_configs,
                 events=None,
             )
             self.datasets.append(dataset)
@@ -365,6 +368,14 @@ class DatasetMetadataManager:
                     logger.error(f"Failed to get cross-section for {fileset_key}: {e}")
                     xsec = 1.0
 
+                # Get lumi_mask_config for this fileset_key
+                try:
+                    idx = dataset.fileset_keys.index(fileset_key)
+                    lumi_mask_config = dataset.lumi_mask_configs[idx] if dataset.lumi_mask_configs else None
+                except (ValueError, IndexError) as e:
+                    logger.warning(f"Failed to get lumi_mask_config for {fileset_key}: {e}")
+                    lumi_mask_config = None
+
                 # Extract nevts from summary
                 nevts = extract_nevts_from_summary(
                     fileset_key,
@@ -378,7 +389,7 @@ class DatasetMetadataManager:
                     "xsec": xsec,
                     "nevts": nevts,
                     "is_data": dataset.is_data,
-                    "lumi_mask_config": dataset.lumi_mask_config,
+                    "lumi_mask_config": lumi_mask_config,
                     "dataset": fileset_key,
                 }
 

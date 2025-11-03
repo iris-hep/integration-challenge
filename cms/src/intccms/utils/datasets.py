@@ -41,8 +41,9 @@ class Dataset:
         Cross-section in picobarns for each fileset entry
     is_data : bool
         Flag indicating whether dataset represents real data
-    lumi_mask_config : Optional[Any]
-        Luminosity mask configuration for data (FunctorConfig), None for MC
+    lumi_mask_configs : List[Optional[Any]]
+        List of luminosity mask configurations (FunctorConfig) for data, one per fileset_key.
+        None entries for MC or if not configured. Length must match fileset_keys.
     events : Optional[List[Tuple[Any, Dict]]]
         Processed events from skimming, added after skimming completes.
         Each tuple contains (events_array, metadata_dict) for one fileset entry.
@@ -53,7 +54,7 @@ class Dataset:
     variation: str
     cross_sections: List[float]
     is_data: bool = False
-    lumi_mask_config: Optional[Any] = None
+    lumi_mask_configs: List[Optional[Any]] = field(default_factory=list)
     events: Optional[List[Tuple[Any, Dict]]] = field(default=None)
 
     def __repr__(self) -> str:
@@ -206,14 +207,19 @@ class ConfigurableDatasetManager:
         """
         return self.datasets[process].is_data
 
-    def get_lumi_mask_config(self, process: str) -> Optional[Any]:
+    def get_lumi_mask_config(self, process: str, directory_index: Optional[int] = None) -> Optional[Any]:
         """
         Get luminosity mask configuration for a process.
+
+        For multi-directory datasets, you can specify which directory's lumi_mask to retrieve.
+        If multiple lumi_masks are configured and directory_index is None, returns the first one.
 
         Parameters
         ----------
         process : str
             Process name
+        directory_index : int, optional
+            Index of directory for multi-directory datasets (0-based)
 
         Returns
         -------
@@ -221,9 +227,28 @@ class ConfigurableDatasetManager:
             Luminosity mask FunctorConfig for data, None for MC or if not configured
         """
         dataset_config = self.datasets[process]
-        if dataset_config.is_data:
-            return dataset_config.lumi_mask
-        return None
+        if not dataset_config.is_data:
+            return None
+
+        lumi_mask = dataset_config.lumi_mask
+        if lumi_mask is None:
+            return None
+
+        # Handle tuple or list of lumi_masks (one per directory)
+        # OmegaConf may convert tuples to lists
+        if isinstance(lumi_mask, (tuple, list)):
+            if directory_index is not None:
+                if directory_index < 0 or directory_index >= len(lumi_mask):
+                    raise ValueError(
+                        f"directory_index {directory_index} out of range for process '{process}' "
+                        f"with {len(lumi_mask)} lumi_masks"
+                    )
+                return lumi_mask[directory_index]
+            # If no directory_index specified, return first one
+            return lumi_mask[0]
+
+        # Single lumi_mask - return it regardless of directory_index
+        return lumi_mask
 
     def list_processes(self) -> List[str]:
         """
