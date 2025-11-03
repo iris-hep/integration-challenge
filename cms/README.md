@@ -16,24 +16,40 @@ cms/
   analysis.py                # Main analysis script
   pixi.toml, pixi.lock       # Environment configuration (pixi)
   analysis/                  # Analysis logic and base classes
-  corrections/               # Correction files (JSON, text, etc.)
-  example/                   # Example datasets and outputs
-  user/                      # User analysis configuration, cuts, observables
-  utils/                     # Utility modules (output, plotting, stats, etc.)
+  example_opendata/          # Open-data example configs, cuts, datasets
+  example_cms/               # CMS internal-style example configs
+  utils/                     # Utility modules (output manager, skimming, schema, etc.)
 ```
-- Configuration files for the analysis are found in `cms/user/` (e.g., `configuration.py`).
+- Start from the example configurations in `example_opendata/configs/` or `example_cms/configs/`—they provide complete analysis dictionaries (datasets, skimming, channels) that you can copy and adapt for your own campaign.
 - Main scripts and entry points are in `cms/`.
 
 ## Metadata and preprocessing
-Metadata extraction and preprocessing are handled before the main analysis. Metadata includes information about datasets, event counts, and cross sections, and is used to configure the analysis and normalization. Preprocessing steps may include filtering, object selection, and preparing input files for skimming and analysis.
+Metadata extraction and preprocessing are handled before the main analysis. Metadata includes information about datasets, event counts, and cross-sections, and is used to configure the analysis and normalization. Preprocessing steps may include filtering, object selection, and preparing input files for skimming and analysis.
 
 ## Skimming
-To skim NanoAOD datasets, use the provided scripts and configuration files in the `analysis/` and `user/` directories. Adjust the configuration as needed for your analysis channels and observables.
+Preprocessing is controlled by the `preprocess` block in the configuration. The `skimming` subsection now uses a single `output` stanza to steer how skimmed NanoAOD chunks are persisted:
 
-Currently, the code writes out skimmed files as intermediate outputs. The plan is to integrate the workflow so that all steps, including skimming, are performed on-the-fly without writing intermediate files, streamlining the analysis process.
+```python
+preprocess = {
+    "skimming": {
+        "function": default_skim_selection,
+        "use": [("PuppiMET", None), ("HLT", None)],
+        "output": {
+            "format": "parquet",          # other options: root_ttree, rntuple, safetensors (stubs)
+            "local": True,
+            "base_uri": "s3://bucket",    # optional override for remote storage
+            "to_kwargs": {"compression": "zstd"},   # forwarded to ak.to_parquet
+            "from_kwargs": {"storage_options": {...}}  # forwarded to NanoEventsFactory.from_parquet
+        },
+    },
+}
+```
 
-If you need pre-skimmed data, it is available on CERNBox upon request. Please contact Mohamed Aly (mohamed.aly@cern.ch) for access.
-If you want to reproduce the skimmed files yourself, set the option `general.run_skimming=True` in the configuration file `cms/user/configuration.py`. This takes roughly 1-1.5 hours for the whole set of data. If you want only a subset, you can specify the maximum number of files to process per dataset using the `datasets.max_files` option in the same configuration file under the dataset configuration section.
+The file suffix is fixed to `{dataset}/file_{index}/part_{chunk}.{ext}`, so switching between local and remote storage only requires changing the `local` flag and optional `base_uri`.
+
+- Set `general.run_skimming=True` to regenerate skims. Use `datasets.max_files` to limit input size when experimenting.
+- Downstream steps load the same path, so no separate cache copy is needed; cached Awkward objects are still produced automatically for faster reruns.
+- Dataset-level options such as lumi masks live next to each dataset definition (for example `lumi_mask`: `{ "function": cuts.lumi_mask, "use": [...], "static_kwargs": {"lumifile": "...json"} }`).
 
 ## Running code
 To run the main analysis chain, execute the relevant Python scripts or notebooks. Outputs such as histograms and fit results will be saved in the `outputs/` directory. For example:
