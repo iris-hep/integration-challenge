@@ -15,6 +15,7 @@ from coffea.processor.executor import WorkItem
 
 from intccms.analysis.processor import UnifiedProcessor
 from intccms.skimming import FilesetManager
+from intccms.utils.filters import filter_by_process
 from intccms.utils.output_files import load_histograms_from_pickle
 from intccms.utils.output_manager import OutputDirectoryManager
 from intccms.utils.schema import Config
@@ -133,27 +134,18 @@ def run_processor_workflow(
                 )
             use_fileset = False
 
-        # Filter workitems by process if configured (only for workitem-based workflow)
-        if not use_fileset and hasattr(config.general, 'processes') and config.general.processes:
-            processes_filter = config.general.processes
-            logger.info(f"Filtering workitems by processes: {processes_filter}")
-            filtered_workitems = [
-                wi for wi in workitems
-                if wi.usermeta.get('process') in processes_filter
-            ]
-            logger.info(
-                f"Filtered {len(workitems)} workitems down to {len(filtered_workitems)} "
-                f"based on process filter"
-            )
-            workitems = filtered_workitems
-
-            if not workitems:
-                logger.warning("No workitems remain after process filtering")
-                return {"histograms": {}, "processed_events": 0, "skimmed_events": 0}
-
-        # TODO: Implement process filtering for fileset-based workflow
-        if use_fileset and hasattr(config.general, 'processes') and config.general.processes:
-            logger.warning("Process filtering not yet implemented for fileset-based workflow")
+        # Filter by process if configured
+        if hasattr(config.general, 'processes') and config.general.processes:
+            if use_fileset:
+                fileset = filter_by_process(fileset, config.general.processes, metadata_lookup)
+                if not fileset:
+                    logger.warning("No datasets remain after process filtering")
+                    return {"histograms": {}, "processed_events": 0, "skimmed_events": 0}
+            else:
+                workitems = filter_by_process(workitems, config.general.processes)
+                if not workitems:
+                    logger.warning("No workitems remain after process filtering")
+                    return {"histograms": {}, "processed_events": 0, "skimmed_events": 0}
 
         # Initialize UnifiedProcessor
         unified_processor = UnifiedProcessor(
