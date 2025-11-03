@@ -152,7 +152,6 @@ class FilesetBuilder:
         tree_name = self.dataset_manager.get_tree_name(process_name)
         redirector = self.dataset_manager.get_redirector(process_name)
         is_data = self.dataset_manager.is_data_dataset(process_name)
-        lumi_mask_config = self.dataset_manager.get_lumi_mask_config(process_name)
 
         # Validate configuration
         if len(listing_dirs) != len(cross_sections):
@@ -164,9 +163,17 @@ class FilesetBuilder:
         # Build fileset entries for each directory
         fileset_entries = {}
         fileset_keys = []
+        lumi_mask_configs = []
         variation_label = "nominal"
 
         for idx, (listing_dir, xsec) in enumerate(zip(listing_dirs, cross_sections)):
+            # Get lumi_mask_config for this directory
+            directory_index = idx if len(listing_dirs) > 1 else None
+            lumi_mask_config = self.dataset_manager.get_lumi_mask_config(
+                process_name, directory_index=directory_index
+            )
+            lumi_mask_configs.append(lumi_mask_config)
+
             # Collect file paths
             file_paths = collect_file_paths(listing_dir, identifiers, redirector)
 
@@ -175,7 +182,6 @@ class FilesetBuilder:
                 file_paths = file_paths[:max_files]
 
             # Create dataset key
-            directory_index = idx if len(listing_dirs) > 1 else None
             dataset_key = format_dataset_key(
                 process_name,
                 variation=variation_label,
@@ -204,7 +210,7 @@ class FilesetBuilder:
             variation=variation_label,
             cross_sections=cross_sections,
             is_data=is_data,
-            lumi_mask_config=lumi_mask_config,
+            lumi_mask_configs=lumi_mask_configs,
             events=None,  # Will be populated during skimming
         )
 
