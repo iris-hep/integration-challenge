@@ -215,9 +215,11 @@ class UnifiedProcessor(ProcessorABC):
             self.analysis.process(events=events, metadata=metadata)
 
             # Step 3: Collect histograms if histogramming was enabled
+            logger.info("Step 3: Collect histograms if histogramming was enabled")
             if self.config.general.run_histogramming:
                 # Histograms are filled in-place in self.analysis.nD_hists_per_region
                 # Coffea will merge them across chunks
+                logger.info(f"self.analysis.nD_hists_per_region: {self.analysis.nD_hists_per_region}")
                 output["histograms"] = self.analysis.nD_hists_per_region
 
         # Track total events processed (input events, not after filtering)

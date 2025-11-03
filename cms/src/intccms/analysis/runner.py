@@ -96,6 +96,24 @@ def run_processor_workflow(
     if config.general.run_processor:
         logger.info("Running processor over data...")
 
+        # Filter workitems by process if configured
+        if hasattr(config.general, 'processes') and config.general.processes:
+            processes_filter = config.general.processes
+            logger.info(f"Filtering workitems by processes: {processes_filter}")
+            filtered_workitems = [
+                wi for wi in workitems
+                if wi.usermeta.get('process') in processes_filter
+            ]
+            logger.info(
+                f"Filtered {len(workitems)} workitems down to {len(filtered_workitems)} "
+                f"based on process filter"
+            )
+            workitems = filtered_workitems
+
+            if not workitems:
+                logger.warning("No workitems remain after process filtering")
+                return {"histograms": {}, "processed_events": 0, "skimmed_events": 0}
+
         # Initialize UnifiedProcessor
         unified_processor = UnifiedProcessor(
             config=config,
