@@ -62,11 +62,24 @@ class EventWriter(ABC):
     Implementations must provide a `write` method that saves events (represented
     as a dictionary of awkward arrays) to a file in a specific format.
 
+    Each writer should define a `file_extension` property that specifies the
+    file extension (including the leading dot) for its format.
+
     Examples:
         >>> writer = ParquetWriter()
         >>> events = {"Muon_pt": ak.Array([25.0, 30.0]), "Muon_eta": ak.Array([0.5, 1.0])}
-        >>> writer.write(events, path="/path/to/output.parquet")
+        >>> writer.write(events, path="/path/to/output")  # Auto-appends .parquet
     """
+
+    @property
+    @abstractmethod
+    def file_extension(self) -> str:
+        """File extension for this writer's format (including leading dot).
+
+        Returns:
+            str: File extension (e.g., ".parquet", ".root")
+        """
+        pass
 
     @abstractmethod
     def write(
@@ -74,14 +87,20 @@ class EventWriter(ABC):
         events: Dict[str, ak.Array],
         path: str,
         **kwargs
-    ) -> None:
+    ) -> str:
         """Write events to a file.
+
+        The writer will automatically append its file extension if the path
+        doesn't already have one.
 
         Args:
             events: Dictionary mapping column names to awkward arrays.
                 Keys are branch/column names, values are the data arrays.
-            path: Path to the output file
+            path: Path to the output file (extension will be added if missing)
             **kwargs: Additional format-specific keyword arguments
+
+        Returns:
+            str: The actual path written to (with extension appended if it was missing)
 
         Raises:
             IOError: If writing to the file fails
