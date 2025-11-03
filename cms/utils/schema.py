@@ -10,7 +10,7 @@ invalid configurations.
 
 import copy
 from enum import Enum
-from typing import Annotated, Callable, List, Literal, Optional, Tuple, Union
+from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 
 from omegaconf import OmegaConf, DictConfig
 from pydantic import BaseModel, Field, model_validator
@@ -18,6 +18,50 @@ from pydantic import BaseModel, Field, model_validator
 
 # Type alias for (object, variable) pairs
 ObjVar = Tuple[str, Optional[str]]
+
+
+class WorkerEval:
+    """
+    Marker for lazy evaluation on distributed workers.
+
+    Wraps a callable to indicate it should be evaluated on the worker
+    rather than passed through. This distinguishes between:
+    - Values computed from worker environment: WorkerEval(lambda: os.environ['KEY'])
+    - Actual callable arguments: my_compression_func (passed through as-is)
+
+    Useful when configuration values need to access environment variables
+    that exist on workers but not on the client side (e.g., in dask distributed).
+
+    Parameters
+    ----------
+    func : Callable
+        Function to evaluate on the worker. Should take no arguments.
+
+    Examples
+    --------
+    >>> import os
+    >>> # Resolved on worker:
+    >>> key = WorkerEval(lambda: os.environ['AWS_ACCESS_KEY_ID'])
+    >>>
+    >>> # Passed through as callable:
+    >>> compression = my_custom_compressor
+    """
+    __slots__ = ('func',)
+
+    def __init__(self, func):
+        if not callable(func):
+            raise TypeError(f"WorkerEval requires a callable, got {type(func)}")
+        self.func = func
+
+    def __call__(self):
+        """Evaluate the wrapped function."""
+        return self.func()
+
+    def __repr__(self):
+        return f"WorkerEval({self.func!r})"
+
+
+_UNSET = object()
 
 
 class SubscriptableModel(BaseModel):
@@ -39,6 +83,24 @@ class SubscriptableModel(BaseModel):
         """Allows `.get(key, default)` method."""
         return getattr(self, key, default)
 
+    def pop(self, key, default=_UNSET):
+        """
+        Remove a field from the model and return its value.
+
+        Mirrors dict.pop semantics: raises KeyError if missing and no default
+        is provided, otherwise returns the default.
+        """
+        if hasattr(self, key):
+            value = getattr(self, key)
+            self.__dict__.pop(key, None)
+            fields_set = getattr(self, "model_fields_set", None)
+            if fields_set is not None:
+                fields_set.discard(key)
+            return value
+        if default is _UNSET:
+            raise KeyError(key)
+        return default
+
 
 class FunctorConfig(SubscriptableModel):
     function: Annotated[
@@ -53,28 +115,24 @@ class FunctorConfig(SubscriptableModel):
             "the inputs for the function.",
         ),
     ]
+    static_kwargs: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            default=None,
+            description=(
+                "Optional static keyword arguments appended when invoking the "
+                "function. These values do not depend on event data."
+            ),
+        ),
+    ]
 
 
-class GoodObjectMasksConfig(SubscriptableModel):
+class GoodObjectMasksConfig(FunctorConfig):
     object: Annotated[
         str,
         Field(
             description="The object collection to which this mask applies "
             "(e.g. 'Jet')."
-        ),
-    ]
-    function: Annotated[
-        Callable,
-        Field(
-            description="A callable that takes object collections and "
-            "returns a boolean mask."
-        ),
-    ]
-    use: Annotated[
-        List[ObjVar],
-        Field(
-            description="A list of (object variable) tuples specifying "
-            "the inputs for the mask function."
         ),
     ]
 
@@ -110,12 +168,6 @@ class GeneralConfig(SubscriptableModel):
     lumi: Annotated[float, Field(description="Integrated luminosity in /pb")]
     weight_branch: Annotated[
         str, Field(description="Branch name for event weight")
-    ]
-    lumifile: Annotated[
-        str,
-        Field(
-            description="Path to JSON file with good luminosity sections",
-        ),
     ]
     analysis: Annotated[
         Optional[str],
@@ -235,9 +287,9 @@ class GeneralConfig(SubscriptableModel):
     @model_validator(mode="after")
     def validate_general(self) -> "GeneralConfig":
         """Validate the general configuration settings."""
-        if self.analysis not in ["diff", "nondiff", "both", "skip"]:
+        if self.analysis not in ["nondiff", "skip"]:
             raise ValueError(
-                f"Invalid analysis mode '{self.analysis}'. Must be 'diff', 'nondiff', 'both', or 'skip'."
+                f"Invalid analysis mode '{self.analysis}'. Must be 'nondiff' or 'skip'."
             )
 
         return self
@@ -249,14 +301,19 @@ class GeneralConfig(SubscriptableModel):
 class DatasetConfig(SubscriptableModel):
     """Configuration for individual dataset paths, cross-sections, and metadata"""
     name: Annotated[str, Field(description="Dataset name/identifier")]
-    directory: Annotated[str, Field(description="Directory containing dataset files")]
-    cross_section: Annotated[float, Field(description="Cross-section in picobarns")]
+    directories: Annotated[Union[str, tuple[str, ...]], Field(description="Directories containing dataset files")]
+    cross_sections: Annotated[Union[float, tuple[float, ...]], Field(description="Cross-sections in picobarns")]
     file_pattern: Annotated[str, Field(default="*.root", description="File pattern for dataset files")]
     tree_name: Annotated[str, Field(default="Events", description="ROOT tree name")]
-    weight_branch: Annotated[str, Field(default="genWeight", description="Branch name for event weights")]
-    remote_access: Annotated[
-        Optional[dict[str, str]],
-        Field(default=None, description="Configuration for remote access (EOS, XRootD, etc.)")
+    weight_branch: Annotated[Optional[str], Field(default="genWeight", description="Branch name for event weights")]
+    redirector: Annotated[Optional[str], Field(default=None, description="redirector to prefix ROOT file-paths")]
+    is_data: Annotated[bool, Field(default=False, description="Flag indicating whether dataset represents real data")]
+    lumi_mask: Annotated[
+        Optional[FunctorConfig],
+        Field(
+            default=None,
+            description="Optional lumi mask configuration applied to data datasets",
+        ),
     ]
 
 class DatasetManagerConfig(SubscriptableModel):
@@ -270,24 +327,83 @@ class DatasetManagerConfig(SubscriptableModel):
         ),
     ]
 
+    @model_validator(mode="after")
+    def validate_general(self) -> "DatasetManagerConfig":
+        """Validate the dataset manager configuration settings."""
+        # Check number of directories and number of cross-sections
+        for dataset_config in self.datasets:
+            dirs = dataset_config.directories
+            xss = dataset_config.cross_sections
+
+            # Get the count of directories
+            num_dirs = len(dirs) if isinstance(dirs, tuple) else 1
+            # Get the count of cross-sections
+            num_xss = len(xss) if isinstance(xss, tuple) else 1
+
+            # Valid cases:
+            # 1. Single dir, single xsec
+            # 2. Multiple dirs, single xsec (will be replicated)
+            # 3. Multiple dirs, matching number of xsecs
+            if num_xss > 1 and num_xss != num_dirs:
+                raise ValueError(
+                    f"Dataset '{dataset_config.name}': You must provide either a single cross-section "
+                    f"or an equal number of cross-sections ({num_dirs}) to match the number of directories. "
+                    f"Got {num_dirs} directories and {num_xss} cross-sections."
+                )
+
+        return self
+
 # ------------------------
 # Skimming configuration
 # ------------------------
-class SkimmingConfig(SubscriptableModel):
+class SkimOutputConfig(SubscriptableModel):
+    """Configuration for a single skimmed output artifact."""
+
+    format: Annotated[
+        Literal["parquet", "root_ttree", "rntuple", "safetensors"],
+        Field(default="parquet", description="Output format for skimmed events"),
+    ]
+    local: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="When True, outputs are written to the local filesystem.",
+        ),
+    ]
+    base_uri: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description=(
+                "Optional base URI or directory when writing to remote storage. "
+                "If omitted, remote outputs fall back to the local skim directory."
+            ),
+        ),
+    ]
+    to_kwargs: Annotated[
+        Dict[str, Any],
+        Field(
+            default_factory=dict,
+            description=(
+                "Additional keyword arguments forwarded to the writer "
+                "function (e.g., ak.to_parquet)."
+            ),
+        ),
+    ]
+    from_kwargs: Annotated[
+        Dict[str, Any],
+        Field(
+            default_factory=dict,
+            description=(
+                "Additional keyword arguments forwarded to the reader "
+                "function (e.g., ak.from_parquet)."
+            ),
+        ),
+    ]
+
+
+class SkimmingConfig(FunctorConfig):
     """Configuration for workitem-based skimming selections and output"""
-
-    # Selection function - required for workitem-based skimming
-    selection_function: Annotated[
-        Callable,
-        Field(description="Selection function that returns a PackedSelection object")
-    ]
-
-    # Selection inputs - required to specify what the function needs
-    selection_use: Annotated[
-        List[ObjVar],
-        Field(description="List of (object, variable) tuples specifying inputs for the selection function")
-    ]
-
 
     # File handling configuration
     chunk_size: Annotated[
@@ -297,6 +413,19 @@ class SkimmingConfig(SubscriptableModel):
     tree_name: Annotated[
         str,
         Field(default="Events", description="ROOT tree name for input and output files")
+    ]
+
+    # Retry configuration
+    max_retries: Annotated[
+        int,
+        Field(default=3, description="Maximum number of retry attempts for failed workitems")
+    ]
+    output: Annotated[
+        SkimOutputConfig,
+        Field(
+            default_factory=SkimOutputConfig,
+            description="Output format and destination for skimmed data",
+        ),
     ]
 
 # ------------------------
@@ -379,27 +508,13 @@ class StatisticalConfig(SubscriptableModel):
 # ------------------------
 # Observable configuration
 # ------------------------
-class ObservableConfig(SubscriptableModel):
+class ObservableConfig(FunctorConfig):
     name: Annotated[str, Field(description="Name of the observable")]
     binning: Annotated[
         Union[str, List[float]],
         Field(
             description="Histogram binning, specified as a 'low,high,nbins' string "
             + "or a list of explicit bin edges."
-        ),
-    ]
-    function: Annotated[
-        Callable,
-        Field(
-            description="A callable that computes the "
-            + "observable values from event data."
-        ),
-    ]
-    use: Annotated[
-        List[ObjVar],
-        Field(
-            description="A list of (object, variable) tuples specifying the inputs \
-                for the function.",
         ),
     ]
     label: Annotated[
@@ -454,7 +569,7 @@ class ObservableConfig(SubscriptableModel):
 # ------------------------
 # Ghost observable configuration
 # ------------------------
-class GhostObservable(SubscriptableModel):
+class GhostObservable(FunctorConfig):
     """Represents a derived quantity computed once and attached to the event record."""
 
     names: Annotated[
@@ -466,17 +581,6 @@ class GhostObservable(SubscriptableModel):
         Field(
             description="The collection(s) to which the "
             + "new observable(s) should be attached."
-        ),
-    ]
-    function: Annotated[
-        Callable,
-        Field(description="A callable that computes the ghost observables."),
-    ]
-    use: Annotated[
-        List[ObjVar],
-        Field(
-            description="A list of (object, variable) tuples "
-            + "specifying the inputs for the function."
         ),
     ]
 
@@ -743,29 +847,13 @@ class LayerConfig(SubscriptableModel):
 # ========
 # Features to train the MVA on
 # ========
-class FeatureConfig(SubscriptableModel):
+class FeatureConfig(FunctorConfig):
     name: Annotated[str, Field(..., description="Feature name")]
     label: Annotated[
         Optional[str],
         Field(
             default=None,
             description="Optional label for plots (e.g. LaTeX string)",
-        ),
-    ]
-    function: Annotated[
-        Callable,
-        Field(
-            ...,
-            description="Callable extracting the raw feature \
-                (e.g. lambda mva: mva.n_jet)",
-        ),
-    ]
-    use: Annotated[
-        List[ObjVar],
-        Field(
-            ...,
-            description="(object, variable) pairs to pass into function, \
-                e.g. [('mva', None)]",
         ),
     ]
     scale: Annotated[
@@ -1079,7 +1167,7 @@ class Config(SubscriptableModel):
         if self.general.run_skimming and (not self.preprocess.skimming):
             raise ValueError(
                 "Skimming is enabled but no skimming configuration provided. "
-                "Please provide a SkimmingConfig with selection_function and selection_use."
+                "Please provide a SkimmingConfig with function and use definitions."
             )
 
         if self.statistics is not None:
