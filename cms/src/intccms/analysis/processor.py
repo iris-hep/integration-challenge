@@ -38,14 +38,40 @@ class UnifiedProcessor(ProcessorABC):
     """Coffea processor for distributed skimming and/or analysis.
 
     This processor integrates the skimming pipeline with the analysis workflow,
-    controlled by configuration flags. It delegates to existing implementations:
-    - Skimming: Uses pipeline stages from intccms.skimming.pipeline
+    controlled by configuration flags. It supports two primary workflows:
+
+    **Workflow 1: Skim NanoAOD files**
+        Process original NanoAOD → Apply event selection → Save filtered events to disk
+        Use when: First time processing, want to create skimmed files for later analysis
+        Config: run_skimming=True, run_analysis=False
+
+    **Workflow 2: Analyze pre-skimmed files**
+        Load skimmed files → Run analysis → Fill histograms
+        Use when: Analyzing previously skimmed data multiple times
+        Config: run_skimming=False, run_analysis=True
+
+    Pipeline Stages
+    ---------------
+    - **Skimming** (via intccms.skimming.pipeline):
       - Event selection filter ALWAYS applies
       - When run_skimming=True: Saves filtered events to disk in configured format
+        (Parquet or ROOT). Writer automatically appends correct file extension.
       - When run_skimming=False: No disk I/O (useful for analyzing pre-skimmed data)
-    - Analysis: Delegates to NonDiffAnalysis.process()
 
-    The processor respects these config.general flags:
+    - **Analysis** (via NonDiffAnalysis):
+      - When run_analysis=True: Object selection, corrections, observable calculations
+      - When run_histogramming=True: Fill histograms during analysis
+      - When run_systematics=True: Apply systematic variations
+
+    - **Output Saving**:
+      - Skimmed files: Saved during process() with manifest.json for tracking
+      - Histograms: Auto-saved in postprocess() to:
+        * processor_histograms.pkl (for caching, load with run_processor=False)
+        * histograms.root (for downstream analysis tools)
+
+    Configuration Flags
+    -------------------
+    config.general flags control workflow behavior:
     - run_skimming: Save filtered events to disk (filter always applies)
     - run_analysis: Run analysis (object selection, corrections, observables)
     - run_histogramming: Fill histograms during analysis
@@ -65,15 +91,21 @@ class UnifiedProcessor(ProcessorABC):
 
     Examples
     --------
-    >>> # User's script (analysis.py)
-    >>> from coffea.processor import Runner, IterativeExecutor
+    **Example 1: Skim original NanoAOD files**
+
+    >>> from coffea.processor import Runner, FuturesExecutor
     >>> from intccms.analysis import UnifiedProcessor
+    >>> from intccms.metadata_extractor import DatasetMetadataManager
     >>>
-    >>> # Generate metadata first
-    >>> generator = NanoAODMetadataGenerator(...)
+    >>> # Generate metadata from NanoAOD files
+    >>> generator = DatasetMetadataManager(dataset_manager, output_manager)
     >>> generator.run(generate_metadata=True)
     >>> metadata_lookup = generator.build_metadata_lookup()
-    >>> fileset = generator.get_coffea_fileset()
+    >>> fileset = generator.get_coffea_fileset()  # Original NanoAOD
+    >>>
+    >>> # Configure for skimming
+    >>> config.general.run_skimming = True
+    >>> config.general.run_analysis = False
     >>>
     >>> processor = UnifiedProcessor(
     ...     config=config,
@@ -81,11 +113,51 @@ class UnifiedProcessor(ProcessorABC):
     ...     metadata_lookup=metadata_lookup,
     ... )
     >>>
-    >>> runner = Runner(executor=IterativeExecutor(), schema=NanoAODSchema)
+    >>> runner = Runner(executor=FuturesExecutor(), schema=NanoAODSchema)
     >>> output = runner(fileset, "Events", processor_instance=processor)
+    >>> # Skimmed files saved to output_manager.get_skimmed_dir()
+
+    **Example 2: Analyze pre-skimmed files**
+
+    >>> from intccms.skimming import FilesetManager
     >>>
-    >>> # Save histograms
-    >>> save_histograms_to_root(output["histograms"], ...)
+    >>> # Load metadata from original run
+    >>> generator = DatasetMetadataManager(dataset_manager, output_manager)
+    >>> generator.run(generate_metadata=False)  # Read existing metadata
+    >>> metadata_lookup = generator.build_metadata_lookup()
+    >>>
+    >>> # Build fileset from skimmed files
+    >>> skimmed_dir = output_manager.get_skimmed_dir()
+    >>> fileset_manager = FilesetManager(skimmed_dir, format="parquet")
+    >>> skimmed_fileset = fileset_manager.build_fileset_from_datasets(generator.datasets)
+    >>>
+    >>> # Convert to workitems
+    >>> from coffea.processor.executor import WorkItem
+    >>> workitems = []
+    >>> for dataset_name, info in skimmed_fileset.items():
+    ...     for file_path in info["files"]:
+    ...         workitems.append(WorkItem(
+    ...             dataset=dataset_name,
+    ...             filename=file_path,
+    ...             treename=info["metadata"].get("treename", "Events"),
+    ...             entrystart=0,
+    ...             entrystop=-1,
+    ...         ))
+    >>>
+    >>> # Configure for analysis only
+    >>> config.general.run_skimming = False  # Don't re-skim
+    >>> config.general.run_analysis = True
+    >>> config.general.run_histogramming = True
+    >>>
+    >>> processor = UnifiedProcessor(
+    ...     config=config,
+    ...     output_manager=output_manager,
+    ...     metadata_lookup=metadata_lookup,
+    ... )
+    >>>
+    >>> runner = Runner(executor=FuturesExecutor(), schema=NanoAODSchema)
+    >>> output = runner({}, "Events", processor_instance=processor, items=workitems)
+    >>> # Histograms auto-saved to processor_histograms.pkl and histograms.root
     """
 
     def __init__(
@@ -287,19 +359,10 @@ class UnifiedProcessor(ProcessorABC):
         # Generate unique chunk ID
         chunk_id = hashlib.md5(str(uuid.uuid4()).encode()).hexdigest()[:8]
 
-        # Determine file extension
-        extension_map = {
-            "parquet": ".parquet",
-            "root_ttree": ".root",
-            "rntuple": ".ntuple",
-            "safetensors": ".safetensors",
-        }
-        extension = extension_map.get(self.skim_config.output.format, ".parquet")
-
-        # Build path: skimmed_dir/dataset/chunk_id.ext
+        # Build path: skimmed_dir/dataset/chunk_id (no extension - writer adds it)
         output_dir = Path(self.output_manager.get_skimmed_dir()) / dataset_name
         output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / f"{chunk_id}{extension}"
+        output_path = output_dir / chunk_id
 
         # Prepare writer kwargs
         writer_kwargs = self.writer_kwargs.copy()

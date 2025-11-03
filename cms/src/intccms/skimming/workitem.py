@@ -69,34 +69,23 @@ def build_output_path(
     Creates deterministic paths based on source filename and entry range,
     with a short hash for uniqueness. Also returns metadata for manifest.
 
+    The file extension is handled automatically by the writer, so this function
+    creates paths without extensions.
+
     Args:
         workitem: coffea WorkItem with file metadata and entry ranges
-        fmt: Output format (parquet, root_ttree)
+        fmt: Output format (parquet, root_ttree) - used for validation only
 
     Returns:
         Tuple of (relative_path, metadata_dict)
-        - relative_path: Path string like "dataset/abc12345_0_1000.parquet"
+        - relative_path: Path string like "dataset/abc12345_0_1000" (no extension)
         - metadata_dict: Manifest entry with source file info
-
-    Raises:
-        ValueError: If format is unsupported
     """
-    extension_map = {
-        "parquet": ".parquet",
-        "root_ttree": ".root",
-        "rntuple": ".ntuple",
-        "safetensors": ".safetensors",
-    }
-    try:
-        extension = extension_map[fmt]
-    except KeyError as exc:
-        raise ValueError(f"Unsupported output format '{fmt}'.") from exc
-
     # Create short hash from filename for stable file identifier
     file_hash = hashlib.md5(workitem.filename.encode()).hexdigest()[:8]
 
-    # Build path with hash and entry range
-    filename = f"{file_hash}_{workitem.entrystart}_{workitem.entrystop}{extension}"
+    # Build path with hash and entry range (no extension - writer will add it)
+    filename = f"{file_hash}_{workitem.entrystart}_{workitem.entrystop}"
     path = f"{workitem.dataset}/{filename}"
 
     # Create metadata for manifest
@@ -254,11 +243,12 @@ def process_workitem(
         if config.output.format == "root_ttree":
             writer_kwargs["tree_name"] = config.tree_name
 
-        save_events(writer, output_columns, output_path, **writer_kwargs)
-        output_files.append(output_path)
+        # Save events and get actual path used (with extension)
+        actual_output_path = save_events(writer, output_columns, output_path, **writer_kwargs)
+        output_files.append(actual_output_path)
 
         # Add output path to manifest metadata
-        manifest_metadata["output_file"] = output_path
+        manifest_metadata["output_file"] = actual_output_path
         manifest_metadata["processed_events"] = processed_events
         manifest_metadata["total_events"] = total_events
 
@@ -266,7 +256,7 @@ def process_workitem(
             f"Processed workitem: {dataset} | {filename} | "
             f"entries [{entry_start}:{entry_stop}] | "
             f"filtered {processed_events}/{total_events} events | "
-            f"output: {output_path}"
+            f"output: {actual_output_path}"
         )
 
         return {
