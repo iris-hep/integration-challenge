@@ -15,7 +15,7 @@ from coffea.nanoevents import NanoAODSchema
 
 from intccms.analysis import run_processor_workflow
 from example_opendata.configs.configuration import config as ZprimeConfig
-from intccms.utils.datasets import ConfigurableDatasetManager
+from intccms.datasets import DatasetManager
 from intccms.utils.logging import setup_logging, log_banner
 from intccms.utils.schema import Config, load_config_with_restricted_cli
 from intccms.metadata_extractor import DatasetMetadataManager
@@ -57,7 +57,7 @@ def main():
     if not config.datasets:
         logger.error("Missing 'datasets' configuration; required for metadata/skimming.")
         sys.exit(1)
-    dataset_manager = ConfigurableDatasetManager(config.datasets)
+    dataset_manager = DatasetManager(config.datasets)
 
     logger.info(log_banner("METADATA AND FILESET GENERATION"))
     # Generate metadata and fileset from NanoAODs
