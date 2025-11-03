@@ -14,5 +14,6 @@ __version__ = "2.0.0"  # Refactored version
 # Main exports
 from intccms.skimming.manager import SkimmingManager
 from intccms.skimming.fileset_manager import FilesetManager
+from intccms.skimming.workitem import get_deterministic_fileuuid
 
-__all__ = ["SkimmingManager", "FilesetManager"]
+__all__ = ["SkimmingManager", "FilesetManager", "get_deterministic_fileuuid"]
