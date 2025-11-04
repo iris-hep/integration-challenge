@@ -19,7 +19,8 @@ from intccms.skimming.pipeline.stages import (
     load_events,
     save_events,
 )
-from intccms.utils.schema import SkimmingConfig, WorkerEval, default_histogram
+from intccms.schema import SkimmingConfig, WorkerEval
+from intccms.skimming.utils import default_histogram
 from intccms.utils.functors import SelectionExecutor
 
 logger = logging.getLogger(__name__)
@@ -92,7 +93,7 @@ def resolve_lazy_values(obj: Any) -> Any:
         Configuration with WorkerEval instances evaluated to their values
 
     Examples:
-        >>> from intccms.utils.schema import WorkerEval
+        >>> from intccms.schema import WorkerEval
         >>> import os
         >>> config = {
         ...     "key": WorkerEval(lambda: os.environ['AWS_KEY']),

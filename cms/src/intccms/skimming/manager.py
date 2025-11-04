@@ -13,7 +13,7 @@ import awkward as ak
 from coffea.processor.executor import WorkItem
 from coffea.nanoevents import NanoAODSchema
 
-from intccms.utils.schema import SkimmingConfig
+from intccms.schema import SkimmingConfig
 from intccms.skimming.dask import WorkitemSkimmingManager
 from intccms.skimming.cacher import (
     compute_cache_key,

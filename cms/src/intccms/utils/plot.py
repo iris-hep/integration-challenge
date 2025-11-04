@@ -803,21 +803,8 @@ def plot_mva_feature_distributions(
         feature_label = feature.get("label", feature_name)
         feature_binning = feature.get("binning", None)
 
-        # Parse binning configuration
-        if feature_binning is not None:
-            if isinstance(feature_binning, str):
-                # Parse binning string like "50,0,100" into bins
-                binning_str = feature_binning.strip()
-                parts = binning_str.split(",")
-                prelim_bins = np.linspace(
-                    float(parts[0]), float(parts[1]), int(parts[2]) + 1
-                )
-            elif isinstance(feature_binning, (list, tuple)):
-                # Assume binning is a list of bin edges
-                prelim_bins = np.asarray(feature_binning)
-        else:
-            # Determine binning from data later if not specified
-            prelim_bins = None
+        # Binning already parsed to edges by schema validation
+        prelim_bins = feature_binning  # Already np.ndarray or None
 
         for scaling_version in ["scaled", "unscaled"]:
             fig, ax = _setup_plot_style_and_figure()

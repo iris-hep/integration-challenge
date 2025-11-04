@@ -19,7 +19,7 @@ import vector
 from coffea.nanoevents import NanoAODSchema
 from correctionlib import Correction, CorrectionSet
 
-from intccms.utils.schema import GoodObjectMasksConfig
+from intccms.schema import GoodObjectMasksConfig
 from intccms.utils.functors import (
     GhostObservableExecutor,
     MaskExecutor,

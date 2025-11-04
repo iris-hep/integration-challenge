@@ -16,7 +16,8 @@ from coffea.processor.executor import WorkItem
 from tabulate import tabulate
 
 from intccms.skimming.workitem import process_workitem, resolve_output_path, ManifestEntry
-from intccms.utils.schema import SkimmingConfig, default_histogram
+from intccms.schema import SkimmingConfig
+from intccms.skimming.utils import default_histogram
 
 logger = logging.getLogger(__name__)
 
