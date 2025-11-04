@@ -290,7 +290,7 @@ def default_skim_selection(puppimet, hlt):
 skimming_config = {
     "function": default_skim_selection,
     "use": [("PuppiMET", None), ("HLT", None)],
-    "chunk_size": 2ß00_000,
+    "chunk_size": 200_000,
     "tree_name": "Events",
     # "output": {
     #     "format": "parquet",
