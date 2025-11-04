@@ -184,14 +184,14 @@ def run_processor_workflow(
                 treename = dataset_info["metadata"].get("treename", "Events")
                 coffea_fileset[dataset_name] = {treename: files}
 
-            output = runner.run(
+            output, report = runner(
                 coffea_fileset,
                 treename="Events",  # Will be overridden by fileset structure
                 processor_instance=unified_processor,
             )
         else:
             logger.info(f"Processing {len(workitems)} work items with chunksize={chunksize}")
-            output = runner.run(
+            output, report = runner(
                 workitems,
                 processor_instance=unified_processor,
             )
