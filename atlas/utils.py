@@ -2,6 +2,7 @@
 import base64
 import dataclasses
 import re
+import urllib.request
 
 import coffea
 
@@ -95,21 +96,27 @@ def sample_xs(campaign: str, dsid: str) -> float:
     # extracting this information is expensive, so do it once and cache
     if "mc20" in campaign:
         if MC16_XSEC_DICT is None:
-            # in case of no cvmfs: https://atlas-groupdata.web.cern.ch/atlas-groupdata/dev/PMGTools/PMGxsecDB_mc16.txt
-            with open("/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc16.txt") as f:
-                content = f.readlines()
+            try:
+                with open("/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc16.txt") as f:
+                    content = f.readlines()
+            except FileNotFoundError:
+                print("falling back to reading cross-section information over https")
+                content = urllib.request.urlopen("https://atlas-groupdata.web.cern.ch/atlas-groupdata/dev/PMGTools/PMGxsecDB_mc16.txt").read().decode().split("\n")
 
-            MC16_XSEC_DICT = dict([(line.split("\t\t")[0], (line.split("\t\t")[2:5])) for line in content[1:]])
+            MC16_XSEC_DICT = dict([(line.strip().split("\t\t")[0], (line.split("\t\t")[2:5])) for line in content[1:]])
 
         xsec_dict = MC16_XSEC_DICT
 
     elif "mc23" in campaign:
         if MC23_XSEC_DICT is None:
-            # in case of no cvmfs: https://atlas-groupdata.web.cern.ch/atlas-groupdata/dev/PMGTools/PMGxsecDB_mc23.txt
-            with open("/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc23.txt") as f:
-                content = f.readlines()
+            try:
+                with open("/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc23.txt") as f:
+                    content = f.readlines()
+            except FileNotFoundError:
+                print("falling back to reading cross-section information over https")
+                content = urllib.request.urlopen("https://atlas-groupdata.web.cern.ch/atlas-groupdata/dev/PMGTools/PMGxsecDB_mc23.txt").read().decode().split("\n")
 
-            MC23_XSEC_DICT = dict([(line.split("\t\t")[0], (line.split("\t\t")[2:5])) for line in content[1:]])
+            MC23_XSEC_DICT = dict([(line.strip().split("\t\t")[0], (line.split("\t\t")[2:5])) for line in content[1:]])
 
         xsec_dict = MC23_XSEC_DICT
 
