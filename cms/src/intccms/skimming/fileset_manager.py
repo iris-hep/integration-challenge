@@ -8,9 +8,36 @@ use with the processor-based analysis workflow.
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, TypedDict
 
 logger = logging.getLogger(__name__)
+
+
+# Type definitions for post-skim fileset structures
+class PostSkimMetadata(TypedDict):
+    """Extended metadata for post-skimming fileset entries.
+
+    Includes additional fields tracking the skimming output format and
+    processed event counts.
+    """
+    process: str  # Process name
+    variation: str  # Systematic variation
+    xsec: float  # Cross-section in picobarns
+    is_data: bool  # True if real data
+    dataset: str  # Dataset key
+    format: str  # Output format: "parquet" or "root_ttree"
+    total_processed_events: int  # Total events after skimming selection
+    treename: Optional[str]  # Tree name for ROOT format, None for parquet
+
+
+class PostSkimFilesetEntry(TypedDict):
+    """Fileset entry for post-skim files with extended metadata."""
+    files: Dict[str, str]  # Mapping of file_path -> tree_name
+    metadata: PostSkimMetadata  # Extended metadata including format info
+
+
+# Type alias for post-skim fileset
+PostSkimFileset = Dict[str, PostSkimFilesetEntry]
 
 
 class FilesetManager:

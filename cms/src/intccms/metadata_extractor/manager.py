@@ -9,7 +9,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, TypedDict, Union
 
 from rich.pretty import pretty_repr
 from coffea.processor.executor import WorkItem
@@ -30,6 +30,26 @@ from intccms.metadata_extractor.io import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# Type definitions for metadata structures
+class MetadataEntry(TypedDict):
+    """Metadata for a single dataset/process/variation.
+
+    This structure contains all information needed for physics analysis normalization
+    and event processing.
+    """
+    process: str  # Process name (e.g., "signal", "ttbar_semilep")
+    variation: str  # Systematic variation (e.g., "nominal", "JES_up")
+    xsec: float  # Cross-section in picobarns
+    nevts: int  # Total number of events
+    is_data: bool  # True if real data, False if Monte Carlo
+    lumi_mask_config: Optional[object]  # FunctorConfig for luminosity mask, or None
+    dataset: str  # Dataset key/identifier
+
+
+# Type alias for the metadata lookup dictionary
+MetadataLookup = Dict[str, MetadataEntry]
 
 
 class DatasetMetadataManager:

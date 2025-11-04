@@ -5,7 +5,7 @@ and event aggregation. All functions are stateless and have no side effects,
 making them easily testable.
 """
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, TypedDict
 from collections import defaultdict
 import dataclasses
 import logging
@@ -17,6 +17,23 @@ logger = logging.getLogger(__name__)
 # Dataset key format constants
 DATASET_DELIMITER = "__"
 DEFAULT_VARIATION = "nominal"
+
+
+# Type definitions for event summary structures
+class FileEventCount(TypedDict):
+    """Event count information for a single file."""
+    path: str  # File path
+    nevts: int  # Number of events in this file
+
+
+class EventSummaryVariation(TypedDict):
+    """Event summary for a specific process/variation combination."""
+    files: List[FileEventCount]  # Per-file event counts
+    nevts_total: int  # Total events across all files
+
+
+# Type alias for nested event summary structure
+EventSummary = Dict[str, Dict[str, EventSummaryVariation]]  # process -> variation -> summary
 
 
 def parse_dataset_key(dataset_key: str) -> Tuple[str, str]:

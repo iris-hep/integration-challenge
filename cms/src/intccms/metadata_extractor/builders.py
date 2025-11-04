@@ -6,7 +6,7 @@ to construct coffea-compatible filesets and Dataset objects.
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, TypedDict, Union
 
 from intccms.datasets import DatasetManager, Dataset
 from intccms.metadata_extractor.core import (
@@ -17,6 +17,26 @@ from intccms.metadata_extractor.io import collect_file_paths, save_json
 from intccms.utils.filters import should_process
 
 logger = logging.getLogger(__name__)
+
+
+# Type definitions for fileset structures
+class FilesetMetadata(TypedDict):
+    """Metadata embedded within a coffea fileset entry."""
+    process: str  # Process name
+    variation: str  # Systematic variation
+    xsec: float  # Cross-section in picobarns
+    is_data: bool  # True if real data
+    dataset: str  # Dataset key/identifier
+
+
+class FilesetEntry(TypedDict):
+    """Single entry in a coffea-compatible fileset dictionary."""
+    files: Dict[str, str]  # Mapping of file_path -> tree_name
+    metadata: FilesetMetadata  # Embedded metadata
+
+
+# Type alias for complete fileset
+CoffeaFileset = Dict[str, FilesetEntry]
 
 
 class FilesetBuilder:
