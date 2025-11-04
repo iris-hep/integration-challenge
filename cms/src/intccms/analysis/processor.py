@@ -17,7 +17,6 @@ from coffea.processor import ProcessorABC
 from intccms.analysis.nondiff import NonDiffAnalysis
 from intccms.skimming.io.writers import get_writer
 from intccms.skimming.pipeline.stages import (
-    apply_selection,
     build_column_list,
     extract_columns,
     save_events,
@@ -29,7 +28,7 @@ from intccms.utils.output import (
     save_histograms_to_root,
 )
 from intccms.utils.schema import Config
-from intccms.utils.tools import get_function_arguments
+from intccms.utils.functors import SelectionExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -309,19 +308,9 @@ class UnifiedProcessor(ProcessorABC):
         ak.Array
             Filtered events after skim selection
         """
-        selection_func = self.skim_config.function
-        selection_use = self.skim_config.use
-
-        selection_args, selection_kwargs = get_function_arguments(
-            selection_use,
-            events,
-            function_name=selection_func.__name__,
-            static_kwargs=self.skim_config.get("static_kwargs"),
-        )
-
-        filtered_events = apply_selection(
-            events, selection_func, selection_args, selection_kwargs
-        )
+        executor = SelectionExecutor(self.skim_config)
+        selection_mask = executor.execute(events)
+        filtered_events = events[selection_mask]
 
         logger.debug(
             f"Skim selection: {len(events)} → {len(filtered_events)} events"

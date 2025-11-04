@@ -14,14 +14,13 @@ from coffea.processor.executor import WorkItem
 from intccms.skimming.io.readers import get_reader
 from intccms.skimming.io.writers import get_writer
 from intccms.skimming.pipeline.stages import (
-    apply_selection,
     build_column_list,
     extract_columns,
     load_events,
     save_events,
 )
 from intccms.utils.schema import SkimmingConfig, WorkerEval, default_histogram
-from intccms.utils.tools import get_function_arguments
+from intccms.utils.functors import SelectionExecutor
 
 logger = logging.getLogger(__name__)
 
@@ -240,23 +239,9 @@ def process_workitem(
         total_events = len(events)
 
         # Stage 2: Apply selection
-        selection_func = config.function
-        selection_use = config.use
-
-        # Get function arguments
-        selection_args, selection_static_kwargs = get_function_arguments(
-            selection_use,
-            events,
-            function_name=selection_func.__name__,
-            static_kwargs=config.get("static_kwargs"),
-        )
-
-        filtered_events = apply_selection(
-            events,
-            selection_func,
-            selection_args,
-            selection_static_kwargs,
-        )
+        executor = SelectionExecutor(config)
+        selection_mask = executor.execute(events)
+        filtered_events = events[selection_mask]
 
         processed_events = len(filtered_events)
 

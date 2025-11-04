@@ -18,7 +18,7 @@ from intccms.utils.output import (
     save_histograms_to_root,
 )
 from intccms.utils.stats import get_cabinetry_rebinning_router
-from intccms.utils.tools import get_function_arguments
+from intccms.utils.functors import ObservableExecutor, SelectionExecutor
 from intccms.utils.logging import setup_logging
 
 # -----------------------------
@@ -158,23 +158,9 @@ class NonDiffAnalysis(Analysis):
             logger.debug(f"Applying selection for {channel_name} in {process} "
                          f"with variation {variation}")
             mask = 1
-            if (selection_funciton := channel.selection.function) is not None:
-                selection_args, selection_static_kwargs = get_function_arguments(
-                    channel.selection.use,
-                    object_copies,
-                    function_name=channel.selection.function.__name__,
-                    static_kwargs=channel.selection.get("static_kwargs"),
-                )
-                packed_selection = selection_funciton(
-                    *selection_args, **selection_static_kwargs
-                )
-                if not isinstance(packed_selection, PackedSelection):
-                    raise ValueError(
-                        f"PackedSelection expected, got {type(packed_selection)}"
-                    )
-                mask = ak.Array(
-                    packed_selection.all(packed_selection.names[-1])
-                )
+            if channel.selection.function is not None:
+                executor = SelectionExecutor(channel.selection)
+                mask = executor.execute(object_copies)
 
             if ak.sum(mask) == 0:
                 logger.warning(
@@ -211,15 +197,8 @@ class NonDiffAnalysis(Analysis):
             for observable in channel.observables:
                 observable_name = observable.name
                 logger.debug(f"Computing observable {observable_name}")
-                observable_args, observable_static_kwargs = get_function_arguments(
-                    observable.use,
-                    object_copies_channel,
-                    function_name=observable.function.__name__,
-                    static_kwargs=observable.get("static_kwargs"),
-                )
-                observable_vals = observable.function(
-                    *observable_args, **observable_static_kwargs
-                )
+                executor = ObservableExecutor(observable)
+                observable_vals = executor.execute(object_copies_channel)
                 self.nD_hists_per_region[channel_name][observable_name].fill(
                     observable=observable_vals,
                     process=process,
@@ -264,34 +243,19 @@ class NonDiffAnalysis(Analysis):
         # Filter objects
         obj_copies = self.apply_object_masks(obj_copies)
 
-        # Apply baseline selection
-        baseline_args, baseline_static_kwargs = get_function_arguments(
-            self.config.baseline_selection.use,
-            obj_copies,
-            function_name=self.config.baseline_selection.function.__name__,
-            static_kwargs=self.config.baseline_selection.get("static_kwargs"),
-        )
-
-        packed_selection = self.config.baseline_selection.function(
-            *baseline_args, **baseline_static_kwargs
-        )
-        mask = ak.Array(packed_selection.all(packed_selection.names[-1]))
-        obj_copies = {
-            collection: variable[mask]
-            for collection, variable in obj_copies.items()
-        }
+        # Apply baseline selection if configured
+        if self.config.baseline_selection is not None:
+            executor = SelectionExecutor(self.config.baseline_selection)
+            mask = executor.execute(obj_copies)
+            obj_copies = {
+                collection: variable[mask]
+                for collection, variable in obj_copies.items()
+            }
 
         # Apply lumi_mask for data if configured
         if is_data and (lumi_mask_config := metadata.get("lumi_mask_config")):
-            lumi_args, lumi_static_kwargs = get_function_arguments(
-                lumi_mask_config.use,
-                obj_copies,
-                function_name=lumi_mask_config.function.__name__,
-                static_kwargs=lumi_mask_config.get("static_kwargs"),
-            )
-            lumi_mask_result = lumi_mask_config.function(
-                *lumi_args, **lumi_static_kwargs
-            )
+            executor = SelectionExecutor(lumi_mask_config)
+            lumi_mask_result = executor.execute(obj_copies)
             obj_copies = {
                 collection: variable[lumi_mask_result]
                 for collection, variable in obj_copies.items()
