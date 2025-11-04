@@ -8,17 +8,40 @@ import json
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Set, Tuple, TypedDict
 
 import dask
 import dask.bag
 from coffea.processor.executor import WorkItem
 from tabulate import tabulate
 
-from intccms.skimming.workitem import process_workitem, resolve_output_path
+from intccms.skimming.workitem import process_workitem, resolve_output_path, ManifestEntry
 from intccms.utils.schema import SkimmingConfig, default_histogram
 
 logger = logging.getLogger(__name__)
+
+
+# Type definitions for dask result structures
+class FailureInfo(TypedDict):
+    """Information about a failed workitem for error reporting."""
+    dataset: str  # Dataset name from workitem
+    error_type: str  # Exception class name
+    error_msg: str  # Exception message
+    filename: str  # Source file that failed
+
+
+class MergedResult(TypedDict):
+    """Aggregated results from multiple workitem processings.
+
+    This structure is the output of merge_results() and represents the
+    combined state from all parallel workers.
+    """
+    hist: object  # Merged histogram (dummy for compatibility)
+    failed_items: Set[WorkItem]  # Union of all failed workitems
+    processed_events: int  # Sum of processed events across all workers
+    output_files: List[str]  # Concatenated list of all output files
+    manifest_entries: List[ManifestEntry]  # All manifest entries from all workers
+    failure_infos: List[FailureInfo]  # Detailed failure information for reporting
 
 
 def merge_results(result_a: Dict[str, Any], result_b: Dict[str, Any]) -> Dict[str, Any]:

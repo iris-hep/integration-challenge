@@ -7,7 +7,7 @@ resolution and integration with the pipeline stages.
 import hashlib
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypedDict, Union
 
 from coffea.processor.executor import WorkItem
 
@@ -24,6 +24,35 @@ from intccms.utils.schema import SkimmingConfig, WorkerEval, default_histogram
 from intccms.utils.tools import get_function_arguments
 
 logger = logging.getLogger(__name__)
+
+
+# Type definitions for workitem processing structures
+class ManifestEntry(TypedDict):
+    """Metadata for a single workitem's output file.
+
+    This structure tracks the relationship between input workitems and their
+    output files, enabling reconstruction of the processing history.
+    """
+    source_file: str  # Original ROOT/parquet file path
+    entrystart: int  # Starting entry index in source file
+    entrystop: int  # Ending entry index in source file
+    dataset: str  # Dataset name from workitem
+    treename: str  # Tree name in source file
+    output_file: str  # Path to generated output file
+    processed_events: int  # Number of events after selection
+    total_events: int  # Total events in entry range
+
+
+class WorkitemResult(TypedDict):
+    """Result dictionary from processing a single workitem.
+
+    This structure is returned by process_workitem and aggregated by Dask.
+    """
+    hist: object  # Dummy histogram for coffea compatibility
+    failed_items: Set[WorkItem]  # Empty set on success, contains workitem if failed
+    processed_events: int  # Total events after selection across all files
+    output_files: List[str]  # List of created output file paths
+    manifest_entries: List[ManifestEntry]  # Metadata for each processed chunk
 
 
 def get_deterministic_fileuuid(file_path: str) -> bytes:
