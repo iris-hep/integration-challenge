@@ -237,11 +237,11 @@ def save_events(
     Args:
         writer: EventWriter instance (ParquetWriter, RootWriter, etc.)
         events: Dictionary mapping column names to awkward arrays
-        output_path: Path where the file will be written
+        output_path: Path where the file will be written (extension will be added if missing)
         **writer_kwargs: Additional arguments passed to the writer
 
     Returns:
-        The output path (for tracking purposes)
+        The actual output path used (with extension appended if it was missing)
 
     Raises:
         IOError: If writing fails
@@ -254,10 +254,12 @@ def save_events(
         >>> path = save_events(
         ...     writer,
         ...     events_dict,
-        ...     "/path/to/output.parquet",
+        ...     "/path/to/output",  # Extension will be added automatically
         ...     compression="zstd"
         ... )
+        >>> print(path)  # Will be "/path/to/output.parquet"
     """
-    # Writer handles directory creation and actual writing
-    writer.write(events, output_path, **writer_kwargs)
-    return output_path
+    # Writer handles directory creation, extension appending, and actual writing
+    # Returns the actual path used (with extension)
+    actual_path = writer.write(events, output_path, **writer_kwargs)
+    return actual_path

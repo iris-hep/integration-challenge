@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Union
 from rich.pretty import pretty_repr
 from coffea.processor.executor import WorkItem
 
-from intccms.utils.datasets import ConfigurableDatasetManager, Dataset
+from intccms.datasets import DatasetManager, Dataset
 from intccms.metadata_extractor.builders import FilesetBuilder
 from intccms.metadata_extractor.extractor import CoffeaMetadataExtractor
 from intccms.metadata_extractor.core import (
@@ -42,7 +42,7 @@ class DatasetMetadataManager:
 
     Attributes
     ----------
-    dataset_manager : ConfigurableDatasetManager
+    dataset_manager : DatasetManager
         Manages dataset configurations
     output_manager : OutputDirectoryManager
         Manages output directory paths
@@ -60,18 +60,19 @@ class DatasetMetadataManager:
 
     def __init__(
         self,
-        dataset_manager: ConfigurableDatasetManager,
+        dataset_manager: DatasetManager,
         output_manager: Any,
         executor: Any = None,
         schema: Any = None,
-        chunksize: int = 100_000,
+        chunksize: Optional[int] = None,
+        config: Optional[Any] = None,
     ):
         """
         Initialize DatasetMetadataManager.
 
         Parameters
         ----------
-        dataset_manager : ConfigurableDatasetManager
+        dataset_manager : DatasetManager
             Dataset manager instance
         output_manager : OutputDirectoryManager
             Output directory manager
@@ -81,11 +82,21 @@ class DatasetMetadataManager:
         schema : coffea schema, optional
             Schema for parsing ROOT files. If None, uses NanoAODSchema
         chunksize : int, optional
-            Number of events per chunk for WorkItem splitting
+            Number of events per chunk for WorkItem splitting.
+            If None, reads from config.preprocess.skimming.chunk_size or defaults to 100_000
+        config : Config, optional
+            Full configuration object to automatically extract chunk_size from
         """
         self.dataset_manager = dataset_manager
         self.output_manager = output_manager
-        self.output_directory = self.output_manager.get_metadata_dir()
+        self.output_directory = self.output_manager.metadata_dir
+
+        # Auto-extract chunksize from config if not provided
+        if chunksize is None:
+            if config and hasattr(config, 'preprocess') and hasattr(config.preprocess, 'skimming'):
+                chunksize = config.preprocess.skimming.chunk_size
+            else:
+                chunksize = 100_000
 
         # Initialize components
         self.fileset_builder = FilesetBuilder(dataset_manager, output_manager)

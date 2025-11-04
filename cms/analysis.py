@@ -11,12 +11,12 @@ import warnings
 
 from intccms.analysis.nondiff import NonDiffAnalysis
 from example_opendata.configs.configuration import config as ZprimeConfig
-from intccms.utils.datasets import ConfigurableDatasetManager
+from intccms.datasets import DatasetManager
 from intccms.utils.logging import setup_logging, log_banner
 from intccms.utils.schema import Config, load_config_with_restricted_cli
 from intccms.metadata_extractor import DatasetMetadataManager
 from intccms.skimming.manager import SkimmingManager
-from intccms.utils.output_manager import OutputDirectoryManager
+from intccms.utils.output import OutputDirectoryManager
 
 # -----------------------------
 # Logging Configuration
@@ -50,7 +50,7 @@ def main():
     if not config.datasets:
         logger.error("Missing 'datasets' configuration; required for metadata/skimming.")
         sys.exit(1)
-    dataset_manager = ConfigurableDatasetManager(config.datasets)
+    dataset_manager = DatasetManager(config.datasets)
 
     logger.info(log_banner("metadata and workitems extraction"))
     # Generate metadata and fileset from NanoAODs
@@ -94,7 +94,7 @@ def main():
         return
     elif analysis_mode == "nondiff":
         logger.info(log_banner("Running Non-Differentiable Analysis"))
-        from intccms.utils.output_files import save_histograms_to_root
+        from intccms.utils.output import save_histograms_to_root
 
         nondiff_analysis = NonDiffAnalysis(config, output_manager)
         logger.info(f"Analysis initialized for {len(datasets)} datasets")

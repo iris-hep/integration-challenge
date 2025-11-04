@@ -21,7 +21,7 @@ from correctionlib import Correction, CorrectionSet
 
 from intccms.utils.schema import GoodObjectMasksConfig
 from intccms.utils.tools import get_function_arguments
-from intccms.utils.output_manager import OutputDirectoryManager
+from intccms.utils.output import OutputDirectoryManager
 
 # -----------------------------
 # Register backends

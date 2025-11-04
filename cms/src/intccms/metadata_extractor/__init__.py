@@ -18,9 +18,9 @@ Main exports for users:
 Usage:
 ------
 >>> from intccms.metadata_extractor import DatasetMetadataManager
->>> from intccms.utils.datasets import ConfigurableDatasetManager
+>>> from intccms.datasets import DatasetManager
 >>>
->>> dataset_manager = ConfigurableDatasetManager(config)
+>>> dataset_manager = DatasetManager(config)
 >>> metadata_manager = DatasetMetadataManager(dataset_manager, output_manager)
 >>> metadata_manager.run(generate_metadata=True)
 >>>

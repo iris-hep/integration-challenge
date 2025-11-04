@@ -3,9 +3,32 @@
 """
 Processor-based analysis workflow using UnifiedProcessor.
 
-This script demonstrates the new processor-based workflow that unifies
-skimming and analysis into a single distributed coffea pipeline. The processor
-handles both event selection and histogram filling in one pass over the data.
+This script supports a flexible 2-stage workflow for efficient analysis:
+
+**Stage 1: Skim NanoAOD files (First Pass)**
+    python analysis_processor.py \
+        general.use_skimmed_input=False \
+        general.save_skimmed_output=True \
+        general.run_analysis=False
+
+    Reads original NanoAOD, applies event selection, saves filtered events to disk.
+
+**Stage 2: Analyze pre-skimmed files (Second Pass)**
+    python analysis_processor.py \
+        general.use_skimmed_input=True \
+        general.run_analysis=True \
+        general.run_histogramming=True
+
+    Automatically loads skimmed files, runs analysis, fills histograms.
+    No manual fileset building needed - everything is automated!
+
+**Alternative: Single-pass workflow (no skimming)**
+    python analysis_processor.py \
+        general.use_skimmed_input=False \
+        general.save_skimmed_output=False \
+        general.run_analysis=True
+
+    Processes NanoAOD directly, filter in-memory, analyze (no disk I/O).
 """
 import logging
 import sys
@@ -15,11 +38,11 @@ from coffea.nanoevents import NanoAODSchema
 
 from intccms.analysis import run_processor_workflow
 from example_opendata.configs.configuration import config as ZprimeConfig
-from intccms.utils.datasets import ConfigurableDatasetManager
+from intccms.datasets import DatasetManager
 from intccms.utils.logging import setup_logging, log_banner
 from intccms.utils.schema import Config, load_config_with_restricted_cli
 from intccms.metadata_extractor import DatasetMetadataManager
-from intccms.utils.output_manager import OutputDirectoryManager
+from intccms.utils.output import OutputDirectoryManager
 
 # -----------------------------
 # Logging Configuration
@@ -32,13 +55,14 @@ logger = logging.getLogger("ProcessorAnalysisDriver")
 # -----------------------------
 def main():
     """
-    Main driver function for running the processor-based analysis workflow.
+    Main driver function for processor-based analysis workflow.
 
-    This workflow:
-    1. Generates metadata and fileset from NanoAODs
-    2. Builds metadata lookup for the processor
-    3. Runs UnifiedProcessor with coffea.processor.Runner
-    4. Saves histograms from accumulated output
+    Supports two workflows:
+    - NanoAOD → Skim → Analyze (2-stage, efficient for multiple analyses)
+    - NanoAOD → Analyze (single-pass, quick for one-off analyses)
+
+    When use_skimmed_input=True, automatically loads pre-skimmed files.
+    When use_skimmed_input=False, processes original NanoAOD files.
     """
     cli_args = sys.argv[1:]
     full_config = load_config_with_restricted_cli(ZprimeConfig, cli_args)
@@ -54,38 +78,53 @@ def main():
     )
     logger.info(f"Output directory structure: {output_manager.list_structure()}")
 
+    # Check datasets config
     if not config.datasets:
-        logger.error("Missing 'datasets' configuration; required for metadata/skimming.")
+        logger.error("Missing 'datasets' configuration; required for metadata.")
         sys.exit(1)
-    dataset_manager = ConfigurableDatasetManager(config.datasets)
+    dataset_manager = DatasetManager(config.datasets)
 
-    logger.info(log_banner("METADATA AND FILESET GENERATION"))
-    # Generate metadata and fileset from NanoAODs
+    # Metadata generation needed for both workflows (provides metadata_lookup)
+    logger.info(log_banner("METADATA GENERATION"))
     generator = DatasetMetadataManager(
         dataset_manager=dataset_manager,
         output_manager=output_manager
     )
-    generator.run(generate_metadata=config.general.run_metadata_generation)
 
-    if not generator.workitems:
-        logger.error("No workitems available. Please ensure metadata generation completed successfully.")
-        sys.exit(1)
+    # Generate metadata if needed, otherwise load from cache
+    # For skimmed input, we still need metadata but not workitems from NanoAOD
+    if config.general.use_skimmed_input:
+        logger.info("Using skimmed input - loading metadata from cache")
+        generator.run(generate_metadata=False)
+    else:
+        logger.info("Using NanoAOD input - generating/loading metadata and workitems")
+        generator.run(generate_metadata=config.general.run_metadata_generation)
+
     if not generator.datasets:
-        logger.error("No datasets available. Please ensure metadata generation completed successfully.")
+        logger.error("No datasets available. Please ensure metadata exists.")
         sys.exit(1)
 
-    # Build metadata lookup and get coffea fileset
+    # Build metadata lookup (needed for both workflows)
     metadata_lookup = generator.build_metadata_lookup()
-    fileset = generator.get_coffea_fileset()
+    logger.info(f"Loaded metadata for {len(metadata_lookup)} dataset variations")
 
-    logger.info(f"Generated fileset with {len(fileset)} dataset variations")
-    logger.info(f"Total workitems: {len(generator.workitems)}")
+    # Get workitems only if not using skimmed input
+    if config.general.use_skimmed_input:
+        workitems = None  # Will be auto-generated from skimmed files
+        logger.info("Workitems will be auto-generated from skimmed files")
+    else:
+        if not generator.workitems:
+            logger.error("No workitems available from NanoAOD metadata generation.")
+            sys.exit(1)
+        workitems = generator.workitems
+        logger.info(f"Generated {len(workitems)} workitems from NanoAOD files")
 
     logger.info(log_banner("PROCESSOR-BASED WORKFLOW"))
 
     logger.info(f"Workflow configuration:")
+    logger.info(f"  - use_skimmed_input: {config.general.use_skimmed_input}")
+    logger.info(f"  - save_skimmed_output: {config.general.save_skimmed_output}")
     logger.info(f"  - run_processor: {config.general.run_processor}")
-    logger.info(f"  - run_skimming: {config.general.run_skimming}")
     logger.info(f"  - run_analysis: {config.general.run_analysis}")
     logger.info(f"  - run_histogramming: {config.general.run_histogramming}")
     logger.info(f"  - run_systematics: {config.general.run_systematics}")
@@ -105,24 +144,31 @@ def main():
         executor = processor.FuturesExecutor()
 
     # Run the processor workflow (or load saved histograms)
+    # If use_skimmed_input=True and workitems=None, fileset auto-built from skimmed files
     output = run_processor_workflow(
         config=config,
         output_manager=output_manager,
         metadata_lookup=metadata_lookup,
-        workitems=generator.workitems,
+        workitems=workitems,
         executor=executor,
         schema=NanoAODSchema,
     )
 
     logger.info(log_banner("RESULTS"))
 
-    # Log summary (histograms auto-saved by processor)
+    # Log summary (histograms and statistics auto-saved by processor)
     if output and "histograms" in output:
         num_histograms = sum(len(hists) for hists in output["histograms"].values())
         logger.info(f"📊 Total histograms produced: {num_histograms}")
         logger.info(f"✅ Histograms auto-saved to: {output_manager.get_histograms_dir()}")
         logger.info(f"   - processor_histograms.pkl (for loading with run_processor=False)")
         logger.info(f"   - histograms.root (for downstream tools)")
+
+        # Statistics runs automatically if run_statistics=True
+        if config.general.run_statistics:
+            logger.info(f"📈 Statistical analysis auto-saved to: {output_manager.get_statistics_dir()}")
+            logger.info(f"   - workspace.json (cabinetry workspace)")
+            logger.info(f"   - Pre-fit and post-fit plots")
     else:
         logger.info("No histograms produced (run_histogramming may be disabled)")
 

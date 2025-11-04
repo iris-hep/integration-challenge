@@ -297,7 +297,7 @@ class WorkitemSkimmingManager:
             by_dataset[entry["dataset"]].append(entry)
 
         # Save one manifest per dataset
-        base_dir = Path(self.output_manager.get_skimmed_dir())
+        base_dir = Path(self.output_manager.skimmed_dir)
         for dataset, entries in by_dataset.items():
             manifest_path = base_dir / dataset / "manifest.json"
             manifest_path.parent.mkdir(parents=True, exist_ok=True)

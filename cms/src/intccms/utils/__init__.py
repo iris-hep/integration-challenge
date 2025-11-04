@@ -1,4 +1,4 @@
-from . import datasets
+from . import filters
 from . import logging
 #from . import mva
 #from . import plot
@@ -7,7 +7,7 @@ from . import stats
 from . import tools
 
 __all__ = [
-    "datasets",
+    "filters",
     "logging",
     "mva",
     "plot",

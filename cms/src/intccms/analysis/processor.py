@@ -23,11 +23,11 @@ from intccms.skimming.pipeline.stages import (
     save_events,
 )
 from intccms.skimming.workitem import resolve_lazy_values
-from intccms.utils.output_files import (
+from intccms.utils.output import (
+    OutputDirectoryManager,
     save_histograms_to_pickle,
     save_histograms_to_root,
 )
-from intccms.utils.output_manager import OutputDirectoryManager
 from intccms.utils.schema import Config
 from intccms.utils.tools import get_function_arguments
 
@@ -38,14 +38,40 @@ class UnifiedProcessor(ProcessorABC):
     """Coffea processor for distributed skimming and/or analysis.
 
     This processor integrates the skimming pipeline with the analysis workflow,
-    controlled by configuration flags. It delegates to existing implementations:
-    - Skimming: Uses pipeline stages from intccms.skimming.pipeline
+    controlled by configuration flags. It supports two primary workflows:
+
+    **Workflow 1: Skim NanoAOD files**
+        Process original NanoAOD → Apply event selection → Save filtered events to disk
+        Use when: First time processing, want to create skimmed files for later analysis
+        Config: run_skimming=True, run_analysis=False
+
+    **Workflow 2: Analyze pre-skimmed files**
+        Load skimmed files → Run analysis → Fill histograms
+        Use when: Analyzing previously skimmed data multiple times
+        Config: run_skimming=False, run_analysis=True
+
+    Pipeline Stages
+    ---------------
+    - **Skimming** (via intccms.skimming.pipeline):
       - Event selection filter ALWAYS applies
       - When run_skimming=True: Saves filtered events to disk in configured format
+        (Parquet or ROOT). Writer automatically appends correct file extension.
       - When run_skimming=False: No disk I/O (useful for analyzing pre-skimmed data)
-    - Analysis: Delegates to NonDiffAnalysis.process()
 
-    The processor respects these config.general flags:
+    - **Analysis** (via NonDiffAnalysis):
+      - When run_analysis=True: Object selection, corrections, observable calculations
+      - When run_histogramming=True: Fill histograms during analysis
+      - When run_systematics=True: Apply systematic variations
+
+    - **Output Saving**:
+      - Skimmed files: Saved during process() with manifest.json for tracking
+      - Histograms: Auto-saved in postprocess() to:
+        * processor_histograms.pkl (for caching, load with run_processor=False)
+        * histograms.root (for downstream analysis tools)
+
+    Configuration Flags
+    -------------------
+    config.general flags control workflow behavior:
     - run_skimming: Save filtered events to disk (filter always applies)
     - run_analysis: Run analysis (object selection, corrections, observables)
     - run_histogramming: Fill histograms during analysis
@@ -65,15 +91,21 @@ class UnifiedProcessor(ProcessorABC):
 
     Examples
     --------
-    >>> # User's script (analysis.py)
-    >>> from coffea.processor import Runner, IterativeExecutor
+    **Example 1: Skim original NanoAOD files**
+
+    >>> from coffea.processor import Runner, FuturesExecutor
     >>> from intccms.analysis import UnifiedProcessor
+    >>> from intccms.metadata_extractor import DatasetMetadataManager
     >>>
-    >>> # Generate metadata first
-    >>> generator = NanoAODMetadataGenerator(...)
+    >>> # Generate metadata from NanoAOD files
+    >>> generator = DatasetMetadataManager(dataset_manager, output_manager)
     >>> generator.run(generate_metadata=True)
     >>> metadata_lookup = generator.build_metadata_lookup()
-    >>> fileset = generator.get_coffea_fileset()
+    >>> fileset = generator.get_coffea_fileset()  # Original NanoAOD
+    >>>
+    >>> # Configure for skimming
+    >>> config.general.run_skimming = True
+    >>> config.general.run_analysis = False
     >>>
     >>> processor = UnifiedProcessor(
     ...     config=config,
@@ -81,11 +113,51 @@ class UnifiedProcessor(ProcessorABC):
     ...     metadata_lookup=metadata_lookup,
     ... )
     >>>
-    >>> runner = Runner(executor=IterativeExecutor(), schema=NanoAODSchema)
+    >>> runner = Runner(executor=FuturesExecutor(), schema=NanoAODSchema)
     >>> output = runner(fileset, "Events", processor_instance=processor)
+    >>> # Skimmed files saved to output_manager.skimmed_dir
+
+    **Example 2: Analyze pre-skimmed files**
+
+    >>> from intccms.skimming import FilesetManager
     >>>
-    >>> # Save histograms
-    >>> save_histograms_to_root(output["histograms"], ...)
+    >>> # Load metadata from original run
+    >>> generator = DatasetMetadataManager(dataset_manager, output_manager)
+    >>> generator.run(generate_metadata=False)  # Read existing metadata
+    >>> metadata_lookup = generator.build_metadata_lookup()
+    >>>
+    >>> # Build fileset from skimmed files
+    >>> skimmed_dir = output_manager.skimmed_dir
+    >>> fileset_manager = FilesetManager(skimmed_dir, format="parquet")
+    >>> skimmed_fileset = fileset_manager.build_fileset_from_datasets(generator.datasets)
+    >>>
+    >>> # Convert to workitems
+    >>> from coffea.processor.executor import WorkItem
+    >>> workitems = []
+    >>> for dataset_name, info in skimmed_fileset.items():
+    ...     for file_path in info["files"]:
+    ...         workitems.append(WorkItem(
+    ...             dataset=dataset_name,
+    ...             filename=file_path,
+    ...             treename=info["metadata"].get("treename", "Events"),
+    ...             entrystart=0,
+    ...             entrystop=-1,
+    ...         ))
+    >>>
+    >>> # Configure for analysis only
+    >>> config.general.run_skimming = False  # Don't re-skim
+    >>> config.general.run_analysis = True
+    >>> config.general.run_histogramming = True
+    >>>
+    >>> processor = UnifiedProcessor(
+    ...     config=config,
+    ...     output_manager=output_manager,
+    ...     metadata_lookup=metadata_lookup,
+    ... )
+    >>>
+    >>> runner = Runner(executor=FuturesExecutor(), schema=NanoAODSchema)
+    >>> output = runner({}, "Events", processor_instance=processor, items=workitems)
+    >>> # Histograms auto-saved to processor_histograms.pkl and histograms.root
     """
 
     def __init__(
@@ -122,7 +194,7 @@ class UnifiedProcessor(ProcessorABC):
 
         logger.info(
             f"Initialized UnifiedProcessor: "
-            f"skimming={config.general.run_skimming}, "
+            f"save_skimmed_output={config.general.save_skimmed_output}, "
             f"analysis={config.general.run_analysis}, "
             f"histogramming={config.general.run_histogramming}, "
             f"systematics={config.general.run_systematics}"
@@ -163,7 +235,7 @@ class UnifiedProcessor(ProcessorABC):
             # Coffea will automatically merge these across chunks via hist.Hist.__add__
             acc["histograms"] = self.analysis.nD_hists_per_region
 
-        if self.config.general.run_skimming:
+        if self.config.general.save_skimmed_output:
             acc["skimmed_events"] = 0
 
         return acc
@@ -202,8 +274,8 @@ class UnifiedProcessor(ProcessorABC):
         events = self._apply_skim_selection(events)
         output["skimmed_events"] = len(events)
 
-        # Save filtered events to disk only if run_skimming is enabled
-        if self.config.general.run_skimming and len(events) > 0:
+        # Save filtered events to disk only if save_skimmed_output is enabled
+        if self.config.general.save_skimmed_output and len(events) > 0:
             self._save_skimmed_events(events, metadata)
 
         # Step 2: Run analysis if enabled
@@ -215,11 +287,9 @@ class UnifiedProcessor(ProcessorABC):
             self.analysis.process(events=events, metadata=metadata)
 
             # Step 3: Collect histograms if histogramming was enabled
-            logger.info("Step 3: Collect histograms if histogramming was enabled")
             if self.config.general.run_histogramming:
                 # Histograms are filled in-place in self.analysis.nD_hists_per_region
                 # Coffea will merge them across chunks
-                logger.info(f"self.analysis.nD_hists_per_region: {self.analysis.nD_hists_per_region}")
                 output["histograms"] = self.analysis.nD_hists_per_region
 
         # Track total events processed (input events, not after filtering)
@@ -287,19 +357,10 @@ class UnifiedProcessor(ProcessorABC):
         # Generate unique chunk ID
         chunk_id = hashlib.md5(str(uuid.uuid4()).encode()).hexdigest()[:8]
 
-        # Determine file extension
-        extension_map = {
-            "parquet": ".parquet",
-            "root_ttree": ".root",
-            "rntuple": ".ntuple",
-            "safetensors": ".safetensors",
-        }
-        extension = extension_map.get(self.skim_config.output.format, ".parquet")
-
-        # Build path: skimmed_dir/dataset/chunk_id.ext
-        output_dir = Path(self.output_manager.get_skimmed_dir()) / dataset_name
+        # Build path: skimmed_dir/dataset/chunk_id (no extension - writer adds it)
+        output_dir = Path(self.output_manager.skimmed_dir) / dataset_name
         output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / f"{chunk_id}{extension}"
+        output_path = output_dir / chunk_id
 
         # Prepare writer kwargs
         writer_kwargs = self.writer_kwargs.copy()
@@ -317,7 +378,7 @@ class UnifiedProcessor(ProcessorABC):
         """Finalize accumulator after all chunks processed.
 
         Called once by coffea after all chunks are merged.
-        Saves histograms to disk for later use without re-running processor.
+        Saves histograms to disk and optionally runs statistical analysis.
 
         Parameters
         ----------
@@ -336,7 +397,7 @@ class UnifiedProcessor(ProcessorABC):
         # Save histograms to disk if they were produced
         if self.config.general.run_histogramming and "histograms" in accumulator:
             # Save pickle format (for loading when run_processor=False)
-            histograms_pkl = self.output_manager.get_histograms_dir() / "processor_histograms.pkl"
+            histograms_pkl = self.output_manager.histograms_dir / "processor_histograms.pkl"
             save_histograms_to_pickle(
                 accumulator["histograms"],
                 output_file=histograms_pkl,
@@ -344,11 +405,39 @@ class UnifiedProcessor(ProcessorABC):
             logger.info(f"Saved processor histograms (pickle) to {histograms_pkl}")
 
             # Save ROOT format (for downstream tools/visualization)
-            histograms_root = self.output_manager.get_histograms_dir() / "histograms.root"
+            histograms_root = self.output_manager.histograms_dir / "histograms.root"
             save_histograms_to_root(
                 accumulator["histograms"],
                 output_file=histograms_root,
             )
             logger.info(f"Saved processor histograms (ROOT) to {histograms_root}")
+
+            # Run statistical analysis if enabled
+            if (self.config.general.run_statistics
+                and self.config.statistics
+                and self.config.statistics.cabinetry_config):
+
+                logger.info("Running statistical analysis...")
+
+                # Verify cabinetry config exists
+                cabinetry_config_path = Path(self.config.statistics.cabinetry_config)
+                if not cabinetry_config_path.exists():
+                    logger.warning(
+                        f"Cabinetry config not found: {cabinetry_config_path}. "
+                        "Skipping statistics step."
+                    )
+                    return accumulator
+
+                # Set histograms in the analysis instance
+                self.analysis.nD_hists_per_region = accumulator["histograms"]
+
+                # Run the statistics
+                try:
+                    self.analysis.run_statistics(str(cabinetry_config_path))
+                    stats_dir = self.output_manager.statistics_dir
+                    logger.info(f"Statistical analysis complete. Results saved to {stats_dir}")
+                except Exception as e:
+                    logger.error(f"Statistics failed: {e}", exc_info=True)
+                    # Don't raise - allow workflow to complete
 
         return accumulator

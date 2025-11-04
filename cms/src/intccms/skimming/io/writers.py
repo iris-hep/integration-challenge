@@ -48,29 +48,45 @@ class ParquetWriter(EventWriter):
     This writer saves events to Parquet format using awkward's native parquet
     writer. Supports compression and other parquet-specific options.
 
+    The writer automatically appends .parquet extension if not present.
+
     Examples:
         >>> writer = ParquetWriter()
         >>> events = {
         ...     "Muon_pt": ak.Array([25.0, 30.0, 40.0]),
         ...     "Muon_eta": ak.Array([0.5, 1.0, -0.5])
         ... }
-        >>> writer.write(events, "/path/to/output.parquet", compression="zstd")
+        >>> writer.write(events, "/path/to/output", compression="zstd")
     """
+
+    @property
+    def file_extension(self) -> str:
+        """File extension for Parquet format.
+
+        Returns:
+            str: ".parquet"
+        """
+        return ".parquet"
 
     def write(
         self,
         events: Dict[str, ak.Array],
         path: str,
         **kwargs
-    ) -> None:
+    ) -> str:
         """Write events to a Parquet file.
+
+        Automatically appends .parquet extension if the path doesn't have it.
 
         Args:
             events: Dictionary mapping column/branch names to awkward arrays.
                 Each key is a column name, each value is the data for that column.
-            path: Path where the Parquet file will be written
+            path: Path where the Parquet file will be written (extension added if missing)
             **kwargs: Additional keyword arguments passed to ak.to_parquet().
                 Common options include 'compression' (e.g., "zstd", "gzip", None).
+
+        Returns:
+            str: The actual path written to (with extension)
 
         Raises:
             ValueError: If events dictionary is empty
@@ -78,7 +94,11 @@ class ParquetWriter(EventWriter):
         """
         if not events:
             logger.warning(f"No events to write to {path}; skipping parquet write.")
-            return
+            return path
+
+        # Auto-append extension if missing
+        if not path.endswith(self.file_extension):
+            path = f"{path}{self.file_extension}"
 
         # Ensure parent directory exists
         _ensure_parent_dir(path)
@@ -89,12 +109,16 @@ class ParquetWriter(EventWriter):
         # Write to parquet
         ak.to_parquet(payload, path, **kwargs)
 
+        return path
+
 
 class RootWriter(EventWriter):
     """Writer for ROOT TTree files using uproot.
 
     This writer saves events to ROOT TTree format using uproot. It creates
     a new ROOT file with a single TTree containing all the specified branches.
+
+    The writer automatically appends .root extension if not present.
 
     Examples:
         >>> writer = RootWriter()
@@ -104,11 +128,20 @@ class RootWriter(EventWriter):
         ... }
         >>> writer.write(
         ...     events,
-        ...     "/path/to/output.root",
+        ...     "/path/to/output",
         ...     tree_name="Events",
         ...     compression=uproot.ZLIB(4)
         ... )
     """
+
+    @property
+    def file_extension(self) -> str:
+        """File extension for ROOT format.
+
+        Returns:
+            str: ".root"
+        """
+        return ".root"
 
     def write(
         self,
@@ -116,17 +149,22 @@ class RootWriter(EventWriter):
         path: str,
         tree_name: str = "Events",
         **kwargs
-    ) -> None:
+    ) -> str:
         """Write events to a ROOT TTree file.
+
+        Automatically appends .root extension if the path doesn't have it.
 
         Args:
             events: Dictionary mapping branch names to awkward arrays.
                 Each key is a branch name, each value is the data for that branch.
-            path: Path where the ROOT file will be written
+            path: Path where the ROOT file will be written (extension added if missing)
             tree_name: Name of the TTree to create (default: "Events")
             **kwargs: Additional keyword arguments. Special keys:
                 - 'tree_kwargs': Dict of kwargs passed to mktree() for tree creation
                 - All other kwargs passed to uproot.recreate() for file creation
+
+        Returns:
+            str: The actual path written to (with extension)
 
         Raises:
             ValueError: If events dictionary is empty
@@ -134,7 +172,11 @@ class RootWriter(EventWriter):
         """
         if not events:
             logger.warning(f"No events to write to {path}; skipping ROOT write.")
-            return
+            return path
+
+        # Auto-append extension if missing
+        if not path.endswith(self.file_extension):
+            path = f"{path}{self.file_extension}"
 
         # Ensure parent directory exists
         _ensure_parent_dir(path)
@@ -150,6 +192,8 @@ class RootWriter(EventWriter):
         with uproot.recreate(path, **file_kwargs) as root_file:
             tree = root_file.mktree(tree_name, branch_types, **tree_kwargs)
             tree.extend(events)
+
+        return path
 
 
 def get_writer(format: str) -> Any:
