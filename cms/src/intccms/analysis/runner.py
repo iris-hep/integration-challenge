@@ -158,7 +158,10 @@ def run_processor_workflow(
 
         # Determine chunksize
         if chunksize is None:
-            chunksize = config.general.chunksize if hasattr(config.general, 'chunksize') else 100_000
+            if hasattr(config, 'preprocess') and hasattr(config.preprocess, 'skimming'):
+                chunksize = config.preprocess.skimming.chunk_size
+            else:
+                chunksize = 100_000
 
         # Create coffea Runner
         runner = Runner(
