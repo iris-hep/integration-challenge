@@ -20,7 +20,11 @@ from coffea.nanoevents import NanoAODSchema
 from correctionlib import Correction, CorrectionSet
 
 from intccms.utils.schema import GoodObjectMasksConfig
-from intccms.utils.tools import get_function_arguments
+from intccms.utils.functors import (
+    GhostObservableExecutor,
+    MaskExecutor,
+    get_function_arguments,
+)
 from intccms.utils.output import OutputDirectoryManager
 
 # -----------------------------
@@ -157,23 +161,11 @@ class Analysis:
         """
         good_objects = {}
         for mask_config in masks:
-            mask_args, mask_static_kwargs = get_function_arguments(
-                mask_config.use,
-                object_copies,
-                function_name=mask_config.function.__name__,
-                static_kwargs=mask_config.get("static_kwargs"),
-            )
-
-            selection_mask = mask_config.function(
-                *mask_args, **mask_static_kwargs
-            )
-            if not isinstance(selection_mask, ak.Array):
-                raise TypeError(
-                    f"Mask must be an awkward array. Got {type(selection_mask)}"
-                )
-
+            executor = MaskExecutor(mask_config)
             obj_name = mask_config.object
-            good_objects[obj_name] = object_copies[obj_name][selection_mask]
+            good_objects[obj_name] = executor.execute(
+                object_copies, object_name=obj_name
+            )
 
         return good_objects
 
@@ -601,49 +593,19 @@ class Analysis:
             Updated object copies with new observables
         """
         for ghost in self.config.ghost_observables:
-
             logger.debug("Computing ghost observables: %s", ghost.names)
-            ghost_args, ghost_static_kwargs = get_function_arguments(
-                ghost.use, object_copies, function_name=ghost.function.__name__,
-                static_kwargs=ghost.get("static_kwargs")
-            )
-            outputs = ghost.function(*ghost_args, **ghost_static_kwargs)
 
-            # Normalize outputs to list
-            if not isinstance(outputs, (list, tuple)):
-                outputs = [outputs]
-
-            # Normalize names and collections
-            names = (
-                [ghost.names] if isinstance(ghost.names, str) else ghost.names
-            )
+            # Normalize names and collections for executor
+            names = [ghost.names] if isinstance(ghost.names, str) else ghost.names
             collections = (
                 [ghost.collections] * len(names)
                 if isinstance(ghost.collections, str)
                 else ghost.collections
             )
 
-            # Update object copies
-            for value, name, collection in zip(outputs, names, collections):
-                # Handle single-field records
-                if (
-                    isinstance(value, ak.Array)
-                    and len(ak.fields(value)) == 1
-                    and name in ak.fields(value)
-                ):
-                    value = value[name]
-
-                # Update existing collection
-                if collection in object_copies:
-                    try:
-                        object_copies[collection][name] = value
-                    except ValueError as error:
-                        logger.exception(
-                            f"Failed to add field '{name}' to collection '{collection}'"
-                        )
-                        raise error
-                # Create new collection
-                else:
-                    object_copies[collection] = ak.Array({name: value})
+            executor = GhostObservableExecutor(ghost)
+            object_copies = executor.execute(
+                object_copies, field_names=names, collections=collections
+            )
 
         return object_copies

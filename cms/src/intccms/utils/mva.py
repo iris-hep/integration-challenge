@@ -17,7 +17,7 @@ from itertools import chain
 from sklearn.model_selection import train_test_split
 
 # Local application imports
-from intccms.utils.tools import get_function_arguments
+from intccms.utils.functors import FeatureExecutor
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -157,29 +157,14 @@ class BaseNetwork(ABC):
         feature_arrays = []
         features_dict = {}
         for feature_cfg in feature_configs:
-            # Extract input arguments from object collections
-            args, static_kwargs = get_function_arguments(
-                feature_cfg.use,
-                object_collections,
-                function_name=feature_cfg.function.__name__,
-                static_kwargs=feature_cfg.get("static_kwargs"),
-            )
+            executor = FeatureExecutor(feature_cfg)
 
-            # Compute raw feature values
-            feature_values_unscaled = feature_cfg.function(
-                *args, **static_kwargs
-            )
+            # Compute scaled version (for training/inference)
+            feature_values_scaled = executor.execute(object_collections, apply_scaling=True)
+            feature_arrays.append(feature_values_scaled)
 
-            # Apply scaling if configured
-            if feature_cfg.scale is not None:
-                feature_values_scaled = feature_cfg.scale(
-                    feature_values_unscaled
-                )
-            else:
-                feature_values_scaled = feature_values_unscaled
-
-            # Convert to NumPy array
-            feature_arrays.append(np.asarray(feature_values_scaled))
+            # Compute unscaled version (for storage/analysis)
+            feature_values_unscaled = executor.execute(object_collections, apply_scaling=False)
 
             features_dict[feature_cfg.name] = {
                 "scaled": feature_values_scaled,
