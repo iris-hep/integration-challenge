@@ -156,13 +156,19 @@ def main():
 
     logger.info(log_banner("RESULTS"))
 
-    # Log summary (histograms auto-saved by processor)
+    # Log summary (histograms and statistics auto-saved by processor)
     if output and "histograms" in output:
         num_histograms = sum(len(hists) for hists in output["histograms"].values())
         logger.info(f"📊 Total histograms produced: {num_histograms}")
         logger.info(f"✅ Histograms auto-saved to: {output_manager.get_histograms_dir()}")
         logger.info(f"   - processor_histograms.pkl (for loading with run_processor=False)")
         logger.info(f"   - histograms.root (for downstream tools)")
+
+        # Statistics runs automatically if run_statistics=True
+        if config.general.run_statistics:
+            logger.info(f"📈 Statistical analysis auto-saved to: {output_manager.get_statistics_dir()}")
+            logger.info(f"   - workspace.json (cabinetry workspace)")
+            logger.info(f"   - Pre-fit and post-fit plots")
     else:
         logger.info("No histograms produced (run_histogramming may be disabled)")
 
