@@ -13,7 +13,7 @@ from typing import List, Tuple
 
 from coffea.analysis_tools import PackedSelection
 from coffea.lumi_tools import LumiMask
-from intccms.utils.schema import WorkerEval
+from intccms.schema import WorkerEval
 #from .cuts import lumi_mask
 
 import awkward as ak

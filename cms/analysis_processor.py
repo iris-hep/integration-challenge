@@ -40,7 +40,7 @@ from intccms.analysis import run_processor_workflow
 from example_opendata.configs.configuration import config as ZprimeConfig
 from intccms.datasets import DatasetManager
 from intccms.utils.logging import setup_logging, log_banner
-from intccms.utils.schema import Config, load_config_with_restricted_cli
+from intccms.schema import Config, load_config_with_restricted_cli
 from intccms.metadata_extractor import DatasetMetadataManager
 from intccms.utils.output import OutputDirectoryManager
 
