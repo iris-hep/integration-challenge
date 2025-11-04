@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from typing import Any, List, Optional
 
-from intccms.utils.schema import DatasetConfig, DatasetManagerConfig
+from intccms.schema import DatasetConfig, DatasetManagerConfig
 
 from .models import Dataset
 from .utils import count_directories, index_or_scalar, normalize_to_list, replicate_single

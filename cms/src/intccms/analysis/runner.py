@@ -22,7 +22,7 @@ from intccms.utils.output import (
     OutputDirectoryManager,
     load_histograms_from_pickle,
 )
-from intccms.utils.schema import Config
+from intccms.schema import Config
 
 logger = logging.getLogger(__name__)
 

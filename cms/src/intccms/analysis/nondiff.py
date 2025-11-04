@@ -79,26 +79,15 @@ class NonDiffAnalysis(Analysis):
             for observable in channel.observables:
 
                 observable_label = observable.label
-                observable_binning = observable.binning
+                observable_binning = observable.binning  # Already array of edges from schema
                 observable_name = observable.name
 
-                if isinstance(observable_binning, str):
-                    low, high, nbins = map(
-                        float, observable_binning.split(",")
-                    )
-                    axis = hist.axis.Regular(
-                        int(nbins),
-                        low,
-                        high,
-                        name="observable",
-                        label=observable_label,
-                    )
-                else:
-                    axis = hist.axis.Variable(
-                        observable_binning,
-                        name="observable",
-                        label=observable_label,
-                    )
+                # Binning is already parsed to edges by schema validation
+                axis = hist.axis.Variable(
+                    observable_binning,
+                    name="observable",
+                    label=observable_label,
+                )
 
                 histograms[channel_name][observable_name] = hist.Hist(
                     axis,

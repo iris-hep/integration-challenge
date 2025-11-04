@@ -27,7 +27,7 @@ from intccms.utils.output import (
     save_histograms_to_pickle,
     save_histograms_to_root,
 )
-from intccms.utils.schema import Config
+from intccms.schema import Config
 from intccms.utils.functors import SelectionExecutor
 
 logger = logging.getLogger(__name__)

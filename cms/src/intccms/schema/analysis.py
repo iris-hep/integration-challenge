@@ -1,0 +1,310 @@
+"""
+Pydantic schemas for validating the analysis configuration.
+"""
+
+from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Tuple, Union
+
+import numpy as np
+from pydantic import Field, model_validator, field_validator
+
+from intccms.schema.base import FunctorConfig, ObjVar, SubscriptableModel
+from intccms.utils.binning import validate_binning_spec, binning_to_edges
+
+
+class GeneralConfig(SubscriptableModel):
+    lumi: Annotated[float, Field(description="Integrated luminosity in /pb")]
+    weight_branch: Annotated[
+        str, Field(description="Branch name for event weight")
+    ]
+    analysis: Annotated[
+        Optional[str],
+        Field(default="nondiff",
+              description="The analysis mode to run: 'nondiff' or 'skip' (skim-only mode)."),
+    ]
+    use_skimmed_input: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="If True, read from pre-skimmed files instead of original NanoAOD. "
+            "Automatically builds fileset from skimmed_dir.",
+        ),
+    ]
+    save_skimmed_output: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="If True, save filtered events to disk in skimmed_dir. "
+            "Controls output behavior independent of input source.",
+        ),
+    ]
+    run_skimming: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="DEPRECATED: Use save_skimmed_output instead. "
+            "If True, run the initial NanoAOD skimming and filtering step.",
+        ),
+    ]
+    run_processor: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="If True, run the coffea processor over data. If False, load previously saved histograms from disk.",
+        ),
+    ]
+    run_analysis: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="If True, run the analysis step (object selection, corrections, observables).",
+        ),
+    ]
+    run_histogramming: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="If True run the histogramming step for the "
+            "non-differentiable analysis.",
+        ),
+    ]
+    run_statistics: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="If True run the statistical analysis "
+            "(e.g. cabinetry fit) in non-differentiable analysis.",
+        ),
+    ]
+    run_systematics: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="If True, process systematic variations.",
+        ),
+    ]
+    run_plots_only: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="If True load cached results and generate plots "
+            "without re-running the analysis.",
+        ),
+    ]
+    run_mva_training: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="If True, run the MVA model pre-training step.",
+        ),
+    ]
+    run_metadata_generation: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="If True, run the JSON metadata generation step before constructing fileset.",
+        ),
+    ]
+    read_from_cache: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="If True, read preprocessed data from the cache directory "
+            "if available.",
+        ),
+    ]
+
+
+class GoodObjectMasksConfig(FunctorConfig):
+    object: Annotated[
+        str,
+        Field(
+            description="The object collection to which this mask applies "
+            "(e.g. 'Jet')."
+        ),
+    ]
+
+
+class GoodObjectMasksBlockConfig(SubscriptableModel):
+    """Configuration block for defining 'good' object masks."""
+
+
+class ObservableConfig(FunctorConfig):
+    name: Annotated[str, Field(description="Name of the observable")]
+    binning: Annotated[
+        Union[str, List[float]],
+        Field(
+            description="Histogram binning, specified as a 'low,high,nbins' string "
+            + "or a list of explicit bin edges. Parsed to array during validation."
+        ),
+    ]
+    label: Annotated[
+        Optional[str],
+        Field(
+            default="observable",
+            description="A LaTeX-formatted string for plot axis labels.",
+        ),
+    ]
+
+    @field_validator("binning", mode="before")
+    @classmethod
+    def validate_and_parse_binning(cls, v: Union[str, List[float]]) -> np.ndarray:
+        """Validate and parse binning specification to array of edges."""
+        validate_binning_spec(v)  # Validate first
+        return binning_to_edges(v)  # Then convert to edges
+
+
+class GhostObservable(FunctorConfig):
+    """Represents a derived quantity computed once and attached to the event record."""
+
+
+class ChannelConfig(SubscriptableModel):
+    name: Annotated[str, Field(description="Name of the analysis channel")]
+    observables: Annotated[
+        List[ObservableConfig],
+        Field(
+            description="A list of observable configurations for this channel."
+        ),
+    ]
+    fit_observable: Annotated[str, Field]
+    selection: Annotated[
+        Optional[FunctorConfig],
+        Field(
+            default=None,
+            description="Event selection function for this channel. "
+            + "If None, all events are selected. Function must "
+            + "return a PackedSelection object.",
+        ),
+    ]
+    use_in_diff: Annotated[
+        Optional[bool],
+        Field(
+            default=False,
+            description="Whether to use this channel in differentiable analysis. "
+            + "If None, defaults to True.",
+        ),
+    ]
+
+
+class CorrectionConfig(SubscriptableModel):
+    name: Annotated[str, Field(description="Name of the correction")]
+    type: Annotated[
+        Literal["event", "object"],
+        Field(description="Whether correction is event/object-level"),
+    ]
+    use: Annotated[
+        Optional[Union[ObjVar, List[ObjVar]]],
+        Field(default=[], description="(object, variable) inputs"),
+    ]
+    op: Annotated[
+        Optional[Literal["mult", "add", "subtract"]],
+        Field(
+            default="mult",
+            description="How (operationa) to apply correction to targets",
+        ),
+    ]
+    key: Annotated[
+        Optional[str],
+        Field(default=None, description="Correctionlib key (optional)"),
+    ]
+    use_correctionlib: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="True if using correctionlib to apply correction",
+        ),
+    ]
+    file: Annotated[str, Field(description="Path to correction file")]
+    transform: Annotated[
+        Optional[Callable],
+        Field(
+            default=lambda *x: x,
+            description="Optional function to apply transformation to inputs "
+            + "before applying correction",
+        ),
+    ]
+    up_and_down_idx: Annotated[
+        Optional[List[str]],
+        Field(
+            default=["up", "down"],
+            description="Systematic variation keys (optional)",
+        ),
+    ]
+    target: Annotated[
+        Optional[Union[ObjVar, List[ObjVar]]],
+        Field(default=None, description="Target (object, variable) to modify"),
+    ]
+
+
+class SystematicConfig(SubscriptableModel):
+    name: Annotated[str, Field(description="Name of the systematic variation")]
+    type: Annotated[
+        Literal["event", "object"],
+        Field(description="Whether variation is event/object-level"),
+    ]
+    up_function: Annotated[
+        Optional[Callable],
+        Field(default=None, description="Callable for 'up' variation"),
+    ]
+    down_function: Annotated[
+        Optional[Callable],
+        Field(default=None, description="Callable for 'down' variation"),
+    ]
+    transform: Annotated[
+        Optional[Callable],
+        Field(
+            default=lambda *x: x,
+            description="Optional function to apply transformation to inputs "
+            + "before applying systematic variation",
+        ),
+    ]
+    target: Annotated[
+        Optional[Union[ObjVar, List[ObjVar]]],
+        Field(default=None, description="Target (object, variable) to modify"),
+    ]
+    use: Annotated[
+        Optional[Union[ObjVar, List[ObjVar]]],
+        Field(
+            default=[],
+            description="(object, variable) inputs to variation functions. If variable "
+            + "is None, object is passed.",
+        ),
+    ]
+    symmetrise: Annotated[
+        bool,
+        Field(default=False, description="Whether to symmetrise variation"),
+    ]
+    op: Annotated[
+        Literal["mult", "add", "subtract"],
+        Field(
+            description="How (operation) to apply systematic variation function "
+            + "to targets"
+        ),
+    ]
+
+
+class StatisticalConfig(SubscriptableModel):
+    cabinetry_config: Annotated[
+        str,
+        Field(
+            description="Path to the YAML configuration file for the `cabinetry` \
+                statistical tool (non-differentiable analysis).",
+        ),
+    ]
+
+
+class PlottingConfig(SubscriptableModel):
+    process_colors: Annotated[
+        Optional[dict[str, str]],
+        Field(default=None, description="Hex colors for each process key"),
+    ]
+    process_labels: Annotated[
+        Optional[dict[str, str]],
+        Field(
+            default=None,
+            description="LaTeX‐style legend labels for each process",
+        ),
+    ]
+    process_order: Annotated[
+        Optional[List[str]],
+        Field(default=None, description="Draw/order sequence for processes"),
+    ]
