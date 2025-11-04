@@ -453,6 +453,8 @@ class Analysis:
             if correction.type != "object":
                 continue
 
+            # TODO: Migrate to CorrectionExecutor once branching logic is refactored
+            # This requires handling correctionlib vs custom functions with direction
             # Prepare arguments and targets
             corr_args, corr_static_kwargs = get_function_arguments(
                 correction.use,
@@ -538,6 +540,8 @@ class Analysis:
         if systematic.type != "event":
             return weights
 
+        # TODO: Migrate to CorrectionExecutor once branching logic is refactored
+        # This requires handling correctionlib vs custom functions with direction
         # Prepare arguments
         weight_args, weight_static_kwargs = get_function_arguments(
             systematic.use,
