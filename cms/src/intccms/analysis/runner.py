@@ -8,10 +8,12 @@ path (for iterating on statistical models without re-processing).
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from lzma import LZMAError
 
 from coffea.nanoevents import NanoAODSchema
 from coffea.processor import Runner
 from coffea.processor.executor import WorkItem
+from coffea.processor.executor import UprootMissTreeError
 
 from intccms.analysis.processor import UnifiedProcessor
 from intccms.skimming import FilesetManager
@@ -168,6 +170,8 @@ def run_processor_workflow(
             executor=executor,
             schema=schema,
             chunksize=chunksize,
+            savemetrics=True,
+            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, Exception),
         )
 
         # Run processor over fileset or workitems
@@ -197,7 +201,7 @@ def run_processor_workflow(
             f"{output.get('skimmed_events', 0):,} events after skim"
         )
 
-        return output
+        return output, report
 
     else:
         # Skip processor and load saved histograms
@@ -216,4 +220,4 @@ def run_processor_workflow(
         logger.info(f"Loaded histograms from {histograms_pkl}")
 
         # Return in same format as processor output
-        return {"histograms": histograms}
+        return {"histograms": histograms}, {}

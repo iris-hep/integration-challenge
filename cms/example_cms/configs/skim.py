@@ -12,9 +12,30 @@ from pathlib import Path
 from typing import List, Tuple
 
 from coffea.analysis_tools import PackedSelection
+from coffea.lumi_tools import LumiMask
 from intccms.utils.schema import WorkerEval
-from .cuts import lumi_mask
+#from .cuts import lumi_mask
 
+import awkward as ak
+
+lumifile16 = Path("./example_cms/corrections/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt").resolve()
+lumifile17 = Path("./example_cms/corrections/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt").resolve()
+lumifile18 = Path("./example_cms/corrections/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt").resolve()
+lmobj16 = LumiMask(lumifile16)
+lmobj17 = LumiMask(lumifile17)
+lmobj18 = LumiMask(lumifile18)
+
+lm16 = lambda run, lb, obj=lmobj16: obj(run, lb)
+lm17 = lambda run, lb, obj=lmobj17: obj(run, lb)
+lm18 = lambda run, lb, obj=lmobj18: obj(run, lb)
+
+
+# Build configuration
+year_run_config = [
+  ("2016", ["B", "C", "D", "E", "F"], lm16),
+  ("2017", ["B", "C", "D", "E", "F"], lm17),
+  ("2018", ["A", "B", "C", "D"], lm18),
+]
 
 def get_cross_sections_for_datasets(
     years: List[str],
@@ -56,6 +77,15 @@ def get_cross_sections_for_datasets(
             cross_sections.append(xsecs[dataset_name])
 
     return tuple(cross_sections)
+
+# Pre-build the lumi_mask configs
+lumi_mask_configs = []
+for year, runs, lm_func in year_run_config:
+  for _ in runs:
+      lumi_mask_configs.append({
+          "function": lm_func,
+          "use": [("event", "run"), ("event", "luminosityBlock")],
+      })
 
 
 # ==============================================================================
@@ -207,25 +237,19 @@ datasets_config = [
     },
     # Data: Single muon (different run periods per year)
     {
-        "name": "data",
-        "directories": tuple(
-            f"example_cms/datasets/{year}/SingleMuonRun{run}/"
-            for year, runs in [("2016", ["B", "C", "D", "E", "F"]),
-                              ("2017", ["B", "C", "D", "E", "F"]),
-                              ("2018", ["A", "B", "C", "D"])]
-            for run in runs
-        ),
-        "cross_sections": 1.0,
-        "file_pattern": "*.txt",
-        "tree_name": "Events",
-        "weight_branch": None,
-        "redirector": REDIRECTOR,
-        "is_data": True,
-        "lumi_mask": {
-            "function": lumi_mask,
-            "use": [("event", "run"), ("event", "luminosityBlock")],
-            "static_kwargs": {"lumifile": "./example_cms/corrections/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt"},
-        },
+          "name": "data",
+          "directories": tuple(
+              f"example_cms/datasets/{year}/SingleMuonRun{run}/"
+              for year, runs, _ in year_run_config
+              for run in runs
+          ),
+          "cross_sections": 1.0,
+          "file_pattern": "*.txt",
+          "tree_name": "Events",
+          "weight_branch": None,
+          "redirector": REDIRECTOR,
+          "is_data": True,
+          "lumi_mask": tuple(lumi_mask_configs),
     }
 ]
 
@@ -266,7 +290,7 @@ def default_skim_selection(puppimet, hlt):
 skimming_config = {
     "function": default_skim_selection,
     "use": [("PuppiMET", None), ("HLT", None)],
-    "chunk_size": 100_000,
+    "chunk_size": 200_000,
     "tree_name": "Events",
     # "output": {
     #     "format": "parquet",

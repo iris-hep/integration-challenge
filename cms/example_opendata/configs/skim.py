@@ -9,8 +9,9 @@ This module contains all skimming-related configuration including:
 
 from coffea.analysis_tools import PackedSelection
 from .cuts import lumi_mask
+import awkward as ak
 
-
+lumifile = "./example_opendata/corrections/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt"
 # ==============================================================================
 #  Dataset Configuration
 # ==============================================================================
@@ -73,7 +74,7 @@ datasets_config = [
         "lumi_mask": {
             "function": lumi_mask,
             "use": [("event", "run"), ("event", "luminosityBlock")],
-            "static_kwargs": {"lumifile": "./example_opendata/corrections/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt"},
+            "static_kwargs": {"goodruns": ak.from_json(open(lumifile, "rb"))},
         },
     }
 ]

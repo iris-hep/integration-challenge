@@ -6,8 +6,10 @@ to extract WorkItems from ROOT files.
 
 import logging
 from typing import Any, Dict, List
+from lzma import LZMAError
 
 from coffea.processor.executor import WorkItem
+from coffea.processor.executor import UprootMissTreeError
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +57,7 @@ class CoffeaMetadataExtractor:
             schema=schema,
             savemetrics=True,
             chunksize=chunksize,
+            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, Exception),
         )
 
         logger.debug(
