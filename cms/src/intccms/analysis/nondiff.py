@@ -12,11 +12,11 @@ import vector
 from coffea.analysis_tools import PackedSelection
 
 from intccms.analysis.base import Analysis
-from intccms.utils.output_files import (
+from intccms.utils.output import (
+    OutputDirectoryManager,
     save_histograms_to_pickle,
     save_histograms_to_root,
 )
-from intccms.utils.output_manager import OutputDirectoryManager
 from intccms.utils.stats import get_cabinetry_rebinning_router
 from intccms.utils.tools import get_function_arguments
 from intccms.utils.logging import setup_logging
@@ -369,7 +369,7 @@ class NonDiffAnalysis(Analysis):
         # build the workspace
         ws = cabinetry.workspace.build(cabinetry_config)
         # save the workspace
-        workspace_path = self.output_manager.get_statistics_dir() / "workspace.json"
+        workspace_path = self.output_manager.statistics_dir / "workspace.json"
         cabinetry.workspace.save(ws, workspace_path)
         # build the model and data
         model, data = cabinetry.model_utils.model_and_data(ws)
@@ -417,7 +417,7 @@ class NonDiffAnalysis(Analysis):
         )
 
         # Create visualizations
-        stats_dir = self.output_manager.get_statistics_dir()
+        stats_dir = self.output_manager.statistics_dir
 
         logger.info("Creating pre-fit data/MC plots")
         cabinetry.visualize.data_mc(

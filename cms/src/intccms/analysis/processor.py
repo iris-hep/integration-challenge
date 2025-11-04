@@ -23,11 +23,11 @@ from intccms.skimming.pipeline.stages import (
     save_events,
 )
 from intccms.skimming.workitem import resolve_lazy_values
-from intccms.utils.output_files import (
+from intccms.utils.output import (
+    OutputDirectoryManager,
     save_histograms_to_pickle,
     save_histograms_to_root,
 )
-from intccms.utils.output_manager import OutputDirectoryManager
 from intccms.utils.schema import Config
 from intccms.utils.tools import get_function_arguments
 
@@ -115,7 +115,7 @@ class UnifiedProcessor(ProcessorABC):
     >>>
     >>> runner = Runner(executor=FuturesExecutor(), schema=NanoAODSchema)
     >>> output = runner(fileset, "Events", processor_instance=processor)
-    >>> # Skimmed files saved to output_manager.get_skimmed_dir()
+    >>> # Skimmed files saved to output_manager.skimmed_dir
 
     **Example 2: Analyze pre-skimmed files**
 
@@ -127,7 +127,7 @@ class UnifiedProcessor(ProcessorABC):
     >>> metadata_lookup = generator.build_metadata_lookup()
     >>>
     >>> # Build fileset from skimmed files
-    >>> skimmed_dir = output_manager.get_skimmed_dir()
+    >>> skimmed_dir = output_manager.skimmed_dir
     >>> fileset_manager = FilesetManager(skimmed_dir, format="parquet")
     >>> skimmed_fileset = fileset_manager.build_fileset_from_datasets(generator.datasets)
     >>>
@@ -287,11 +287,9 @@ class UnifiedProcessor(ProcessorABC):
             self.analysis.process(events=events, metadata=metadata)
 
             # Step 3: Collect histograms if histogramming was enabled
-            logger.info("Step 3: Collect histograms if histogramming was enabled")
             if self.config.general.run_histogramming:
                 # Histograms are filled in-place in self.analysis.nD_hists_per_region
                 # Coffea will merge them across chunks
-                logger.info(f"self.analysis.nD_hists_per_region: {self.analysis.nD_hists_per_region}")
                 output["histograms"] = self.analysis.nD_hists_per_region
 
         # Track total events processed (input events, not after filtering)
@@ -360,7 +358,7 @@ class UnifiedProcessor(ProcessorABC):
         chunk_id = hashlib.md5(str(uuid.uuid4()).encode()).hexdigest()[:8]
 
         # Build path: skimmed_dir/dataset/chunk_id (no extension - writer adds it)
-        output_dir = Path(self.output_manager.get_skimmed_dir()) / dataset_name
+        output_dir = Path(self.output_manager.skimmed_dir) / dataset_name
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / chunk_id
 
@@ -399,7 +397,7 @@ class UnifiedProcessor(ProcessorABC):
         # Save histograms to disk if they were produced
         if self.config.general.run_histogramming and "histograms" in accumulator:
             # Save pickle format (for loading when run_processor=False)
-            histograms_pkl = self.output_manager.get_histograms_dir() / "processor_histograms.pkl"
+            histograms_pkl = self.output_manager.histograms_dir / "processor_histograms.pkl"
             save_histograms_to_pickle(
                 accumulator["histograms"],
                 output_file=histograms_pkl,
@@ -407,7 +405,7 @@ class UnifiedProcessor(ProcessorABC):
             logger.info(f"Saved processor histograms (pickle) to {histograms_pkl}")
 
             # Save ROOT format (for downstream tools/visualization)
-            histograms_root = self.output_manager.get_histograms_dir() / "histograms.root"
+            histograms_root = self.output_manager.histograms_dir / "histograms.root"
             save_histograms_to_root(
                 accumulator["histograms"],
                 output_file=histograms_root,
@@ -436,7 +434,7 @@ class UnifiedProcessor(ProcessorABC):
                 # Run the statistics
                 try:
                     self.analysis.run_statistics(str(cabinetry_config_path))
-                    stats_dir = self.output_manager.get_statistics_dir()
+                    stats_dir = self.output_manager.statistics_dir
                     logger.info(f"Statistical analysis complete. Results saved to {stats_dir}")
                 except Exception as e:
                     logger.error(f"Statistics failed: {e}", exc_info=True)

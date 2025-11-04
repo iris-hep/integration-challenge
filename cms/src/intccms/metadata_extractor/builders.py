@@ -228,7 +228,7 @@ class FilesetBuilder:
         fileset : Dict[str, Dict[str, Any]]
             The fileset mapping to save
         """
-        output_dir = Path(self.output_manager.get_metadata_dir())
+        output_dir = Path(self.output_manager.metadata_dir)
         fileset_path = output_dir / "fileset.json"
 
         save_json(fileset, fileset_path)

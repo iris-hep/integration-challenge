@@ -85,7 +85,7 @@ class DatasetMetadataManager:
         """
         self.dataset_manager = dataset_manager
         self.output_manager = output_manager
-        self.output_directory = self.output_manager.get_metadata_dir()
+        self.output_directory = self.output_manager.metadata_dir
 
         # Initialize components
         self.fileset_builder = FilesetBuilder(dataset_manager, output_manager)

@@ -150,12 +150,12 @@ def resolve_output_path(
 
     # Determine if local or remote
     if output_cfg.local or not output_cfg.base_uri:
-        base_dir = Path(output_manager.get_skimmed_dir())
+        base_dir = Path(output_manager.skimmed_dir)
         return str(base_dir / relative_path), True, metadata
     else:
         base_uri = (output_cfg.base_uri or "").rstrip("/")
         if base_uri == "":
-            base_dir = Path(output_manager.get_skimmed_dir())
+            base_dir = Path(output_manager.skimmed_dir)
             return str(base_dir / relative_path), output_cfg.local, metadata
         else:
             path = f"{base_uri}/{relative_path}"
