@@ -380,7 +380,7 @@ class UnifiedProcessor(ProcessorABC):
         """Finalize accumulator after all chunks processed.
 
         Called once by coffea after all chunks are merged.
-        Saves histograms to disk for later use without re-running processor.
+        Saves histograms to disk and optionally runs statistical analysis.
 
         Parameters
         ----------
@@ -413,5 +413,33 @@ class UnifiedProcessor(ProcessorABC):
                 output_file=histograms_root,
             )
             logger.info(f"Saved processor histograms (ROOT) to {histograms_root}")
+
+            # Run statistical analysis if enabled
+            if (self.config.general.run_statistics
+                and self.config.statistics
+                and self.config.statistics.cabinetry_config):
+
+                logger.info("Running statistical analysis...")
+
+                # Verify cabinetry config exists
+                cabinetry_config_path = Path(self.config.statistics.cabinetry_config)
+                if not cabinetry_config_path.exists():
+                    logger.warning(
+                        f"Cabinetry config not found: {cabinetry_config_path}. "
+                        "Skipping statistics step."
+                    )
+                    return accumulator
+
+                # Set histograms in the analysis instance
+                self.analysis.nD_hists_per_region = accumulator["histograms"]
+
+                # Run the statistics
+                try:
+                    self.analysis.run_statistics(str(cabinetry_config_path))
+                    stats_dir = self.output_manager.get_statistics_dir()
+                    logger.info(f"Statistical analysis complete. Results saved to {stats_dir}")
+                except Exception as e:
+                    logger.error(f"Statistics failed: {e}", exc_info=True)
+                    # Don't raise - allow workflow to complete
 
         return accumulator
