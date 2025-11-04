@@ -16,7 +16,7 @@ from intccms.utils.logging import setup_logging, log_banner
 from intccms.utils.schema import Config, load_config_with_restricted_cli
 from intccms.metadata_extractor import DatasetMetadataManager
 from intccms.skimming.manager import SkimmingManager
-from intccms.utils.output_manager import OutputDirectoryManager
+from intccms.utils.output import OutputDirectoryManager
 
 # -----------------------------
 # Logging Configuration
@@ -94,7 +94,7 @@ def main():
         return
     elif analysis_mode == "nondiff":
         logger.info(log_banner("Running Non-Differentiable Analysis"))
-        from intccms.utils.output_files import save_histograms_to_root
+        from intccms.utils.output import save_histograms_to_root
 
         nondiff_analysis = NonDiffAnalysis(config, output_manager)
         logger.info(f"Analysis initialized for {len(datasets)} datasets")

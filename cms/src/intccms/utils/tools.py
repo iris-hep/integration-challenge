@@ -120,7 +120,7 @@ def get_function_arguments(
             try:
                 args.append(objects[obj_name][field_name])
             except KeyError:
-                raise_doeerror(f"{obj_name}.{field_name}")
+                raise_error(f"{obj_name}.{field_name}")
         elif obj_name == "event" and field_name:
             try:
                 args.append(objects[field_name])

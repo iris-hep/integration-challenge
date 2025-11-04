@@ -5245,7 +5245,7 @@ packages:
 - pypi: .
   name: intccms
   version: 2.0.0
-  sha256: 5b977d2ac5af90a6227351ba7674919cf93108060ce2ee9073cf81ff45cfc3ce
+  sha256: e57a595153ff3896ae4ad0f76885c9fcb9a0f0ce463e78610c0cc961a3c8b26e
   requires_python: '>=3.12'
   editable: true
 - pypi: https://files.pythonhosted.org/packages/32/4b/b99e37f88336009971405cbb7630610322ed6fbfa31e1d7ab3fbf3049a2d/invoke-2.2.1-py3-none-any.whl

@@ -16,8 +16,10 @@ from coffea.processor.executor import WorkItem
 from intccms.analysis.processor import UnifiedProcessor
 from intccms.skimming import FilesetManager
 from intccms.utils.filters import filter_by_process
-from intccms.utils.output_files import load_histograms_from_pickle
-from intccms.utils.output_manager import OutputDirectoryManager
+from intccms.utils.output import (
+    OutputDirectoryManager,
+    load_histograms_from_pickle,
+)
 from intccms.utils.schema import Config
 
 logger = logging.getLogger(__name__)
@@ -102,7 +104,7 @@ def run_processor_workflow(
         if config.general.use_skimmed_input:
             logger.info("Auto-detecting skimmed files (use_skimmed_input=True)...")
 
-            skimmed_dir = Path(output_manager.get_skimmed_dir())
+            skimmed_dir = Path(output_manager.skimmed_dir)
             if not skimmed_dir.exists():
                 raise FileNotFoundError(
                     f"Skimmed directory does not exist: {skimmed_dir}\n"
@@ -199,7 +201,7 @@ def run_processor_workflow(
         logger.info("Skipping processor (run_processor=False)")
         logger.info("Loading previously saved histograms from disk...")
 
-        histograms_pkl = output_manager.get_histograms_dir() / "processor_histograms.pkl"
+        histograms_pkl = output_manager.histograms_dir / "processor_histograms.pkl"
 
         if not histograms_pkl.exists():
             raise FileNotFoundError(
