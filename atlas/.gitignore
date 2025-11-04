@@ -212,3 +212,5 @@ __marimo__/
 ntuple_production/production_status.json
 # preprocess json
 preprocess_output.json
+# Dask reports
+*html
