@@ -566,7 +566,7 @@ def plot_summary_dashboard(
     ax5 = fig.add_subplot(gs[2, 0])
     compression_ratios = stats["compression_ratios"]
     if compression_ratios:
-        bp2 = ax5.boxplot(compression_ratios, vert=True, patch_artist=True, widths=0.5, whis=[5, 95])
+        bp2 = ax5.boxplot(compression_ratios, orientation='vertical', patch_artist=True, widths=0.5, whis=[5, 95])
         bp2['boxes'][0].set_facecolor('coral')
         bp2['boxes'][0].set_alpha(0.6)
         ax5.axhline(y=2.0, color='green', linestyle='--', alpha=0.5, linewidth=1)
@@ -587,7 +587,7 @@ def plot_summary_dashboard(
     dataset_names = list(dataset_sizes.keys())
     size_data = [dataset_sizes[name] for name in dataset_names]
     if size_data:
-        bp3 = ax6.boxplot(size_data, labels=dataset_names, patch_artist=True, whis=[5, 95])
+        bp3 = ax6.boxplot(size_data, tick_labels=dataset_names, patch_artist=True, whis=[5, 95])
         for patch in bp3['boxes']:
             patch.set_facecolor('steelblue')
             patch.set_alpha(0.6)
