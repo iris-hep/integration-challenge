@@ -202,6 +202,54 @@ class GeneralConfig(SubscriptableModel):
             "if available.",
         ),
     ]
+    output_dir: Annotated[
+        Optional[str],
+        Field(
+            default="output/",
+            description="Root directory for all analysis outputs "
+            "(plots, models, histograms, statistics, etc.).",
+        ),
+    ]
+    cache_dir: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Cache directory for intermediate products of the analysis. "
+            "If None, uses system temp directory with 'graep' subdirectory.",
+        ),
+    ]
+    metadata_dir: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Directory containing existing metadata JSON files. "
+            "If None, uses output_dir/metadata/ and creates if needed.",
+        ),
+    ]
+    skimmed_dir: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Directory containing existing skimmed ROOT files. "
+            "If None, uses output_dir/skimmed/ and creates if needed.",
+        ),
+    ]
+    processes: Annotated[
+        Optional[List[str]],
+        Field(
+            default=None,
+            description="If specified, limit the analysis to this list "
+            "of process names.",
+        ),
+    ]
+    channels: Annotated[
+        Optional[List[str]],
+        Field(
+            default=None,
+            description="If specified, limit the analysis to this list "
+            "of channel names.",
+        ),
+    ]
     metrics: Annotated[
         MetricsConfig,
         Field(
@@ -210,6 +258,16 @@ class GeneralConfig(SubscriptableModel):
             "Controls metrics collection, worker tracking, and measurement persistence.",
         ),
     ]
+
+    @model_validator(mode="after")
+    def validate_general(self) -> "GeneralConfig":
+        """Validate the general configuration settings."""
+        if self.analysis not in ["nondiff", "skip"]:
+            raise ValueError(
+                f"Invalid analysis mode '{self.analysis}'. Must be 'nondiff' or 'skip'."
+            )
+
+        return self
 
 
 class GoodObjectMasksConfig(FunctorConfig):
