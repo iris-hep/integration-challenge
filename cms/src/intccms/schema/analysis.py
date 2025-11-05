@@ -279,9 +279,29 @@ class GoodObjectMasksConfig(FunctorConfig):
         ),
     ]
 
+    @model_validator(mode="after")
+    def validate_fields(self) -> "GoodObjectMasksConfig":
+        """Validate that the object is a recognised type."""
+        if self.object not in ["Muon", "Jet", "FatJet"]:
+            raise ValueError(
+                f"Invalid object '{self.object}'. Must be one of "
+                f"'Muon' 'Jet' or 'FatJet'."
+            )
+
+        return self
+
 
 class GoodObjectMasksBlockConfig(SubscriptableModel):
     """Configuration block for defining 'good' object masks."""
+
+    analysis: Annotated[
+        List[GoodObjectMasksConfig],
+        Field(description="Masks for the main physics analysis branch."),
+    ]
+    mva: Annotated[
+        List[GoodObjectMasksConfig],
+        Field(description="Masks for the MVA training data branch."),
+    ]
 
 
 class ObservableConfig(FunctorConfig):
@@ -312,6 +332,18 @@ class ObservableConfig(FunctorConfig):
 class GhostObservable(FunctorConfig):
     """Represents a derived quantity computed once and attached to the event record."""
 
+    names: Annotated[
+        Union[str, List[str]],
+        Field(description="Name(s) of the computed observable(s)."),
+    ]
+    collections: Annotated[
+        Union[str, List[str]],
+        Field(
+            description="The collection(s) to which the "
+            + "new observable(s) should be attached."
+        ),
+    ]
+
 
 class ChannelConfig(SubscriptableModel):
     name: Annotated[str, Field(description="Name of the analysis channel")]
@@ -339,6 +371,31 @@ class ChannelConfig(SubscriptableModel):
             + "If None, defaults to True.",
         ),
     ]
+
+    @model_validator(mode="after")
+    def validate_fields(self) -> "ChannelConfig":
+        """Validate channel configuration fields."""
+        if self.selection and self.selection.function and not self.selection.use:
+            raise ValueError(
+                "If 'selection.function' is provided, 'selection.use' must also "
+                + "be specified."
+            )
+        if not self.observables:
+            raise ValueError("Each channel must have at least one observable.")
+
+        obs_names = [obs.name for obs in self.observables]
+        if self.fit_observable not in obs_names:
+            raise ValueError(
+                f"'fit_observable'='{self.fit_observable}' is not in the list of "
+                + f"observables: {sorted(obs_names)}"
+            )
+
+        if len(set(obs_names)) != len(obs_names):
+            raise ValueError(
+                "Duplicate observable names found in the channel configuration."
+            )
+
+        return self
 
 
 class CorrectionConfig(SubscriptableModel):
@@ -390,6 +447,30 @@ class CorrectionConfig(SubscriptableModel):
         Field(default=None, description="Target (object, variable) to modify"),
     ]
 
+    @model_validator(mode="after")
+    def validate_corrections_fields(self) -> "CorrectionConfig":
+        """Validate correction configuration fields."""
+        if self.use_correctionlib:
+            if not self.file:
+                raise ValueError(
+                    "If 'use_correctionlib' is True, 'file' must also be specified."
+                )
+            if not self.key:
+                raise ValueError(
+                    "If 'use_correctionlib' is True, 'key' must also be specified."
+                )
+        if self.type == "object":
+            if not self.target:
+                raise ValueError(
+                    "If correction 'type' is 'object', 'target' must be specified."
+                )
+            if self.target[2] is None:
+                raise ValueError(
+                    "If correction 'type' is 'object', "
+                    "target variable must not be None."
+                )
+        return self
+
 
 class SystematicConfig(SubscriptableModel):
     name: Annotated[str, Field(description="Name of the systematic variation")]
@@ -436,6 +517,23 @@ class SystematicConfig(SubscriptableModel):
             + "to targets"
         ),
     ]
+
+    @model_validator(mode="after")
+    def validate_functions_and_consistency(self) -> "SystematicConfig":
+        """Validate systematic configuration fields."""
+        if not self.up_function and not self.down_function:
+            raise ValueError(
+                f"Systematic '{self.name}' must define at least one of 'up_function' "
+                + "or 'down_function'."
+            )
+
+        if self.type == "object":
+            if not self.target:
+                raise ValueError(
+                    "If correction 'type' is 'object', 'target' must be specified."
+                )
+
+        return self
 
 
 class StatisticalConfig(SubscriptableModel):
