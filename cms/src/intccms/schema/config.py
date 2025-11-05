@@ -24,6 +24,7 @@ from intccms.schema.analysis import (
 from intccms.schema.base import FunctorConfig, SubscriptableModel
 from intccms.schema.mva import MVAConfig
 from intccms.schema.skimming import PreprocessConfig
+from intccms.schema.datasets import DatasetManagerConfig
 
 
 class Config(SubscriptableModel):
