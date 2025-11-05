@@ -32,6 +32,12 @@ from intccms.metrics.inspector.integration import (
     extract_files_from_dataset_manager,
     get_dataset_file_counts,
 )
+from intccms.metrics.inspector.format import (
+    format_overall_stats_table,
+    format_branch_stats_table,
+    format_dataset_stats_table,
+    format_compression_stats_table,
+)
 from intccms.metrics.inspector import plot
 
 __all__ = [
@@ -49,6 +55,11 @@ __all__ = [
     # Integration
     "extract_files_from_dataset_manager",
     "get_dataset_file_counts",
+    # Formatting
+    "format_overall_stats_table",
+    "format_branch_stats_table",
+    "format_dataset_stats_table",
+    "format_compression_stats_table",
     # Plotting
     "plot",
 ]

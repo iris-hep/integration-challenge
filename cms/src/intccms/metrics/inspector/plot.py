@@ -7,6 +7,40 @@ import numpy as np
 from intccms.metrics.inspector.aggregator import compute_branch_statistics, group_by_dataset
 
 
+def _apply_modern_style(ax):
+    """Apply modern plotting style to axes.
+
+    Applies consistent styling:
+    - Internal tick marks on all sides
+    - Minor ticks enabled
+    - Light grid
+    - Removes top/right spines for cleaner look
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axes object to style
+    """
+    # Internal tick marks on all sides
+    ax.tick_params(
+        direction='in',
+        which='both',      # Apply to both major and minor ticks
+        top=True,          # Show ticks on top
+        right=True,        # Show ticks on right
+        labelsize=10
+    )
+
+    # Enable minor ticks
+    ax.minorticks_on()
+
+    # Light grid
+    ax.grid(True, alpha=0.2, linewidth=0.5)
+
+    # Remove top and right spines for cleaner look
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+
 def plot_event_distribution(
     results: List[Dict],
     title: str = "Event Distribution Across Files",
@@ -35,11 +69,13 @@ def plot_event_distribution(
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    ax.hist(event_counts, bins=30, edgecolor='black', alpha=0.7)
+    ax.hist(event_counts, bins=30, edgecolor='none', alpha=0.6, color='steelblue')
     ax.set_xlabel("Events per File", fontsize=12)
     ax.set_ylabel("Number of Files", fontsize=12)
     ax.set_title(title, fontsize=14, fontweight='bold')
-    ax.grid(True, alpha=0.3)
+
+    # Apply modern style
+    _apply_modern_style(ax)
 
     # Add stats text
     stats_text = f"Files: {len(event_counts)}\n"
@@ -93,24 +129,28 @@ def plot_dataset_comparison(
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
     # Files per dataset
-    ax1.barh(datasets, num_files, color='steelblue', edgecolor='black')
+    ax1.barh(datasets, num_files, color='steelblue', edgecolor='none', alpha=0.6)
     ax1.set_xlabel("Number of Files", fontsize=12)
     ax1.set_title("Files per Dataset", fontsize=13, fontweight='bold')
-    ax1.grid(True, alpha=0.3, axis='x')
 
     # Add values on bars
     for i, v in enumerate(num_files):
         ax1.text(v, i, f' {v:,}', va='center', fontsize=9)
 
+    # Apply modern style
+    _apply_modern_style(ax1)
+
     # Events per dataset
-    ax2.barh(datasets, total_events, color='coral', edgecolor='black')
+    ax2.barh(datasets, total_events, color='coral', edgecolor='none', alpha=0.6)
     ax2.set_xlabel("Total Events", fontsize=12)
     ax2.set_title("Events per Dataset", fontsize=13, fontweight='bold')
-    ax2.grid(True, alpha=0.3, axis='x')
 
     # Add values on bars
     for i, v in enumerate(total_events):
         ax2.text(v, i, f' {v:,}', va='center', fontsize=9)
+
+    # Apply modern style
+    _apply_modern_style(ax2)
 
     fig.suptitle(title, fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
@@ -120,6 +160,56 @@ def plot_dataset_comparison(
         print(f"Saved to {save_path}")
 
     return fig, (ax1, ax2)
+
+
+def plot_events_per_file_by_dataset(
+    dataset_stats: Dict[str, Dict],
+    title: str = "Events per File by Dataset",
+    figsize: tuple = (10, 6),
+    save_path: Optional[str] = None,
+):
+    """Plot events/file ratio comparison across datasets.
+
+    Parameters
+    ----------
+    dataset_stats : Dict[str, dict]
+        Per-dataset statistics from compute_dataset_statistics()
+    title : str
+        Plot title
+    figsize : tuple
+        Figure size
+    save_path : str, optional
+        Path to save figure
+
+    Examples
+    --------
+    >>> plot_events_per_file_by_dataset(dataset_stats)
+    """
+    datasets = list(dataset_stats.keys())
+    events_per_file = [stats["avg_events_per_file"] for stats in dataset_stats.values()]
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Horizontal bar chart showing events/file ratio
+    bars = ax.barh(datasets, events_per_file, color='mediumseagreen', edgecolor='none', alpha=0.6)
+
+    ax.set_xlabel("Average Events per File", fontsize=12)
+    ax.set_title(title, fontsize=14, fontweight='bold')
+
+    # Add values on bars
+    for i, v in enumerate(events_per_file):
+        ax.text(v, i, f' {v:,.0f}', va='center', fontsize=9)
+
+    # Apply modern style
+    _apply_modern_style(ax)
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Saved to {save_path}")
+
+    return fig, ax
 
 
 def plot_branch_size_distribution(
@@ -151,15 +241,17 @@ def plot_branch_size_distribution(
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    # Create box plot
-    bp = ax.boxplot(sizes_mb, vert=True, patch_artist=True, widths=0.5)
+    # Create box plot with 5th-95th percentile whiskers
+    bp = ax.boxplot(sizes_mb, orientation='vertical', patch_artist=True, widths=0.5, whis=[5, 95])
     bp['boxes'][0].set_facecolor('mediumseagreen')
-    bp['boxes'][0].set_alpha(0.7)
+    bp['boxes'][0].set_alpha(0.6)
 
     ax.set_ylabel("Branch Size (MB)", fontsize=12)
     ax.set_title(title, fontsize=14, fontweight='bold')
     ax.set_xticks([])
-    ax.grid(True, alpha=0.3, axis='y')
+
+    # Apply modern style
+    _apply_modern_style(ax)
 
     # Add stats text
     stats_text = f"Total branches: {stats['num_branches']}\n"
@@ -215,15 +307,17 @@ def plot_branch_compression_distribution(
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    # Create box plot
-    bp = ax.boxplot(compression_ratios, vert=True, patch_artist=True, widths=0.5)
+    # Create box plot with 5th-95th percentile whiskers
+    bp = ax.boxplot(compression_ratios, orientation='vertical', patch_artist=True, widths=0.5, whis=[5, 95])
     bp['boxes'][0].set_facecolor('coral')
-    bp['boxes'][0].set_alpha(0.7)
+    bp['boxes'][0].set_alpha(0.6)
 
     ax.set_ylabel("Compression Ratio", fontsize=12)
     ax.set_title(title, fontsize=14, fontweight='bold')
     ax.set_xticks([])
-    ax.grid(True, alpha=0.3, axis='y')
+
+    # Apply modern style
+    _apply_modern_style(ax)
 
     # Add reference lines
     ax.axhline(y=2.0, color='green', linestyle='--', alpha=0.5, label='Good (>2x)')
@@ -294,33 +388,37 @@ def plot_branch_distributions_by_dataset(
     dataset_names = list(dataset_sizes.keys())
     size_data = [dataset_sizes[name] for name in dataset_names]
 
-    bp1 = ax1.boxplot(size_data, labels=dataset_names, patch_artist=True)
+    bp1 = ax1.boxplot(size_data, tick_labels=dataset_names, patch_artist=True, whis=[5, 95])
     for patch in bp1['boxes']:
         patch.set_facecolor('steelblue')
-        patch.set_alpha(0.7)
+        patch.set_alpha(0.6)
 
     ax1.set_ylabel("Branch Size (MB)", fontsize=12)
     ax1.set_title("Branch Sizes", fontsize=13, fontweight='bold')
-    ax1.grid(True, alpha=0.3, axis='y')
     ax1.tick_params(axis='x', rotation=45)
+
+    # Apply modern style
+    _apply_modern_style(ax1)
 
     # Compression ratios per dataset
     compression_data = [dataset_compressions[name] for name in dataset_names if dataset_compressions[name]]
     compression_labels = [name for name in dataset_names if dataset_compressions[name]]
 
     if compression_data:
-        bp2 = ax2.boxplot(compression_data, labels=compression_labels, patch_artist=True)
+        bp2 = ax2.boxplot(compression_data, tick_labels=compression_labels, patch_artist=True, whis=[5, 95])
         for patch in bp2['boxes']:
             patch.set_facecolor('coral')
-            patch.set_alpha(0.7)
+            patch.set_alpha(0.6)
 
         ax2.axhline(y=2.0, color='green', linestyle='--', alpha=0.5, linewidth=1)
         ax2.axhline(y=1.5, color='orange', linestyle='--', alpha=0.5, linewidth=1)
 
     ax2.set_ylabel("Compression Ratio", fontsize=12)
     ax2.set_title("Compression Ratios", fontsize=13, fontweight='bold')
-    ax2.grid(True, alpha=0.3, axis='y')
     ax2.tick_params(axis='x', rotation=45)
+
+    # Apply modern style
+    _apply_modern_style(ax2)
 
     fig.suptitle(title, fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
@@ -368,11 +466,13 @@ def plot_file_size_distribution(
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    ax.hist(file_sizes_gb, bins=30, edgecolor='black', alpha=0.7, color='purple')
+    ax.hist(file_sizes_gb, bins=30, edgecolor='none', alpha=0.6, color='purple')
     ax.set_xlabel("File Size (GB)", fontsize=12)
     ax.set_ylabel("Number of Files", fontsize=12)
     ax.set_title(title, fontsize=14, fontweight='bold')
-    ax.grid(True, alpha=0.3)
+
+    # Apply modern style
+    _apply_modern_style(ax)
 
     # Add stats text
     stats_text = f"Files: {len(file_sizes_gb)}\n"
@@ -427,54 +527,54 @@ def plot_summary_dashboard(
     # 1. Event distribution
     ax1 = fig.add_subplot(gs[0, 0])
     event_counts = [r["num_events"] for r in results]
-    ax1.hist(event_counts, bins=30, edgecolor='black', alpha=0.7)
+    ax1.hist(event_counts, bins=30, edgecolor='none', alpha=0.6, color='steelblue')
     ax1.set_xlabel("Events per File", fontsize=10)
     ax1.set_ylabel("Number of Files", fontsize=10)
     ax1.set_title("Event Distribution", fontweight='bold', fontsize=11)
-    ax1.grid(True, alpha=0.3)
+    _apply_modern_style(ax1)
 
     # 2. Dataset comparison - events
     ax2 = fig.add_subplot(gs[0, 1])
     datasets = list(dataset_stats.keys())
     total_events = [stats["total_events"] for stats in dataset_stats.values()]
-    ax2.barh(datasets, total_events, color='coral', edgecolor='black')
+    ax2.barh(datasets, total_events, color='coral', edgecolor='none', alpha=0.6)
     ax2.set_xlabel("Total Events", fontsize=10)
     ax2.set_title("Events per Dataset", fontweight='bold', fontsize=11)
-    ax2.grid(True, alpha=0.3, axis='x')
+    _apply_modern_style(ax2)
 
     # 3. Dataset comparison - files
     ax3 = fig.add_subplot(gs[1, 0])
     num_files = [stats["num_files"] for stats in dataset_stats.values()]
-    ax3.barh(datasets, num_files, color='steelblue', edgecolor='black')
+    ax3.barh(datasets, num_files, color='steelblue', edgecolor='none', alpha=0.6)
     ax3.set_xlabel("Number of Files", fontsize=10)
     ax3.set_title("Files per Dataset", fontweight='bold', fontsize=11)
-    ax3.grid(True, alpha=0.3, axis='x')
+    _apply_modern_style(ax3)
 
     # 4. Branch size distribution (aggregated)
     ax4 = fig.add_subplot(gs[1, 1])
     stats = compute_branch_statistics(results)
     sizes_mb = [s / 1024 / 1024 for s in stats["branch_sizes"]]
-    bp = ax4.boxplot(sizes_mb, vert=True, patch_artist=True, widths=0.5)
+    bp = ax4.boxplot(sizes_mb, orientation='vertical', patch_artist=True, widths=0.5, whis=[5, 95])
     bp['boxes'][0].set_facecolor('mediumseagreen')
-    bp['boxes'][0].set_alpha(0.7)
+    bp['boxes'][0].set_alpha(0.6)
     ax4.set_ylabel("Branch Size (MB)", fontsize=10)
     ax4.set_title("Branch Size Distribution", fontweight='bold', fontsize=11)
     ax4.set_xticks([])
-    ax4.grid(True, alpha=0.3, axis='y')
+    _apply_modern_style(ax4)
 
     # 5. Branch compression distribution (aggregated)
     ax5 = fig.add_subplot(gs[2, 0])
     compression_ratios = stats["compression_ratios"]
     if compression_ratios:
-        bp2 = ax5.boxplot(compression_ratios, vert=True, patch_artist=True, widths=0.5)
+        bp2 = ax5.boxplot(compression_ratios, vert=True, patch_artist=True, widths=0.5, whis=[5, 95])
         bp2['boxes'][0].set_facecolor('coral')
-        bp2['boxes'][0].set_alpha(0.7)
+        bp2['boxes'][0].set_alpha(0.6)
         ax5.axhline(y=2.0, color='green', linestyle='--', alpha=0.5, linewidth=1)
         ax5.axhline(y=1.5, color='orange', linestyle='--', alpha=0.5, linewidth=1)
     ax5.set_ylabel("Compression Ratio", fontsize=10)
     ax5.set_title("Compression Distribution", fontweight='bold', fontsize=11)
     ax5.set_xticks([])
-    ax5.grid(True, alpha=0.3, axis='y')
+    _apply_modern_style(ax5)
 
     # 6. Per-dataset branch size comparison
     ax6 = fig.add_subplot(gs[2, 1])
@@ -487,14 +587,14 @@ def plot_summary_dashboard(
     dataset_names = list(dataset_sizes.keys())
     size_data = [dataset_sizes[name] for name in dataset_names]
     if size_data:
-        bp3 = ax6.boxplot(size_data, labels=dataset_names, patch_artist=True)
+        bp3 = ax6.boxplot(size_data, labels=dataset_names, patch_artist=True, whis=[5, 95])
         for patch in bp3['boxes']:
             patch.set_facecolor('steelblue')
-            patch.set_alpha(0.7)
+            patch.set_alpha(0.6)
         ax6.tick_params(axis='x', rotation=45)
     ax6.set_ylabel("Branch Size (MB)", fontsize=10)
     ax6.set_title("Branch Sizes by Dataset", fontweight='bold', fontsize=11)
-    ax6.grid(True, alpha=0.3, axis='y')
+    _apply_modern_style(ax6)
 
     fig.suptitle("Input Data Characterization Summary", fontsize=16, fontweight='bold')
 
