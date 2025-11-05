@@ -11,6 +11,96 @@ from intccms.schema.base import FunctorConfig, ObjVar, SubscriptableModel
 from intccms.utils.binning import validate_binning_spec, binning_to_edges
 
 
+class MetricsConfig(SubscriptableModel):
+    """Performance benchmarking configuration.
+
+    Controls performance metrics collection, worker tracking, and benchmark
+    measurement persistence. All features are opt-in and have minimal overhead
+    when enabled (~0.2%), zero overhead when disabled.
+
+    Attributes
+    ----------
+    enable : bool
+        Master switch for all metrics collection. When False, no overhead.
+    track_workers : bool
+        Enable background thread tracking worker count every `worker_tracking_interval` seconds.
+        Required for core efficiency calculations.
+    worker_tracking_interval : float
+        Seconds between worker count samples (default: 1.0 second).
+    save_measurements : bool
+        Save complete benchmark measurement to disk for later reanalysis.
+        Creates timestamped directory with task results, timing, worker timeline, etc.
+    generate_plots : bool
+        Auto-generate performance visualization plots (worker timeline, runtime distributions, etc.).
+    generate_reports : bool
+        Auto-generate human-readable summary reports matching idap-200gbps format.
+    measurement_name : Optional[str]
+        Custom name for measurement directory. If None, uses timestamp.
+    target_throughput_gbps : float
+        Target throughput for comparison (default: 200.0 Gbps for idap-200gbps target).
+    """
+
+    enable: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="Enable performance metrics collection. When False, zero overhead.",
+        ),
+    ]
+    track_workers: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="Track worker count over time in background thread. "
+            "Required for core efficiency calculations.",
+        ),
+    ]
+    worker_tracking_interval: Annotated[
+        float,
+        Field(
+            default=1.0,
+            description="Seconds between worker count samples (default: 1.0).",
+            gt=0.0,
+        ),
+    ]
+    save_measurements: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="Save complete measurement to disk for later reanalysis.",
+        ),
+    ]
+    generate_plots: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="Auto-generate performance visualization plots.",
+        ),
+    ]
+    generate_reports: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="Auto-generate human-readable summary reports.",
+        ),
+    ]
+    measurement_name: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Custom measurement name. If None, uses timestamp YYYY-MM-DD_HH-MM-SS.",
+        ),
+    ]
+    target_throughput_gbps: Annotated[
+        float,
+        Field(
+            default=200.0,
+            description="Target throughput for comparison (e.g., 200 Gbps for idap-200gbps).",
+            gt=0.0,
+        ),
+    ]
+
+
 class GeneralConfig(SubscriptableModel):
     lumi: Annotated[float, Field(description="Integrated luminosity in /pb")]
     weight_branch: Annotated[
@@ -110,6 +200,14 @@ class GeneralConfig(SubscriptableModel):
             default=True,
             description="If True, read preprocessed data from the cache directory "
             "if available.",
+        ),
+    ]
+    metrics: Annotated[
+        MetricsConfig,
+        Field(
+            default_factory=MetricsConfig,
+            description="Performance benchmarking configuration. "
+            "Controls metrics collection, worker tracking, and measurement persistence.",
         ),
     ]
 

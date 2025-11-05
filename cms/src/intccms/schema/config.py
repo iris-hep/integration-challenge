@@ -16,6 +16,7 @@ from intccms.schema.analysis import (
     GeneralConfig,
     GhostObservable,
     GoodObjectMasksBlockConfig,
+    MetricsConfig,
     PlottingConfig,
     StatisticalConfig,
     SystematicConfig,
@@ -90,7 +91,10 @@ class Config(SubscriptableModel):
             description="Global plotting configuration (all keys are optional)",
         ),
     ]
-
+    datasets: Annotated[
+        DatasetManagerConfig,
+        Field(description="Dataset management configuration (required)")
+    ]
 
 def load_config_with_restricted_cli(
     base_cfg: dict, cli_args: list[str]
