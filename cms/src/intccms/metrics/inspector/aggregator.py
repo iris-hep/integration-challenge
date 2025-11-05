@@ -86,11 +86,13 @@ def get_top_branches(results: List[Dict], top_n: int = 20) -> List[Tuple[str, in
 
     for result in results:
         for branch_name, info in result["branches"].items():
-            branch_totals[branch_name] += info["num_bytes"]
+            # info is tuple: (num_bytes, compressed_bytes, uncompressed_bytes)
+            num_bytes, compressed_bytes, uncompressed_bytes = info
+            branch_totals[branch_name] += num_bytes
 
             # Track compression ratios if available
-            if info["compressed_bytes"] > 0 and info["uncompressed_bytes"] > 0:
-                ratio = info["uncompressed_bytes"] / info["compressed_bytes"]
+            if compressed_bytes > 0 and uncompressed_bytes > 0:
+                ratio = uncompressed_bytes / compressed_bytes
                 branch_compression[branch_name].append(ratio)
 
     # Compute average compression ratio per branch
@@ -273,14 +275,15 @@ def compute_branch_statistics(results: List[Dict]) -> Dict:
         for branch_name, info in result["branches"].items():
             all_branch_names.add(branch_name)
 
+            # info is tuple: (num_bytes, compressed_bytes, uncompressed_bytes)
+            num_bytes, compressed_bytes, uncompressed_bytes = info
+
             # Aggregate total size for this branch
-            branch_totals[branch_name] += info["num_bytes"]
+            branch_totals[branch_name] += num_bytes
 
             # Collect compression ratio if available
-            comp = info.get("compressed_bytes", 0)
-            uncomp = info.get("uncompressed_bytes", 0)
-            if comp > 0 and uncomp > 0:
-                ratio = uncomp / comp
+            if compressed_bytes > 0 and uncompressed_bytes > 0:
+                ratio = uncompressed_bytes / compressed_bytes
                 compression_ratios.append(ratio)
 
     # Convert to lists for plotting
