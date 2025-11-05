@@ -81,27 +81,36 @@ def inspect_file(filepath: str, max_branches: Optional[int] = None) -> Dict:
                 file_size_bytes = Path(filepath).stat().st_size
 
             result = {
-                "filepath": filepath,
-                "file_size_bytes": file_size_bytes,
-                "num_events": tree.num_entries,
-                "num_branches": len(branches),
-                "total_branch_bytes": total_branch_bytes,
-                "tree_compressed_bytes": tree_compressed,
-                "tree_uncompressed_bytes": tree_uncompressed,
-                "branches": branches,
+                "filepath": str(filepath),  # Ensure string
+                "file_size_bytes": int(file_size_bytes),  # Ensure int
+                "num_events": int(tree.num_entries),  # Ensure int
+                "num_branches": int(len(branches)),  # Ensure int
+                "total_branch_bytes": int(total_branch_bytes),  # Ensure int
+                "tree_compressed_bytes": int(tree_compressed),  # Ensure int
+                "tree_uncompressed_bytes": int(tree_uncompressed),  # Ensure int
+                "branches": branches,  # Dict of dicts with int values
             }
 
             # Add num_branches_sampled if max_branches was used
             if max_branches is not None:
-                result["num_branches_sampled"] = len(branches)
+                result["num_branches_sampled"] = int(len(branches))
                 # Update num_branches to total count
-                result["num_branches"] = len(tree.keys())
+                result["num_branches"] = int(len(tree.keys()))
 
             return result
     except Exception as e:
         # Return dict with error info for error tracking
+        # Use simple types to ensure Dask can serialize/deserialize
+        try:
+            error_type = type(e).__name__
+            error_message = str(e)
+        except Exception:
+            # Fallback if even getting error info fails
+            error_type = "UnknownError"
+            error_message = "Could not extract error details"
+
         return {
-                "filepath": filepath,
+                "filepath": str(filepath),  # Ensure string
                 "file_size_bytes": -1,
                 "num_events": -1,
                 "num_branches": -1,
@@ -109,8 +118,8 @@ def inspect_file(filepath: str, max_branches: Optional[int] = None) -> Dict:
                 "tree_compressed_bytes": -1,
                 "tree_uncompressed_bytes": -1,
                 "branches": {},
-                "error_type": type(e).__name__,
-                "error_message": str(e),
+                "error_type": error_type,
+                "error_message": error_message,
         }
 
 
@@ -157,27 +166,53 @@ def inspect_dataset_distributed(
 
     # Use reasonable number of partitions (not one per file!)
     # Aim for ~100 files per partition, or at least use fewer partitions
-    n_partitions = min(len(filepaths), max(1, len(filepaths) // 100))
+    n_partitions = min(len(filepaths), max(1, len(filepaths) // 5))
 
-    # Use Dask bag to distribute inspection with error handling
-    bag = db.from_sequence(file_args, npartitions=n_partitions)
-    raw_results = bag.map(lambda args: inspect_file(*args)).compute()
-
-    # Separate successes from failures
-    successes = []
-    failures = []
-
-    for result in raw_results:
+    # Define partitioning function to separate successes from failures
+    def partition_result(result):
+        """Partition result into (success, failure) tuple."""
         if "error_type" in result:
-            # This is an error: dict with "error_type" and "error_message" keys
-            failures.append({
+            # Return as failure
+            failure = {
                 "filepath": result["filepath"],
                 "error_type": result["error_type"],
                 "error_message": result["error_message"],
-            })
+            }
+            return ([], [failure])
         else:
-            # This is a successful result dict
-            successes.append(result)
+            # Return as success
+            return ([result], [])
+
+    def combine_partitions(part1, part2):
+        """Combine two (successes, failures) tuples."""
+        successes1, failures1 = part1
+        successes2, failures2 = part2
+        return (successes1 + successes2, failures1 + failures2)
+
+    # Use Dask bag with fold to aggregate on workers
+    bag = db.from_sequence(file_args, npartitions=n_partitions)
+
+    try:
+        # Map to results, partition, then fold to combine
+        successes, failures = (
+            bag.map(lambda args: inspect_file(*args))
+            .map(partition_result)
+            .fold(combine_partitions, initial=([], []), split_every=8)
+            .compute()
+        )
+    except Exception as e:
+        # If Dask itself fails (e.g., serialization issues), fail gracefully
+        error_summary = {
+            "total_files": len(filepaths),
+            "successful": 0,
+            "failed": len(filepaths),
+            "failures": [{
+                "filepath": "ALL FILES",
+                "error_type": type(e).__name__,
+                "error_message": f"Dask compute failed: {str(e)}",
+            }],
+        }
+        return [], error_summary
 
     # Build error summary
     error_summary = {
