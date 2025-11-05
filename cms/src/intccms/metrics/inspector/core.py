@@ -5,7 +5,7 @@ using Dask, enabling fast characterization of large datasets.
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple, Union
 
 import dask.bag as db
 import uproot
@@ -95,8 +95,8 @@ def inspect_dataset_distributed(
     client,
     filepaths: List[str],
     max_branches: Optional[int] = None,
-) -> List[Dict]:
-    """Inspect multiple files in parallel using Dask.
+) -> Tuple[List[Dict], Dict]:
+    """Inspect multiple files in parallel using Dask with robust error handling.
 
     Parameters
     ----------
@@ -111,14 +111,23 @@ def inspect_dataset_distributed(
     Returns
     -------
     results : List[dict]
-        List of metadata dicts (one per file)
+        List of metadata dicts for successfully inspected files
+    error_summary : dict
+        Summary of failures with keys:
+        - total_files: Total files attempted
+        - successful: Number of successful inspections
+        - failed: Number of failed inspections
+        - failures: List of failure dicts with filepath, error_type, error_message
 
     Examples
     --------
     >>> from dask.distributed import Client
     >>> client = Client()
-    >>> results = inspect_dataset_distributed(client, file_list)
-    >>> total_events = sum(r["num_events"] for r in results)
+    >>> results, errors = inspect_dataset_distributed(client, file_list)
+    >>> print(f"Success: {errors['successful']}/{errors['total_files']}")
+    >>> if errors['failures']:
+    ...     for failure in errors['failures']:
+    ...         print(f"Failed: {failure['filepath']} - {failure['error_type']}")
     """
 
     def inspect_with_limit(filepath: str) -> Dict:
@@ -179,11 +188,41 @@ def inspect_dataset_distributed(
                 "branches": branches,
             }
 
-    # Use Dask bag to distribute inspection
-    bag = db.from_sequence(filepaths, npartitions=len(filepaths))
-    results = bag.map(inspect_with_limit).compute()
+    def safe_inspect(filepath: str) -> Union[Dict, Exception]:
+        """Wrapper that catches all exceptions during inspection."""
+        try:
+            return inspect_with_limit(filepath)
+        except Exception as e:
+            # Return exception instead of raising
+            return e
 
-    return results
+    # Use Dask bag to distribute inspection with error handling
+    bag = db.from_sequence(filepaths, npartitions=len(filepaths))
+    raw_results = bag.map(safe_inspect).compute()
+
+    # Separate successes from failures
+    successes = []
+    failures = []
+
+    for filepath, result in zip(filepaths, raw_results):
+        if isinstance(result, Exception):
+            failures.append({
+                "filepath": filepath,
+                "error_type": type(result).__name__,
+                "error_message": str(result),
+            })
+        else:
+            successes.append(result)
+
+    # Build error summary
+    error_summary = {
+        "total_files": len(filepaths),
+        "successful": len(successes),
+        "failed": len(failures),
+        "failures": failures,
+    }
+
+    return successes, error_summary
 
 
 def get_total_events_distributed(client, filepaths: List[str]) -> int:

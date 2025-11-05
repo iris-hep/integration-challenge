@@ -9,7 +9,8 @@ Example Usage
 >>> from intccms.metrics.inspector import inspect_dataset_distributed, aggregate_statistics
 >>>
 >>> client = Client()
->>> results = inspect_dataset_distributed(client, file_list)
+>>> results, errors = inspect_dataset_distributed(client, file_list)
+>>> print(f"Success: {errors['successful']}/{errors['total_files']} files")
 >>> stats = aggregate_statistics(results)
 >>> print(f"Total events: {stats['total_events']:,}")
 """
