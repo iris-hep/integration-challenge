@@ -4,6 +4,8 @@ from typing import Dict, List, Optional
 import matplotlib.pyplot as plt
 import numpy as np
 
+from intccms.metrics.inspector.aggregator import compute_branch_statistics, group_by_dataset
+
 
 def plot_event_distribution(
     results: List[Dict],
@@ -120,18 +122,18 @@ def plot_dataset_comparison(
     return fig, (ax1, ax2)
 
 
-def plot_top_branches(
-    top_branches: List[tuple],
-    title: str = "Top Branches by Size",
-    figsize: tuple = (10, 8),
+def plot_branch_size_distribution(
+    results: List[Dict],
+    title: str = "Branch Size Distribution",
+    figsize: tuple = (10, 6),
     save_path: Optional[str] = None,
 ):
-    """Plot top N largest branches.
+    """Plot box plot of branch sizes across all branches.
 
     Parameters
     ----------
-    top_branches : List[tuple]
-        List of (branch_name, size_bytes, compression_ratio) from get_top_branches()
+    results : List[dict]
+        File inspection results
     title : str
         Plot title
     figsize : tuple
@@ -141,46 +143,186 @@ def plot_top_branches(
 
     Examples
     --------
-    >>> top = get_top_branches(results, top_n=20)
-    >>> plot_top_branches(top)
+    >>> plot_branch_size_distribution(results)
     """
-    branch_names = [b[0] for b in top_branches]
-    sizes_mb = [b[1] / 1024 / 1024 for b in top_branches]  # Convert to MB
-    compression_ratios = [b[2] for b in top_branches]
+    # Compute branch statistics
+    stats = compute_branch_statistics(results)
+    sizes_mb = [s / 1024 / 1024 for s in stats["branch_sizes"]]  # Convert to MB
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Create box plot
+    bp = ax.boxplot(sizes_mb, vert=True, patch_artist=True, widths=0.5)
+    bp['boxes'][0].set_facecolor('mediumseagreen')
+    bp['boxes'][0].set_alpha(0.7)
+
+    ax.set_ylabel("Branch Size (MB)", fontsize=12)
+    ax.set_title(title, fontsize=14, fontweight='bold')
+    ax.set_xticks([])
+    ax.grid(True, alpha=0.3, axis='y')
+
+    # Add stats text
+    stats_text = f"Total branches: {stats['num_branches']}\n"
+    stats_text += f"Median: {np.median(sizes_mb):.2f} MB\n"
+    stats_text += f"Mean: {np.mean(sizes_mb):.2f} MB"
+
+    ax.text(0.98, 0.97, stats_text,
+            transform=ax.transAxes,
+            verticalalignment='top',
+            horizontalalignment='right',
+            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5),
+            fontsize=10)
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Saved to {save_path}")
+
+    return fig, ax
+
+
+def plot_branch_compression_distribution(
+    results: List[Dict],
+    title: str = "Branch Compression Ratio Distribution",
+    figsize: tuple = (10, 6),
+    save_path: Optional[str] = None,
+):
+    """Plot box plot of compression ratios across all branches.
+
+    Parameters
+    ----------
+    results : List[dict]
+        File inspection results
+    title : str
+        Plot title
+    figsize : tuple
+        Figure size
+    save_path : str, optional
+        Path to save figure
+
+    Examples
+    --------
+    >>> plot_branch_compression_distribution(results)
+    """
+    # Compute branch statistics
+    stats = compute_branch_statistics(results)
+    compression_ratios = stats["compression_ratios"]
+
+    if not compression_ratios:
+        print("No compression data available")
+        return None, None
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Create box plot
+    bp = ax.boxplot(compression_ratios, vert=True, patch_artist=True, widths=0.5)
+    bp['boxes'][0].set_facecolor('coral')
+    bp['boxes'][0].set_alpha(0.7)
+
+    ax.set_ylabel("Compression Ratio", fontsize=12)
+    ax.set_title(title, fontsize=14, fontweight='bold')
+    ax.set_xticks([])
+    ax.grid(True, alpha=0.3, axis='y')
+
+    # Add reference lines
+    ax.axhline(y=2.0, color='green', linestyle='--', alpha=0.5, label='Good (>2x)')
+    ax.axhline(y=1.5, color='orange', linestyle='--', alpha=0.5, label='OK (>1.5x)')
+    ax.legend(fontsize=9, loc='upper right')
+
+    # Add stats text
+    stats_text = f"Median: {np.median(compression_ratios):.2f}x\n"
+    stats_text += f"Mean: {np.mean(compression_ratios):.2f}x"
+
+    ax.text(0.02, 0.97, stats_text,
+            transform=ax.transAxes,
+            verticalalignment='top',
+            horizontalalignment='left',
+            bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5),
+            fontsize=10)
+
+    plt.tight_layout()
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Saved to {save_path}")
+
+    return fig, ax
+
+
+def plot_branch_distributions_by_dataset(
+    results: List[Dict],
+    dataset_map: Dict[str, str],
+    title: str = "Branch Distributions by Dataset",
+    figsize: tuple = (12, 6),
+    save_path: Optional[str] = None,
+):
+    """Plot side-by-side box plots of branch characteristics per dataset.
+
+    Parameters
+    ----------
+    results : List[dict]
+        File inspection results
+    dataset_map : Dict[str, str]
+        Mapping from filepath to dataset name
+    title : str
+        Plot title
+    figsize : tuple
+        Figure size
+    save_path : str, optional
+        Path to save figure
+
+    Examples
+    --------
+    >>> plot_branch_distributions_by_dataset(results, dataset_map)
+    """
+    # Group results by dataset
+    grouped = group_by_dataset(results, dataset_map)
+
+    # Compute stats for each dataset
+    dataset_sizes = {}
+    dataset_compressions = {}
+
+    for dataset_name, dataset_results in grouped.items():
+        stats = compute_branch_statistics(dataset_results)
+        dataset_sizes[dataset_name] = [s / 1024 / 1024 for s in stats["branch_sizes"]]  # MB
+        dataset_compressions[dataset_name] = stats["compression_ratios"]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
-    # Branch sizes
-    ax1.barh(range(len(branch_names)), sizes_mb, color='mediumseagreen', edgecolor='black')
-    ax1.set_yticks(range(len(branch_names)))
-    ax1.set_yticklabels(branch_names, fontsize=9)
-    ax1.set_xlabel("Size (MB)", fontsize=12)
-    ax1.set_title("Branch Size", fontsize=13, fontweight='bold')
-    ax1.grid(True, alpha=0.3, axis='x')
-    ax1.invert_yaxis()
+    # Branch sizes per dataset
+    dataset_names = list(dataset_sizes.keys())
+    size_data = [dataset_sizes[name] for name in dataset_names]
 
-    # Add values on bars
-    for i, v in enumerate(sizes_mb):
-        ax1.text(v, i, f' {v:.1f}', va='center', fontsize=8)
+    bp1 = ax1.boxplot(size_data, labels=dataset_names, patch_artist=True)
+    for patch in bp1['boxes']:
+        patch.set_facecolor('steelblue')
+        patch.set_alpha(0.7)
 
-    # Compression ratios
-    colors = ['red' if r < 1.5 else 'orange' if r < 2.0 else 'green' for r in compression_ratios]
-    ax2.barh(range(len(branch_names)), compression_ratios, color=colors, edgecolor='black', alpha=0.7)
-    ax2.set_yticks(range(len(branch_names)))
-    ax2.set_yticklabels(branch_names, fontsize=9)
-    ax2.set_xlabel("Compression Ratio", fontsize=12)
-    ax2.set_title("Compression Efficiency", fontsize=13, fontweight='bold')
-    ax2.grid(True, alpha=0.3, axis='x')
-    ax2.axvline(x=2.0, color='green', linestyle='--', alpha=0.5, label='Good (>2x)')
-    ax2.axvline(x=1.5, color='orange', linestyle='--', alpha=0.5, label='OK (>1.5x)')
-    ax2.legend(fontsize=9)
-    ax2.invert_yaxis()
+    ax1.set_ylabel("Branch Size (MB)", fontsize=12)
+    ax1.set_title("Branch Sizes", fontsize=13, fontweight='bold')
+    ax1.grid(True, alpha=0.3, axis='y')
+    ax1.tick_params(axis='x', rotation=45)
 
-    # Add values on bars
-    for i, v in enumerate(compression_ratios):
-        ax2.text(v, i, f' {v:.2f}x', va='center', fontsize=8)
+    # Compression ratios per dataset
+    compression_data = [dataset_compressions[name] for name in dataset_names if dataset_compressions[name]]
+    compression_labels = [name for name in dataset_names if dataset_compressions[name]]
 
-    fig.suptitle(title, fontsize=14, fontweight='bold', y=0.995)
+    if compression_data:
+        bp2 = ax2.boxplot(compression_data, labels=compression_labels, patch_artist=True)
+        for patch in bp2['boxes']:
+            patch.set_facecolor('coral')
+            patch.set_alpha(0.7)
+
+        ax2.axhline(y=2.0, color='green', linestyle='--', alpha=0.5, linewidth=1)
+        ax2.axhline(y=1.5, color='orange', linestyle='--', alpha=0.5, linewidth=1)
+
+    ax2.set_ylabel("Compression Ratio", fontsize=12)
+    ax2.set_title("Compression Ratios", fontsize=13, fontweight='bold')
+    ax2.grid(True, alpha=0.3, axis='y')
+    ax2.tick_params(axis='x', rotation=45)
+
+    fig.suptitle(title, fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
 
     if save_path:
@@ -257,7 +399,7 @@ def plot_file_size_distribution(
 def plot_summary_dashboard(
     results: List[Dict],
     dataset_stats: Dict[str, Dict],
-    top_branches: List[tuple],
+    dataset_map: Dict[str, str],
     save_path: Optional[str] = None,
 ):
     """Create a comprehensive summary dashboard with all key plots.
@@ -268,27 +410,27 @@ def plot_summary_dashboard(
         All file inspection results
     dataset_stats : Dict[str, dict]
         Per-dataset statistics
-    top_branches : List[tuple]
-        Top branches by size
+    dataset_map : Dict[str, str]
+        Mapping from filepath to dataset name
     save_path : str, optional
         Path to save figure
 
     Examples
     --------
     >>> # After running full inspection
-    >>> plot_summary_dashboard(results, dataset_stats, top_branches,
+    >>> plot_summary_dashboard(results, dataset_stats, dataset_map,
     ...                        save_path="input_summary.png")
     """
     fig = plt.figure(figsize=(16, 12))
-    gs = fig.add_gridspec(3, 2, hspace=0.3, wspace=0.3)
+    gs = fig.add_gridspec(3, 2, hspace=0.35, wspace=0.3)
 
     # 1. Event distribution
     ax1 = fig.add_subplot(gs[0, 0])
     event_counts = [r["num_events"] for r in results]
     ax1.hist(event_counts, bins=30, edgecolor='black', alpha=0.7)
-    ax1.set_xlabel("Events per File")
-    ax1.set_ylabel("Number of Files")
-    ax1.set_title("Event Distribution", fontweight='bold')
+    ax1.set_xlabel("Events per File", fontsize=10)
+    ax1.set_ylabel("Number of Files", fontsize=10)
+    ax1.set_title("Event Distribution", fontweight='bold', fontsize=11)
     ax1.grid(True, alpha=0.3)
 
     # 2. Dataset comparison - events
@@ -296,45 +438,63 @@ def plot_summary_dashboard(
     datasets = list(dataset_stats.keys())
     total_events = [stats["total_events"] for stats in dataset_stats.values()]
     ax2.barh(datasets, total_events, color='coral', edgecolor='black')
-    ax2.set_xlabel("Total Events")
-    ax2.set_title("Events per Dataset", fontweight='bold')
+    ax2.set_xlabel("Total Events", fontsize=10)
+    ax2.set_title("Events per Dataset", fontweight='bold', fontsize=11)
     ax2.grid(True, alpha=0.3, axis='x')
 
     # 3. Dataset comparison - files
     ax3 = fig.add_subplot(gs[1, 0])
     num_files = [stats["num_files"] for stats in dataset_stats.values()]
     ax3.barh(datasets, num_files, color='steelblue', edgecolor='black')
-    ax3.set_xlabel("Number of Files")
-    ax3.set_title("Files per Dataset", fontweight='bold')
+    ax3.set_xlabel("Number of Files", fontsize=10)
+    ax3.set_title("Files per Dataset", fontweight='bold', fontsize=11)
     ax3.grid(True, alpha=0.3, axis='x')
 
-    # 4. Top branches
+    # 4. Branch size distribution (aggregated)
     ax4 = fig.add_subplot(gs[1, 1])
-    top_10 = top_branches[:10]
-    branch_names = [b[0] for b in top_10]
-    sizes_mb = [b[1] / 1024 / 1024 for b in top_10]
-    ax4.barh(range(len(branch_names)), sizes_mb, color='mediumseagreen', edgecolor='black')
-    ax4.set_yticks(range(len(branch_names)))
-    ax4.set_yticklabels(branch_names, fontsize=9)
-    ax4.set_xlabel("Size (MB)")
-    ax4.set_title("Top 10 Branches by Size", fontweight='bold')
-    ax4.grid(True, alpha=0.3, axis='x')
-    ax4.invert_yaxis()
+    stats = compute_branch_statistics(results)
+    sizes_mb = [s / 1024 / 1024 for s in stats["branch_sizes"]]
+    bp = ax4.boxplot(sizes_mb, vert=True, patch_artist=True, widths=0.5)
+    bp['boxes'][0].set_facecolor('mediumseagreen')
+    bp['boxes'][0].set_alpha(0.7)
+    ax4.set_ylabel("Branch Size (MB)", fontsize=10)
+    ax4.set_title("Branch Size Distribution", fontweight='bold', fontsize=11)
+    ax4.set_xticks([])
+    ax4.grid(True, alpha=0.3, axis='y')
 
-    # 5. Compression ratios
-    ax5 = fig.add_subplot(gs[2, :])
-    compression_ratios = [b[2] for b in top_10]
-    colors = ['red' if r < 1.5 else 'orange' if r < 2.0 else 'green' for r in compression_ratios]
-    ax5.barh(range(len(branch_names)), compression_ratios, color=colors, edgecolor='black', alpha=0.7)
-    ax5.set_yticks(range(len(branch_names)))
-    ax5.set_yticklabels(branch_names, fontsize=9)
-    ax5.set_xlabel("Compression Ratio")
-    ax5.set_title("Compression Efficiency (Top 10 Branches)", fontweight='bold')
-    ax5.grid(True, alpha=0.3, axis='x')
-    ax5.axvline(x=2.0, color='green', linestyle='--', alpha=0.5, label='Good (>2x)')
-    ax5.axvline(x=1.5, color='orange', linestyle='--', alpha=0.5, label='OK (>1.5x)')
-    ax5.legend()
-    ax5.invert_yaxis()
+    # 5. Branch compression distribution (aggregated)
+    ax5 = fig.add_subplot(gs[2, 0])
+    compression_ratios = stats["compression_ratios"]
+    if compression_ratios:
+        bp2 = ax5.boxplot(compression_ratios, vert=True, patch_artist=True, widths=0.5)
+        bp2['boxes'][0].set_facecolor('coral')
+        bp2['boxes'][0].set_alpha(0.7)
+        ax5.axhline(y=2.0, color='green', linestyle='--', alpha=0.5, linewidth=1)
+        ax5.axhline(y=1.5, color='orange', linestyle='--', alpha=0.5, linewidth=1)
+    ax5.set_ylabel("Compression Ratio", fontsize=10)
+    ax5.set_title("Compression Distribution", fontweight='bold', fontsize=11)
+    ax5.set_xticks([])
+    ax5.grid(True, alpha=0.3, axis='y')
+
+    # 6. Per-dataset branch size comparison
+    ax6 = fig.add_subplot(gs[2, 1])
+    grouped = group_by_dataset(results, dataset_map)
+    dataset_sizes = {}
+    for dataset_name, dataset_results in grouped.items():
+        ds_stats = compute_branch_statistics(dataset_results)
+        dataset_sizes[dataset_name] = [s / 1024 / 1024 for s in ds_stats["branch_sizes"]]
+
+    dataset_names = list(dataset_sizes.keys())
+    size_data = [dataset_sizes[name] for name in dataset_names]
+    if size_data:
+        bp3 = ax6.boxplot(size_data, labels=dataset_names, patch_artist=True)
+        for patch in bp3['boxes']:
+            patch.set_facecolor('steelblue')
+            patch.set_alpha(0.7)
+        ax6.tick_params(axis='x', rotation=45)
+    ax6.set_ylabel("Branch Size (MB)", fontsize=10)
+    ax6.set_title("Branch Sizes by Dataset", fontweight='bold', fontsize=11)
+    ax6.grid(True, alpha=0.3, axis='y')
 
     fig.suptitle("Input Data Characterization Summary", fontsize=16, fontweight='bold')
 

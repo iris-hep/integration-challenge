@@ -234,3 +234,62 @@ def compute_compression_stats(results: List[Dict]) -> Dict:
             total_uncompressed / total_compressed if total_compressed > 0 else 0
         ),
     }
+
+
+def compute_branch_statistics(results: List[Dict]) -> Dict:
+    """Compute branch-level statistics for distribution plots.
+
+    Aggregates branch sizes across all files and collects compression ratios
+    for all branches across all files.
+
+    Parameters
+    ----------
+    results : List[dict]
+        List of file metadata dicts from inspection
+
+    Returns
+    -------
+    branch_stats : dict
+        Dictionary containing:
+        - branch_sizes: List of total branch sizes (summed across files)
+        - compression_ratios: List of compression ratios (one per branch per file)
+        - branch_names: List of unique branch names
+        - num_branches: Number of unique branches
+
+    Examples
+    --------
+    >>> stats = compute_branch_statistics(results)
+    >>> # Use for box plot of branch sizes
+    >>> plt.boxplot(stats['branch_sizes'])
+    >>> # Use for box plot of compression ratios
+    >>> plt.boxplot(stats['compression_ratios'])
+    """
+    # Aggregate branch sizes across all files
+    branch_totals = defaultdict(int)
+    compression_ratios = []
+    all_branch_names = set()
+
+    for result in results:
+        for branch_name, info in result["branches"].items():
+            all_branch_names.add(branch_name)
+
+            # Aggregate total size for this branch
+            branch_totals[branch_name] += info["num_bytes"]
+
+            # Collect compression ratio if available
+            comp = info.get("compressed_bytes", 0)
+            uncomp = info.get("uncompressed_bytes", 0)
+            if comp > 0 and uncomp > 0:
+                ratio = uncomp / comp
+                compression_ratios.append(ratio)
+
+    # Convert to lists for plotting
+    branch_sizes = list(branch_totals.values())
+    branch_names = list(all_branch_names)
+
+    return {
+        "branch_sizes": branch_sizes,
+        "compression_ratios": compression_ratios,
+        "branch_names": branch_names,
+        "num_branches": len(branch_names),
+    }
