@@ -168,40 +168,15 @@ def inspect_dataset_distributed(
     # Aim for ~100 files per partition, or at least use fewer partitions
     n_partitions = min(len(filepaths), max(1, len(filepaths) // 5))
 
-    # Define partitioning function to separate successes from failures
-    def partition_result(result):
-        """Partition result into (success, failure) tuple."""
-        if "error_type" in result:
-            # Return as failure
-            failure = {
-                "filepath": result["filepath"],
-                "error_type": result["error_type"],
-                "error_message": result["error_message"],
-            }
-            return ([], [failure])
-        else:
-            # Return as success
-            return ([result], [])
-
-    def combine_partitions(part1, part2):
-        """Combine two (successes, failures) tuples."""
-        successes1, failures1 = part1
-        successes2, failures2 = part2
-        return (successes1 + successes2, failures1 + failures2)
-
-    # Use Dask bag with fold to aggregate on workers
+    # Use Dask bag to process files - compute directly without persist
+    # This streams results from workers to client without holding all in memory
     bag = db.from_sequence(file_args, npartitions=n_partitions)
 
     try:
-        # Map to results, partition, then fold to combine
-        successes, failures = (
-            bag.map(lambda args: inspect_file(*args))
-            .map(partition_result)
-            .fold(combine_partitions, initial=([], []), split_every=8)
-            .compute()
-        )
+        # Compute all results - Dask streams from workers as they complete
+        raw_results = bag.map(lambda args: inspect_file(*args)).compute()
     except Exception as e:
-        # If Dask itself fails (e.g., serialization issues), fail gracefully
+        # If Dask itself fails, fail gracefully
         error_summary = {
             "total_files": len(filepaths),
             "successful": 0,
@@ -213,6 +188,22 @@ def inspect_dataset_distributed(
             }],
         }
         return [], error_summary
+
+    # Separate successes from failures on client side
+    successes = []
+    failures = []
+
+    for result in raw_results:
+        if "error_type" in result:
+            # This is an error
+            failures.append({
+                "filepath": result["filepath"],
+                "error_type": result["error_type"],
+                "error_message": result["error_message"],
+            })
+        else:
+            # This is a success
+            successes.append(result)
 
     # Build error summary
     error_summary = {
