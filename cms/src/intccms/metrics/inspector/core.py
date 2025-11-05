@@ -11,7 +11,7 @@ import dask.bag as db
 import uproot
 
 
-def inspect_file(filepath: str) -> Dict:
+def inspect_file(filepath: str, max_branches: Optional[int] = None) -> Dict:
     """Extract all metadata from a single ROOT file.
 
     Parameters
@@ -38,133 +38,80 @@ def inspect_file(filepath: str) -> Dict:
     >>> print(f"Events: {metadata['num_events']:,}")
     >>> print(f"Size: {metadata['file_size_bytes'] / 1024**3:.2f} GB")
     """
-    with uproot.open(filepath) as f:
-        tree = f["Events"]
-
-        # Get all branch info
-        branches = {}
-        for branch_name in tree.keys():
-            branch = tree[branch_name]
-
-            # Get sizes
-            # - num_bytes: Always works (on-disk size including ROOT overhead)
-            # - compressed/uncompressed: Work on production files, may be 0 on small test files
-            num_bytes = branch.num_bytes if hasattr(branch, "num_bytes") else 0
-            compressed = (
-                branch.compressed_bytes if hasattr(branch, "compressed_bytes") else 0
-            )
-            uncompressed = (
-                branch.uncompressed_bytes if hasattr(branch, "uncompressed_bytes") else 0
-            )
-
-            branches[branch_name] = {
-                "num_bytes": num_bytes,
-                "compressed_bytes": compressed,
-                "uncompressed_bytes": uncompressed,
-            }
-
-        # Compute totals
-        total_branch_bytes = sum(b["num_bytes"] for b in branches.values())
-
-        # Get tree-level compression info if available
-        tree_compressed = tree.compressed_bytes if hasattr(tree, "compressed_bytes") else 0
-        tree_uncompressed = (
-            tree.uncompressed_bytes if hasattr(tree, "uncompressed_bytes") else 0
-        )
-
-        # Get file size (handle both local and remote)
-        if filepath.startswith("root://"):
-            # For remote files, we can't easily get file size
-            file_size_bytes = 0
-        else:
-            file_size_bytes = Path(filepath).stat().st_size
-
-        return {
-            "filepath": filepath,
-            "file_size_bytes": file_size_bytes,
-            "num_events": tree.num_entries,
-            "num_branches": len(branches),
-            "total_branch_bytes": total_branch_bytes,
-            "tree_compressed_bytes": tree_compressed,
-            "tree_uncompressed_bytes": tree_uncompressed,
-            "branches": branches,
-        }
-
-
-def _inspect_file_with_limit(filepath: str, max_branches: Optional[int]) -> Dict:
-    """Helper to inspect file with optional branch limit.
-
-    Module-level function to avoid Dask serialization issues with closures.
-    """
-    if max_branches is None:
-        return inspect_file(filepath)
-
-    # Inspect with branch limit (faster for remote files)
-    with uproot.open(filepath) as f:
-        tree = f["Events"]
-
-        # Only sample first N branches
-        branch_names = list(tree.keys())[:max_branches]
-
-        branches = {}
-        for branch_name in branch_names:
-            branch = tree[branch_name]
-            num_bytes = branch.num_bytes if hasattr(branch, "num_bytes") else 0
-            compressed = (
-                branch.compressed_bytes
-                if hasattr(branch, "compressed_bytes")
-                else 0
-            )
-            uncompressed = (
-                branch.uncompressed_bytes
-                if hasattr(branch, "uncompressed_bytes")
-                else 0
-            )
-
-            branches[branch_name] = {
-                "num_bytes": num_bytes,
-                "compressed_bytes": compressed,
-                "uncompressed_bytes": uncompressed,
-            }
-
-        total_branch_bytes = sum(b["num_bytes"] for b in branches.values())
-        tree_compressed = (
-            tree.compressed_bytes if hasattr(tree, "compressed_bytes") else 0
-        )
-        tree_uncompressed = (
-            tree.uncompressed_bytes if hasattr(tree, "uncompressed_bytes") else 0
-        )
-
-        if filepath.startswith("root://"):
-            file_size_bytes = 0
-        else:
-            file_size_bytes = Path(filepath).stat().st_size
-
-        return {
-            "filepath": filepath,
-            "file_size_bytes": file_size_bytes,
-            "num_events": tree.num_entries,
-            "num_branches": len(tree.keys()),  # Total branches
-            "num_branches_sampled": len(branches),  # Sampled branches
-            "total_branch_bytes": total_branch_bytes,
-            "tree_compressed_bytes": tree_compressed,
-            "tree_uncompressed_bytes": tree_uncompressed,
-            "branches": branches,
-        }
-
-
-def _safe_inspect_wrapper(args: tuple) -> Union[Dict, tuple]:
-    """Safe inspection wrapper that catches exceptions.
-
-    Module-level function to avoid Dask serialization issues.
-    Returns either the result dict or a tuple (filepath, Exception).
-    """
-    filepath, max_branches = args
     try:
-        return _inspect_file_with_limit(filepath, max_branches)
+        with uproot.open(filepath) as f:
+            tree = f["Events"]
+
+            # Get all branch info
+            branches = {}
+            for branch_name in tree.keys()[:max_branches]:
+                branch = tree[branch_name]
+
+                # Get sizes
+                # - num_bytes: Always works (on-disk size including ROOT overhead)
+                # - compressed/uncompressed: Work on production files, may be 0 on small test files
+                num_bytes = branch.num_bytes if hasattr(branch, "num_bytes") else 0
+                compressed = (
+                    branch.compressed_bytes if hasattr(branch, "compressed_bytes") else 0
+                )
+                uncompressed = (
+                    branch.uncompressed_bytes if hasattr(branch, "uncompressed_bytes") else 0
+                )
+
+                branches[branch_name] = {
+                    "num_bytes": num_bytes,
+                    "compressed_bytes": compressed,
+                    "uncompressed_bytes": uncompressed,
+                }
+
+            # Compute totals
+            total_branch_bytes = sum(b["num_bytes"] for b in branches.values())
+
+            # Get tree-level compression info if available
+            tree_compressed = tree.compressed_bytes if hasattr(tree, "compressed_bytes") else 0
+            tree_uncompressed = (
+                tree.uncompressed_bytes if hasattr(tree, "uncompressed_bytes") else 0
+            )
+
+            # Get file size (handle both local and remote)
+            if filepath.startswith("root://"):
+                # For remote files, we can't easily get file size
+                file_size_bytes = 0
+            else:
+                file_size_bytes = Path(filepath).stat().st_size
+
+            result = {
+                "filepath": filepath,
+                "file_size_bytes": file_size_bytes,
+                "num_events": tree.num_entries,
+                "num_branches": len(branches),
+                "total_branch_bytes": total_branch_bytes,
+                "tree_compressed_bytes": tree_compressed,
+                "tree_uncompressed_bytes": tree_uncompressed,
+                "branches": branches,
+            }
+
+            # Add num_branches_sampled if max_branches was used
+            if max_branches is not None:
+                result["num_branches_sampled"] = len(branches)
+                # Update num_branches to total count
+                result["num_branches"] = len(tree.keys())
+
+            return result
     except Exception as e:
-        # Return tuple with filepath for error tracking
-        return (filepath, e)
+        # Return dict with error info for error tracking
+        return {
+                "filepath": filepath,
+                "file_size_bytes": -1,
+                "num_events": -1,
+                "num_branches": -1,
+                "total_branch_bytes": -1,
+                "tree_compressed_bytes": -1,
+                "tree_uncompressed_bytes": -1,
+                "branches": {},
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+        }
 
 
 def inspect_dataset_distributed(
@@ -214,20 +161,19 @@ def inspect_dataset_distributed(
 
     # Use Dask bag to distribute inspection with error handling
     bag = db.from_sequence(file_args, npartitions=n_partitions)
-    raw_results = bag.map(_safe_inspect_wrapper).compute()
+    raw_results = bag.map(lambda args: inspect_file(*args)).compute()
 
     # Separate successes from failures
     successes = []
     failures = []
 
     for result in raw_results:
-        if isinstance(result, tuple):
-            # This is an error: (filepath, Exception)
-            filepath, exception = result
+        if "error_type" in result:
+            # This is an error: dict with "error_type" and "error_message" keys
             failures.append({
-                "filepath": filepath,
-                "error_type": type(exception).__name__,
-                "error_message": str(exception),
+                "filepath": result["filepath"],
+                "error_type": result["error_type"],
+                "error_message": result["error_message"],
             })
         else:
             # This is a successful result dict
