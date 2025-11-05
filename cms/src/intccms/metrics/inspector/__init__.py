@@ -19,6 +19,7 @@ from intccms.metrics.inspector.core import (
     inspect_file,
     inspect_dataset_distributed,
     get_total_events_distributed,
+    format_error_summary,
 )
 from intccms.metrics.inspector.aggregator import (
     aggregate_statistics,
@@ -38,6 +39,7 @@ __all__ = [
     "inspect_file",
     "inspect_dataset_distributed",
     "get_total_events_distributed",
+    "format_error_summary",
     # Aggregation
     "aggregate_statistics",
     "get_top_branches",
