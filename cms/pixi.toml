@@ -39,6 +39,9 @@ scikit-hep-testdata = ">=0.4.0"
 pytest = ">=8.0.0"
 pytest-cov = ">=4.0.0"
 
+[feature.dev.pypi-dependencies]
+rucio = ">=37.7.1, <38"
+
 [feature.lab.dependencies]
 notebook = ">=7.4.5,<8"
 jupyterlab = ">=4.4.5,<5"

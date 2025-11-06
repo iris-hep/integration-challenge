@@ -4,11 +4,80 @@ This module provides functions to extract metadata from ROOT files in parallel
 using Dask, enabling fast characterization of large datasets.
 """
 
+import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
 import dask.bag as db
 import uproot
+
+try:
+    from coffea.dataset_tools import rucio_utils  # type: ignore
+except ImportError:  # pragma: no cover
+    rucio_utils = None  # type: ignore
+
+logger = logging.getLogger(__name__)
+
+_RUCIO_SCOPE = "cms"
+_RUCIO_CLIENT = None
+
+
+def _is_remote_path(filepath: str) -> bool:
+    return filepath.startswith("root://")
+
+
+def _strip_root_redirector(filepath: str) -> str:
+    """
+    Remove the XRootD redirector from a remote path, returning the logical file name.
+    """
+    stripped = filepath[len("root://") :]
+    if "/" not in stripped:
+        return filepath
+    _, rest = stripped.split("/", 1)
+    rest = rest.lstrip("/")
+    return f"/{rest}"
+
+
+def _get_rucio_client():
+    global _RUCIO_CLIENT
+
+    if rucio_utils is None:
+        return None
+
+    if _RUCIO_CLIENT is None:
+        try:
+            _RUCIO_CLIENT = rucio_utils.get_rucio_client()
+        except Exception as exc:  # pragma: no cover - depends on env
+            logger.warning("Failed to create Rucio client: %s", exc)
+            _RUCIO_CLIENT = None
+    return _RUCIO_CLIENT
+
+
+def _get_remote_file_size(filepath: str, rucio_client=None) -> int:
+    client = rucio_client or _get_rucio_client()
+    if client is None:
+        return 0
+
+    lfn = _strip_root_redirector(filepath)
+    name_candidates = []
+
+    lfn_no_slash = lfn.lstrip("/")
+    if lfn_no_slash:
+        name_candidates.append(lfn_no_slash)
+    if lfn.startswith("/"):
+        name_candidates.append(lfn)
+
+    for name in name_candidates:
+        try:
+            meta = client.get_file_meta(scope=_RUCIO_SCOPE, name=name)
+        except Exception:
+            continue
+        if meta and "bytes" in meta and meta["bytes"]:
+            try:
+                return int(meta["bytes"])
+            except (TypeError, ValueError):
+                continue
+    return 0
 
 
 def inspect_file(filepath: str, max_branches: Optional[int] = None) -> Dict:
@@ -82,9 +151,8 @@ def inspect_file(filepath: str, max_branches: Optional[int] = None) -> Dict:
             )
 
             # Get file size (handle both local and remote)
-            if filepath.startswith("root://"):
-                # For remote files, we can't easily get file size
-                file_size_bytes = 0
+            if _is_remote_path(filepath):
+                file_size_bytes = _get_remote_file_size(filepath)
             else:
                 file_size_bytes = Path(filepath).stat().st_size
 

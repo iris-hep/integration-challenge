@@ -1,295 +1,252 @@
-"""Background thread tracking Dask worker count and memory over time.
+"""Scheduler-based tracking of Dask worker count and memory over time.
 
 Enables core efficiency calculations, worker scaling analysis, and memory
-usage tracking by recording worker count and memory usage every N seconds
-during execution.
+usage tracking by recording worker count and memory usage on the scheduler
+using async tasks.
 """
 
+import asyncio
 import datetime
-import os
-import threading
-import time
+import json
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
 
-def start_tracking(
-    client,
-    measurement_path: Path,
-    interval: float = 1.0,
-) -> Tuple[threading.Thread, Path]:
-    """Start background thread tracking worker count and memory.
+# =============================================================================
+# Scheduler-Side Functions (Run via client.run_on_scheduler)
+# =============================================================================
 
-    Creates a signal file and spawns a daemon thread that writes worker
-    count and memory usage to disk every `interval` seconds. Thread
-    automatically stops when signal file is removed.
+
+def start_tracking(dask_scheduler, interval: float = 1.0):
+    """Start tracking worker count and memory on scheduler.
+
+    Creates an async task on the scheduler that records worker count and
+    memory usage every `interval` seconds. Data is stored in-memory on
+    the scheduler.
 
     Parameters
     ----------
-    client : dask.distributed.Client
-        Dask distributed client
-    measurement_path : Path
-        Directory to write num_workers.txt and worker_memory.txt
+    dask_scheduler : distributed.Scheduler
+        Dask scheduler object
     interval : float
         Seconds between samples (default: 1.0)
-
-    Returns
-    -------
-    thread : threading.Thread
-        Background tracking thread (already started)
-    signal_file : Path
-        Signal file path (remove to stop tracking)
 
     Examples
     --------
     >>> from dask.distributed import Client
-    >>> from pathlib import Path
-    >>>
     >>> client = Client()
-    >>> measurement_path = Path("measurements/test")
-    >>> tracker = start_tracking(client, measurement_path)
-    >>>
-    >>> # Run workload...
-    >>>
-    >>> stop_tracking(tracker)
+    >>> client.run_on_scheduler(start_tracking, interval=1.0)
+    """
+    # Initialize tracking state on scheduler
+    dask_scheduler.worker_counts = {}
+    dask_scheduler.worker_memory = {}
+    dask_scheduler.track_count = True
+
+    async def track_worker_metrics():
+        """Async task to track worker metrics."""
+        while dask_scheduler.track_count:
+            timestamp = datetime.datetime.now()
+
+            # Record worker count
+            num_workers = len(dask_scheduler.workers)
+            dask_scheduler.worker_counts[timestamp] = num_workers
+
+            # Record memory for each worker
+            for worker_id, worker_state in dask_scheduler.workers.items():
+                # Get memory from worker metrics
+                memory_bytes = worker_state.metrics.get("memory", 0)
+
+                if worker_id not in dask_scheduler.worker_memory:
+                    dask_scheduler.worker_memory[worker_id] = []
+
+                dask_scheduler.worker_memory[worker_id].append(
+                    (timestamp, memory_bytes)
+                )
+
+            # Sleep for interval
+            await asyncio.sleep(interval)
+
+    # Create and start the tracking task
+    asyncio.create_task(track_worker_metrics())
+
+
+def stop_tracking(dask_scheduler) -> Dict:
+    """Stop tracking and return collected data.
+
+    Stops the tracking task and returns all collected worker count
+    and memory data.
+
+    Parameters
+    ----------
+    dask_scheduler : distributed.Scheduler
+        Dask scheduler object
+
+    Returns
+    -------
+    tracking_data : dict
+        Dictionary containing:
+        - worker_counts: {datetime -> count} mapping
+        - worker_memory: {worker_id -> [(datetime, memory_bytes), ...]}
+
+    Examples
+    --------
+    >>> from dask.distributed import Client
+    >>> client = Client()
+    >>> client.run_on_scheduler(start_tracking)
+    >>> # ... run workload ...
+    >>> data = client.run_on_scheduler(stop_tracking)
+    """
+    # Stop tracking
+    dask_scheduler.track_count = False
+
+    # Retrieve and return data
+    tracking_data = {
+        "worker_counts": dask_scheduler.worker_counts,
+        "worker_memory": dask_scheduler.worker_memory,
+    }
+
+    return tracking_data
+
+
+# =============================================================================
+# Client-Side Functions (Save/Load/Calculate)
+# =============================================================================
+
+
+def save_worker_timeline(
+    tracking_data: Dict,
+    measurement_path: Path,
+) -> None:
+    """Save worker tracking data to JSON file.
+
+    Saves worker count and memory timelines to a structured JSON file
+    on the client side.
+
+    Parameters
+    ----------
+    tracking_data : dict
+        Data returned from stop_tracking()
+    measurement_path : Path
+        Directory to save worker_timeline.json
+
+    Examples
+    --------
+    >>> data = client.run_on_scheduler(stop_tracking)
+    >>> save_worker_timeline(data, Path("measurements/test"))
     """
     measurement_path = Path(measurement_path)
     measurement_path.mkdir(parents=True, exist_ok=True)
 
-    signal_file = measurement_path / "DASK_RUNNING"
-    worker_count_file = measurement_path / "num_workers.txt"
-    memory_file = measurement_path / "worker_memory.txt"
+    # Convert datetime keys to ISO format strings
+    worker_counts = tracking_data["worker_counts"]
+    worker_memory = tracking_data["worker_memory"]
 
-    # Create signal file
-    signal_file.touch()
+    # Build JSON-serializable structure
+    timeline_data = {
+        "metadata": {
+            "num_samples": len(worker_counts),
+            "start_time": None,
+            "end_time": None,
+            "num_workers_range": None,
+        },
+        "worker_counts": [],
+        "worker_memory": {},
+    }
 
-    # Start background thread
-    thread = threading.Thread(
-        target=_write_worker_metrics,
-        args=(client, worker_count_file, memory_file, signal_file, interval),
-        daemon=True,
-    )
-    thread.start()
+    # Convert worker counts timeline
+    if worker_counts:
+        sorted_timestamps = sorted(worker_counts.keys())
+        timeline_data["metadata"]["start_time"] = sorted_timestamps[0].isoformat()
+        timeline_data["metadata"]["end_time"] = sorted_timestamps[-1].isoformat()
+        timeline_data["metadata"]["num_workers_range"] = [
+            min(worker_counts.values()),
+            max(worker_counts.values()),
+        ]
 
-    return thread, signal_file
+        for timestamp in sorted_timestamps:
+            timeline_data["worker_counts"].append({
+                "timestamp": timestamp.isoformat(),
+                "worker_count": worker_counts[timestamp],
+            })
 
+    # Convert worker memory timeline
+    for worker_id, memory_timeline in worker_memory.items():
+        timeline_data["worker_memory"][worker_id] = [
+            {
+                "timestamp": timestamp.isoformat(),
+                "memory_bytes": memory_bytes,
+            }
+            for timestamp, memory_bytes in memory_timeline
+        ]
 
-def stop_tracking(tracker: Tuple[threading.Thread, Path]) -> None:
-    """Stop worker tracking thread gracefully.
-
-    Removes signal file and waits for thread to complete. Thread will
-    finish its current sleep interval before stopping.
-
-    Parameters
-    ----------
-    tracker : Tuple[threading.Thread, Path]
-        Tuple of (thread, signal_file) returned by start_tracking()
-
-    Examples
-    --------
-    >>> tracker = start_tracking(client, measurement_path)
-    >>> # ... run workload ...
-    >>> stop_tracking(tracker)
-    """
-    thread, signal_file = tracker
-
-    # Remove signal file to stop thread
-    if signal_file.exists():
-        signal_file.unlink()
-
-    # Wait for thread to finish (with timeout)
-    thread.join(timeout=5.0)
-
-
-def _write_worker_metrics(
-    client,
-    worker_count_file: Path,
-    memory_file: Path,
-    signal_file: Path,
-    interval: float,
-) -> None:
-    """Background thread worker function (internal use only).
-
-    Writes worker count and memory usage to files every `interval` seconds
-    while signal file exists. Daemon thread - automatically stops when main exits.
-
-    Parameters
-    ----------
-    client : dask.distributed.Client
-        Dask distributed client
-    worker_count_file : Path
-        File to write worker counts
-    memory_file : Path
-        File to write memory usage per worker
-    signal_file : Path
-        Signal file (thread stops when removed)
-    interval : float
-        Seconds between samples
-    """
-    with open(worker_count_file, "w") as f_workers, open(memory_file, "w") as f_memory:
-        while signal_file.exists():
-            try:
-                # Get current scheduler info
-                scheduler_info = client.scheduler_info()
-                workers_dict = scheduler_info.get("workers", {})
-                nworkers = len(workers_dict)
-
-                timestamp = datetime.datetime.now()
-
-                # Write worker count
-                f_workers.write(f"{timestamp}, {nworkers}\n")
-                f_workers.flush()
-
-                # Write memory usage for each worker
-                # Format: timestamp, worker_id, memory_bytes
-                for worker_id, worker_info in workers_dict.items():
-                    # Get memory from worker metrics
-                    metrics = worker_info.get("metrics", {})
-                    memory_bytes = metrics.get("memory", 0)
-
-                    f_memory.write(f"{timestamp}, {worker_id}, {memory_bytes}\n")
-
-                f_memory.flush()
-
-            except Exception as e:
-                # Log error but keep running
-                error_msg = f"{datetime.datetime.now()}, ERROR: {e}\n"
-                f_workers.write(error_msg)
-                f_memory.write(error_msg)
-                f_workers.flush()
-                f_memory.flush()
-
-            # Sleep for interval
-            time.sleep(interval)
+    # Save to JSON
+    output_file = measurement_path / "worker_timeline.json"
+    with open(output_file, "w") as f:
+        json.dump(timeline_data, f, indent=2)
 
 
-def load_worker_timeline(measurement_path: Path) -> Tuple[List[datetime.datetime], List[int]]:
-    """Load worker count timeline from measurement.
+def load_worker_timeline(measurement_path: Path) -> Dict:
+    """Load worker tracking data from JSON file.
+
+    Loads and deserializes worker count and memory timelines from JSON.
 
     Parameters
     ----------
     measurement_path : Path
-        Directory containing num_workers.txt
+        Directory containing worker_timeline.json
 
     Returns
     -------
-    timestamps : List[datetime.datetime]
-        List of sample timestamps
-    worker_counts : List[int]
-        Number of workers at each timestamp
+    tracking_data : dict
+        Dictionary containing:
+        - worker_counts: {datetime -> count} mapping
+        - worker_memory: {worker_id -> [(datetime, memory_bytes), ...]}
 
     Raises
     ------
     FileNotFoundError
-        If num_workers.txt doesn't exist
+        If worker_timeline.json doesn't exist
 
     Examples
     --------
     >>> from pathlib import Path
-    >>>
-    >>> timestamps, workers = load_worker_timeline(Path("measurements/test"))
-    >>> avg_workers = calculate_time_averaged_workers(timestamps, workers)
+    >>> data = load_worker_timeline(Path("measurements/test"))
+    >>> avg_workers = calculate_time_averaged_workers(data["worker_counts"])
     """
-    timeline_file = measurement_path / "num_workers.txt"
+    timeline_file = measurement_path / "worker_timeline.json"
 
     if not timeline_file.exists():
         raise FileNotFoundError(f"Worker timeline not found: {timeline_file}")
 
-    timestamps = []
-    worker_counts = []
-
     with open(timeline_file, "r") as f:
-        for line in f:
-            line = line.strip()
-            if not line or "ERROR" in line:
-                continue
+        timeline_data = json.load(f)
 
-            try:
-                timestamp_str, count_str = line.rsplit(",", 1)
-                timestamp = datetime.datetime.fromisoformat(timestamp_str.strip())
-                count = int(count_str.strip())
+    # Convert ISO strings back to datetime objects
+    worker_counts = {}
+    for entry in timeline_data["worker_counts"]:
+        timestamp = datetime.datetime.fromisoformat(entry["timestamp"])
+        worker_counts[timestamp] = entry["worker_count"]
 
-                timestamps.append(timestamp)
-                worker_counts.append(count)
-            except (ValueError, AttributeError):
-                # Skip malformed lines
-                continue
+    # Convert worker memory timeline
+    worker_memory = {}
+    for worker_id, memory_timeline in timeline_data["worker_memory"].items():
+        worker_memory[worker_id] = [
+            (
+                datetime.datetime.fromisoformat(entry["timestamp"]),
+                entry["memory_bytes"],
+            )
+            for entry in memory_timeline
+        ]
 
-    return timestamps, worker_counts
-
-
-def load_memory_timeline(measurement_path: Path) -> Tuple[List[datetime.datetime], dict]:
-    """Load worker memory timeline from measurement.
-
-    Parameters
-    ----------
-    measurement_path : Path
-        Directory containing worker_memory.txt
-
-    Returns
-    -------
-    timestamps : List[datetime.datetime]
-        List of unique sample timestamps
-    worker_memory : dict
-        Dictionary mapping worker_id to list of (timestamp, memory_bytes) tuples
-
-    Raises
-    ------
-    FileNotFoundError
-        If worker_memory.txt doesn't exist
-
-    Examples
-    --------
-    >>> from pathlib import Path
-    >>>
-    >>> timestamps, worker_memory = load_memory_timeline(Path("measurements/test"))
-    >>> peak_memory_gb = calculate_peak_memory(worker_memory) / 1e9
-    """
-    memory_file = measurement_path / "worker_memory.txt"
-
-    if not memory_file.exists():
-        raise FileNotFoundError(f"Memory timeline not found: {memory_file}")
-
-    timestamps_set = set()
-    worker_memory = {}  # worker_id -> [(timestamp, memory_bytes), ...]
-
-    with open(memory_file, "r") as f:
-        for line in f:
-            line = line.strip()
-            if not line or "ERROR" in line:
-                continue
-
-            try:
-                parts = line.rsplit(",", 2)
-                if len(parts) != 3:
-                    continue
-
-                timestamp_str, worker_id, memory_str = parts
-                timestamp = datetime.datetime.fromisoformat(timestamp_str.strip())
-                worker_id = worker_id.strip()
-                memory_bytes = float(memory_str.strip())
-
-                timestamps_set.add(timestamp)
-
-                if worker_id not in worker_memory:
-                    worker_memory[worker_id] = []
-
-                worker_memory[worker_id].append((timestamp, memory_bytes))
-
-            except (ValueError, AttributeError):
-                # Skip malformed lines
-                continue
-
-    timestamps = sorted(timestamps_set)
-    return timestamps, worker_memory
+    return {
+        "worker_counts": worker_counts,
+        "worker_memory": worker_memory,
+    }
 
 
-def calculate_time_averaged_workers(
-    timestamps: List[datetime.datetime],
-    worker_counts: List[int],
-) -> float:
+def calculate_time_averaged_workers(worker_counts: Dict[datetime.datetime, int]) -> float:
     """Calculate time-weighted average worker count.
 
     Uses trapezoidal integration to compute the average number of workers
@@ -297,10 +254,8 @@ def calculate_time_averaged_workers(
 
     Parameters
     ----------
-    timestamps : List[datetime.datetime]
-        Sample timestamps
-    worker_counts : List[int]
-        Worker count at each timestamp
+    worker_counts : dict
+        Mapping from datetime to worker count
 
     Returns
     -------
@@ -309,41 +264,87 @@ def calculate_time_averaged_workers(
 
     Examples
     --------
-    >>> timestamps = [t0, t1, t2]  # 0s, 100s, 300s
-    >>> workers = [10, 50, 50]
-    >>> avg = calculate_time_averaged_workers(timestamps, workers)
-    >>> # avg ≈ (10*100 + 50*200) / 300 = 36.67
+    >>> data = load_worker_timeline(measurement_path)
+    >>> avg_workers = calculate_time_averaged_workers(data["worker_counts"])
     """
-    if len(timestamps) < 2:
-        return float(worker_counts[0]) if worker_counts else 0.0
+    if not worker_counts:
+        return 0.0
 
-    # Convert timestamps to seconds since first sample
+    if len(worker_counts) < 2:
+        return float(list(worker_counts.values())[0])
+
+    # Sort by timestamp
+    sorted_items = sorted(worker_counts.items())
+    timestamps = [t for t, _ in sorted_items]
+    counts = [c for _, c in sorted_items]
+
+    # Convert to seconds since first sample
     t0 = timestamps[0]
     times = np.array([(t - t0).total_seconds() for t in timestamps])
-    counts = np.array(worker_counts, dtype=float)
+    worker_array = np.array(counts, dtype=float)
 
     # Calculate time intervals
     delta_t = np.diff(times)
 
-    # Calculate workers * time for each interval (using midpoint)
-    workers_times_time = [(counts[i] + counts[i + 1]) / 2 * delta_t[i]
-                          for i in range(len(delta_t))]
+    # Trapezoidal integration: area = (y1 + y2) / 2 * delta_t
+    workers_times_time = [
+        (worker_array[i] + worker_array[i + 1]) / 2 * delta_t[i]
+        for i in range(len(delta_t))
+    ]
 
     # Time-weighted average
     total_time = times[-1] - times[0]
     if total_time == 0:
-        return counts[0]
+        return worker_array[0]
 
     return sum(workers_times_time) / total_time
 
 
-def calculate_peak_memory(worker_memory: dict) -> float:
+def calculate_average_workers(worker_counts: Dict[datetime.datetime, int]) -> float:
+    """Calculate average number of workers using trapezoidal integration.
+
+    This is the implementation from Mo's example. Identical to
+    calculate_time_averaged_workers() but kept as separate function
+    for compatibility.
+
+    Parameters
+    ----------
+    worker_counts : dict
+        Mapping from datetime to worker count
+
+    Returns
+    -------
+    avg_workers : float
+        Time-averaged worker count
+
+    Examples
+    --------
+    >>> data = client.run_on_scheduler(stop_tracking)
+    >>> avg = calculate_average_workers(data["worker_counts"])
+    """
+    if not worker_counts:
+        return 0.0
+
+    worker_info = sorted(worker_counts.items())
+
+    if len(worker_info) < 2:
+        return float(worker_info[0][1])
+
+    nworker_dt = 0
+    for (t0, nw0), (t1, nw1) in zip(worker_info[:-1], worker_info[1:]):
+        nworker_dt += (nw1 + nw0) / 2 * (t1 - t0).total_seconds()
+
+    total_seconds = (worker_info[-1][0] - worker_info[0][0]).total_seconds()
+    return nworker_dt / total_seconds
+
+
+def calculate_peak_memory(worker_memory: Dict[str, List[Tuple]]) -> float:
     """Calculate peak memory usage across all workers.
 
     Parameters
     ----------
     worker_memory : dict
-        Dictionary from load_memory_timeline: worker_id -> [(timestamp, memory_bytes), ...]
+        Dictionary from tracking data: worker_id -> [(timestamp, memory_bytes), ...]
 
     Returns
     -------
@@ -352,8 +353,8 @@ def calculate_peak_memory(worker_memory: dict) -> float:
 
     Examples
     --------
-    >>> timestamps, worker_memory = load_memory_timeline(measurement_path)
-    >>> peak_gb = calculate_peak_memory(worker_memory) / 1e9
+    >>> data = load_worker_timeline(measurement_path)
+    >>> peak_gb = calculate_peak_memory(data["worker_memory"]) / 1e9
     """
     if not worker_memory:
         return 0.0
@@ -366,13 +367,15 @@ def calculate_peak_memory(worker_memory: dict) -> float:
     return max(all_memory_values) if all_memory_values else 0.0
 
 
-def calculate_average_memory_per_worker(worker_memory: dict) -> float:
+def calculate_average_memory_per_worker(worker_memory: Dict[str, List[Tuple]]) -> float:
     """Calculate time-weighted average memory per worker.
+
+    Computes time-weighted average for each worker, then averages across workers.
 
     Parameters
     ----------
     worker_memory : dict
-        Dictionary from load_memory_timeline: worker_id -> [(timestamp, memory_bytes), ...]
+        Dictionary from tracking data: worker_id -> [(timestamp, memory_bytes), ...]
 
     Returns
     -------
@@ -381,8 +384,8 @@ def calculate_average_memory_per_worker(worker_memory: dict) -> float:
 
     Examples
     --------
-    >>> timestamps, worker_memory = load_memory_timeline(measurement_path)
-    >>> avg_gb = calculate_average_memory_per_worker(worker_memory) / 1e9
+    >>> data = load_worker_timeline(measurement_path)
+    >>> avg_gb = calculate_average_memory_per_worker(data["worker_memory"]) / 1e9
     """
     if not worker_memory:
         return 0.0
@@ -410,9 +413,11 @@ def calculate_average_memory_per_worker(worker_memory: dict) -> float:
         # Calculate time intervals
         delta_t = np.diff(times)
 
-        # Calculate memory * time for each interval (using midpoint)
-        memory_times_time = [(memory[i] + memory[i + 1]) / 2 * delta_t[i]
-                            for i in range(len(delta_t))]
+        # Trapezoidal integration
+        memory_times_time = [
+            (memory[i] + memory[i + 1]) / 2 * delta_t[i]
+            for i in range(len(delta_t))
+        ]
 
         # Time-weighted average for this worker
         total_time = times[-1] - times[0]
