@@ -68,6 +68,8 @@ def collect_processing_metrics(
         **Timing Metrics:**
         - wall_time: Real elapsed time (seconds)
         - total_cpu_time: Sum of all task durations (seconds)
+        - num_chunks: Number of chunks processed
+        - avg_cpu_time_per_chunk: Average CPU time per chunk (seconds)
 
         **Worker/Resource Metrics:**
         - avg_workers: Time-averaged worker count
@@ -102,6 +104,9 @@ def collect_processing_metrics(
     """
     # Calculate wall time
     wall_time = t_end - t_start
+
+    # Extract number of chunks from coffea report
+    num_chunks = coffea_report.get("chunks", 0)
 
     # Combine coffea report and custom metrics into unified structure
     # Coffea report (flat) → "total" dataset entry
@@ -198,6 +203,9 @@ def collect_processing_metrics(
         except Exception as e:
             logger.warning(f"Failed to load worker tracking data: {e}")
 
+    # Calculate chunk-level metrics
+    avg_cpu_time_per_chunk = total_cpu_time / num_chunks if num_chunks > 0 else 0
+
     # Build metrics dictionary
     metrics = {
         # Throughput metrics
@@ -212,6 +220,8 @@ def collect_processing_metrics(
         # Timing metrics
         "wall_time": wall_time,
         "total_cpu_time": total_cpu_time,
+        "num_chunks": num_chunks,
+        "avg_cpu_time_per_chunk": avg_cpu_time_per_chunk,
         # Data volume metrics
         "total_bytes_compressed": total_bytes_compressed,
         "total_bytes_uncompressed": total_bytes_uncompressed,

@@ -200,4 +200,11 @@ def format_timing_table(metrics: Dict[str, Any]) -> Table:
     cpu_time = metrics.get('total_cpu_time', 0)
     table.add_row("Total CPU Time", format_time(cpu_time))
 
+    # Chunk metrics
+    num_chunks = metrics.get('num_chunks', 0)
+    if num_chunks > 0:
+        table.add_row("Number of Chunks", f"{num_chunks:,}")
+        avg_cpu_per_chunk = metrics.get('avg_cpu_time_per_chunk', 0)
+        table.add_row("Avg CPU Time/Chunk", format_time(avg_cpu_per_chunk))
+
     return table
