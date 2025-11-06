@@ -26,6 +26,8 @@ def aggregate_statistics(results: List[Dict]) -> Dict:
     """
     event_counts = [r["num_events"] for r in results]
     file_sizes = [r["file_size_bytes"] for r in results if r["file_size_bytes"] > 0]
+    total_events = sum(event_counts)
+    total_size_bytes = sum(file_sizes)
 
     # Get all unique branches (assume all files have same branches)
     all_branches = set()
@@ -38,10 +40,19 @@ def aggregate_statistics(results: List[Dict]) -> Dict:
     else:
         hist, bin_edges = np.array([]), np.array([])
 
+    events_with_size = sum(
+        r["num_events"] for r in results if r["file_size_bytes"] > 0
+    )
+    event_branch_pairs = sum(
+        r["num_events"] * len(r["branches"])
+        for r in results
+        if r["file_size_bytes"] > 0 and r["num_events"] > 0 and len(r["branches"]) > 0
+    )
+
     stats = {
         "total_files": len(results),
-        "total_events": sum(event_counts),
-        "total_size_bytes": sum(file_sizes),
+        "total_events": total_events,
+        "total_size_bytes": total_size_bytes,
         "avg_events_per_file": np.mean(event_counts) if event_counts else 0,
         "std_events_per_file": np.std(event_counts) if event_counts else 0,
         "median_events_per_file": np.median(event_counts) if event_counts else 0,
@@ -50,6 +61,12 @@ def aggregate_statistics(results: List[Dict]) -> Dict:
         "median_file_size_bytes": np.median(file_sizes) if file_sizes else 0,
         "p90_file_size_bytes": np.percentile(file_sizes, 90) if file_sizes else 0,
         "total_branches": len(all_branches),
+        "avg_bytes_per_event": (
+            total_size_bytes / events_with_size if events_with_size else 0
+        ),
+        "avg_bytes_per_event_per_branch": (
+            total_size_bytes / event_branch_pairs if event_branch_pairs else 0
+        ),
         "event_histogram": {
             "bins": bin_edges.tolist(),
             "counts": hist.tolist(),
@@ -181,13 +198,29 @@ def compute_dataset_statistics(grouped: Dict[str, List[Dict]]) -> Dict[str, Dict
         event_counts = [f["num_events"] for f in files]
         file_sizes = [f["file_size_bytes"] for f in files if f["file_size_bytes"] > 0]
 
+        total_size_bytes = sum(file_sizes) if file_sizes else 0
+        events_with_size = sum(
+            f["num_events"] for f in files if f["file_size_bytes"] > 0
+        )
+        event_branch_pairs = sum(
+            f["num_events"] * len(f["branches"])
+            for f in files
+            if f["file_size_bytes"] > 0 and f["num_events"] > 0 and len(f["branches"]) > 0
+        )
+
         dataset_stats[dataset_name] = {
             "num_files": len(files),
             "total_events": sum(event_counts),
-            "total_size_bytes": sum(file_sizes) if file_sizes else 0,
+            "total_size_bytes": total_size_bytes,
             "avg_events_per_file": np.mean(event_counts) if event_counts else 0,
             "avg_file_size_bytes": np.mean(file_sizes) if file_sizes else 0,
             "median_file_size_bytes": np.median(file_sizes) if file_sizes else 0,
+            "bytes_per_event": (
+                total_size_bytes / events_with_size if events_with_size else 0
+            ),
+            "bytes_per_event_per_branch": (
+                total_size_bytes / event_branch_pairs if event_branch_pairs else 0
+            ),
         }
 
     return dataset_stats

@@ -1,8 +1,10 @@
 """Visualization tools for input file inspection results."""
 
 from typing import Dict, List, Optional
+
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import ScalarFormatter
 
 from intccms.metrics.inspector.aggregator import compute_branch_statistics, group_by_dataset
 
@@ -23,11 +25,11 @@ def _apply_modern_style(ax):
     """
     # Internal tick marks on all sides
     ax.tick_params(
-        direction='in',
-        which='both',      # Apply to both major and minor ticks
-        top=True,          # Show ticks on top
-        right=True,        # Show ticks on right
-        labelsize=10
+        direction="in",
+        which="both",
+        top=True,
+        right=True,
+        labelsize=10,
     )
 
     # Enable minor ticks
@@ -37,8 +39,36 @@ def _apply_modern_style(ax):
     ax.grid(True, alpha=0.2, linewidth=0.5)
 
     # Remove top and right spines for cleaner look
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+
+def _apply_scientific_notation(ax, axis="x", threshold=1e4):
+    """Apply scientific notation with LaTeX when tick magnitudes are large."""
+    axis_obj = ax.xaxis if axis == "x" else ax.yaxis
+    ticks = axis_obj.get_ticklocs()
+    finite_ticks = [abs(t) for t in ticks if np.isfinite(t)]
+    if not finite_ticks:
+        return
+    if max(finite_ticks) < threshold:
+        return
+
+    formatter = ScalarFormatter(useMathText=True)
+    formatter.set_powerlimits((-3, 3))
+    axis_obj.set_major_formatter(formatter)
+    axis_obj.get_offset_text().set_fontsize(10)
+
+
+def _label_with_units(ax, axis: str, base_label: str, unit: Optional[str] = None):
+    """Append unit text to an axis label if provided."""
+    label = base_label.strip()
+    if unit:
+        label = f"{label} ({unit})"
+
+    if axis == "x":
+        ax.set_xlabel(label, fontsize=12)
+    else:
+        ax.set_ylabel(label, fontsize=12)
 
 
 def plot_event_distribution(
@@ -69,13 +99,14 @@ def plot_event_distribution(
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    ax.hist(event_counts, bins=30, edgecolor='none', alpha=0.6, color='steelblue')
-    ax.set_xlabel("Events per File", fontsize=12)
-    ax.set_ylabel("Number of Files", fontsize=12)
+    ax.hist(event_counts, bins=30, edgecolor="none", alpha=0.6, color="steelblue")
+    _label_with_units(ax, "x", "Events per File", "events")
+    _label_with_units(ax, "y", "Number of Files")
     ax.set_title(title, fontsize=14, fontweight='bold')
 
     # Apply modern style
     _apply_modern_style(ax)
+    _apply_scientific_notation(ax, axis="x")
 
     # Add stats text
     stats_text = f"Files: {len(event_counts)}\n"
@@ -129,28 +160,29 @@ def plot_dataset_comparison(
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
 
     # Files per dataset
-    ax1.barh(datasets, num_files, color='steelblue', edgecolor='none', alpha=0.6)
-    ax1.set_xlabel("Number of Files", fontsize=12)
+    ax1.barh(datasets, num_files, color="steelblue", edgecolor="none", alpha=0.6)
+    _label_with_units(ax1, "x", "Number of Files")
     ax1.set_title("Files per Dataset", fontsize=13, fontweight='bold')
 
     # Add values on bars
     for i, v in enumerate(num_files):
-        ax1.text(v, i, f' {v:,}', va='center', fontsize=9)
+        ax1.text(v, i, f" {v:,}", va='center', fontsize=9)
 
     # Apply modern style
     _apply_modern_style(ax1)
 
     # Events per dataset
-    ax2.barh(datasets, total_events, color='coral', edgecolor='none', alpha=0.6)
-    ax2.set_xlabel("Total Events", fontsize=12)
+    ax2.barh(datasets, total_events, color="coral", edgecolor="none", alpha=0.6)
+    _label_with_units(ax2, "x", "Total Events", "events")
     ax2.set_title("Events per Dataset", fontsize=13, fontweight='bold')
 
     # Add values on bars
     for i, v in enumerate(total_events):
-        ax2.text(v, i, f' {v:,}', va='center', fontsize=9)
+        ax2.text(v, i, f" {v:,}", va='center', fontsize=9)
 
     # Apply modern style
     _apply_modern_style(ax2)
+    _apply_scientific_notation(ax2, axis="x")
 
     fig.suptitle(title, fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout()
@@ -191,17 +223,18 @@ def plot_events_per_file_by_dataset(
     fig, ax = plt.subplots(figsize=figsize)
 
     # Horizontal bar chart showing events/file ratio
-    bars = ax.barh(datasets, events_per_file, color='mediumseagreen', edgecolor='none', alpha=0.6)
+    ax.barh(datasets, events_per_file, color="mediumseagreen", edgecolor="none", alpha=0.6)
 
-    ax.set_xlabel("Average Events per File", fontsize=12)
+    _label_with_units(ax, "x", "Average Events per File", "events")
     ax.set_title(title, fontsize=14, fontweight='bold')
 
     # Add values on bars
     for i, v in enumerate(events_per_file):
-        ax.text(v, i, f' {v:,.0f}', va='center', fontsize=9)
+        ax.text(v, i, f" {v:,.0f}", va='center', fontsize=9)
 
     # Apply modern style
     _apply_modern_style(ax)
+    _apply_scientific_notation(ax, axis="x")
 
     plt.tight_layout()
 
@@ -242,11 +275,17 @@ def plot_branch_size_distribution(
     fig, ax = plt.subplots(figsize=figsize)
 
     # Create box plot with 5th-95th percentile whiskers
-    bp = ax.boxplot(sizes_mb, orientation='vertical', patch_artist=True, widths=0.5, whis=[5, 95])
+    bp = ax.boxplot(
+        sizes_mb,
+        orientation='vertical',
+        patch_artist=True,
+        widths=0.5,
+        whis=[5, 95],
+    )
     bp['boxes'][0].set_facecolor('mediumseagreen')
     bp['boxes'][0].set_alpha(0.6)
 
-    ax.set_ylabel("Branch Size (MB)", fontsize=12)
+    _label_with_units(ax, "y", "Branch Size", "MB")
     ax.set_title(title, fontsize=14, fontweight='bold')
     ax.set_xticks([])
 
@@ -308,11 +347,17 @@ def plot_branch_compression_distribution(
     fig, ax = plt.subplots(figsize=figsize)
 
     # Create box plot with 5th-95th percentile whiskers
-    bp = ax.boxplot(compression_ratios, orientation='vertical', patch_artist=True, widths=0.5, whis=[5, 95])
+    bp = ax.boxplot(
+        compression_ratios,
+        orientation='vertical',
+        patch_artist=True,
+        widths=0.5,
+        whis=[5, 95],
+    )
     bp['boxes'][0].set_facecolor('coral')
     bp['boxes'][0].set_alpha(0.6)
 
-    ax.set_ylabel("Compression Ratio", fontsize=12)
+    _label_with_units(ax, "y", "Compression Ratio")
     ax.set_title(title, fontsize=14, fontweight='bold')
     ax.set_xticks([])
 
@@ -393,7 +438,7 @@ def plot_branch_distributions_by_dataset(
         patch.set_facecolor('steelblue')
         patch.set_alpha(0.6)
 
-    ax1.set_ylabel("Branch Size (MB)", fontsize=12)
+    _label_with_units(ax1, "y", "Branch Size", "MB")
     ax1.set_title("Branch Sizes", fontsize=13, fontweight='bold')
     ax1.tick_params(axis='x', rotation=45)
 
@@ -413,7 +458,7 @@ def plot_branch_distributions_by_dataset(
         ax2.axhline(y=2.0, color='green', linestyle='--', alpha=0.5, linewidth=1)
         ax2.axhline(y=1.5, color='orange', linestyle='--', alpha=0.5, linewidth=1)
 
-    ax2.set_ylabel("Compression Ratio", fontsize=12)
+    _label_with_units(ax2, "y", "Compression Ratio")
     ax2.set_title("Compression Ratios", fontsize=13, fontweight='bold')
     ax2.tick_params(axis='x', rotation=45)
 
@@ -467,12 +512,13 @@ def plot_file_size_distribution(
     fig, ax = plt.subplots(figsize=figsize)
 
     ax.hist(file_sizes_gb, bins=30, edgecolor='none', alpha=0.6, color='purple')
-    ax.set_xlabel("File Size (GB)", fontsize=12)
-    ax.set_ylabel("Number of Files", fontsize=12)
+    _label_with_units(ax, "x", "File Size", "GB")
+    _label_with_units(ax, "y", "Number of Files")
     ax.set_title(title, fontsize=14, fontweight='bold')
 
     # Apply modern style
     _apply_modern_style(ax)
+    _apply_scientific_notation(ax, axis="x")
 
     # Add stats text
     stats_text = f"Files: {len(file_sizes_gb)}\n"
