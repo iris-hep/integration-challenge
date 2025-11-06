@@ -7,7 +7,7 @@ from rich.console import Console
 
 def _format_bytes(value: float) -> str:
     """Format byte quantity with appropriate unit."""
-    if value <= 0:
+    if value is None or value <= 0:
         return "0 B"
 
     units = ["B", "KB", "MB", "GB", "TB"]
@@ -62,8 +62,8 @@ def format_overall_stats_table(stats: Dict) -> Table:
 
     table.add_section()
 
-    table.add_row("Avg Bytes/Event", _format_bytes(stats['avg_bytes_per_event']))
-    table.add_row("Avg Bytes/Event/Branch", _format_bytes(stats['avg_bytes_per_event_per_branch']))
+    table.add_row("Avg Bytes/Event", _format_bytes(stats.get('avg_bytes_per_event')))
+    table.add_row("Avg Bytes/Event/Branch", _format_bytes(stats.get('avg_bytes_per_event_per_branch')))
 
     table.add_section()
 
@@ -160,8 +160,8 @@ def format_dataset_stats_table(dataset_stats: Dict[str, Dict]) -> Table:
             f"{stats['avg_events_per_file']:,.0f}",
             f"{stats['total_size_bytes'] / 1024**3:.2f} GB",
             f"{stats['avg_file_size_bytes'] / 1024**3:.2f} GB",
-            _format_bytes(stats['bytes_per_event']),
-            _format_bytes(stats['bytes_per_event_per_branch']),
+            _format_bytes(stats.get('bytes_per_event')),
+            _format_bytes(stats.get('bytes_per_event_per_branch')),
         )
 
     return table

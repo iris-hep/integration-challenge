@@ -6,6 +6,16 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 
+def _branch_count(record: Dict) -> int:
+    """Return the number of branches described in a result record."""
+    branches = record.get("branches", {})
+    if isinstance(branches, dict):
+        return len(branches)
+    if isinstance(branches, (list, tuple)):
+        return len(branches)
+    return 0
+
+
 def aggregate_statistics(results: List[Dict]) -> Dict:
     """Compute aggregate statistics from file inspection results.
 
@@ -44,9 +54,9 @@ def aggregate_statistics(results: List[Dict]) -> Dict:
         r["num_events"] for r in results if r["file_size_bytes"] > 0
     )
     event_branch_pairs = sum(
-        r["num_events"] * len(r["branches"])
+        r["num_events"] * _branch_count(r)
         for r in results
-        if r["file_size_bytes"] > 0 and r["num_events"] > 0 and len(r["branches"]) > 0
+        if r["file_size_bytes"] > 0 and r["num_events"] > 0 and _branch_count(r) > 0
     )
 
     stats = {
@@ -203,9 +213,9 @@ def compute_dataset_statistics(grouped: Dict[str, List[Dict]]) -> Dict[str, Dict
             f["num_events"] for f in files if f["file_size_bytes"] > 0
         )
         event_branch_pairs = sum(
-            f["num_events"] * len(f["branches"])
+            f["num_events"] * _branch_count(f)
             for f in files
-            if f["file_size_bytes"] > 0 and f["num_events"] > 0 and len(f["branches"]) > 0
+            if f["file_size_bytes"] > 0 and f["num_events"] > 0 and _branch_count(f) > 0
         )
 
         dataset_stats[dataset_name] = {
