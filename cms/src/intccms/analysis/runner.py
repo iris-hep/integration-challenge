@@ -281,8 +281,8 @@ def run_processor_workflow(
 
                 # Save measurements if configured
                 if config.general.metrics.save_measurements:
-                    save_measurement(metrics, t0, t1, measurement_path)
-                    logger.info(f"Saved metrics measurement to {measurement_path}")
+                    saved_path = save_measurement(metrics, t0, t1, output_manager, measurement_name="latest")
+                    logger.info(f"Saved metrics measurement to {saved_path}")
 
                 # Log performance report location
                 if config.general.metrics.track_workers:
