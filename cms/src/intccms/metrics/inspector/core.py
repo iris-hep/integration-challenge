@@ -251,7 +251,7 @@ def inspect_dataset_distributed(
 
     # Use Dask bag to process files - compute directly without persist
     # This streams results from workers to client without holding all in memory
-    bag = db.from_sequence(file_args, npartitions=n_partitions)
+    bag = db.from_sequence(file_args, npartitions=len(filepaths)) #TODO:: configure
 
     try:
         # Compute all results - Dask streams from workers as they complete

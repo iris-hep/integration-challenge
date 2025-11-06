@@ -5,11 +5,14 @@ workflow, handling both the full processor execution and the histogram loading
 path (for iterating on statistical models without re-processing).
 """
 
+import cloudpickle
 import logging
 import time
+import traceback
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from lzma import LZMAError
+import sys
 
 from coffea.nanoevents import NanoAODSchema
 from coffea.processor import Runner
@@ -17,6 +20,8 @@ from coffea.processor.executor import WorkItem
 from coffea.processor.executor import UprootMissTreeError
 from dask.distributed import performance_report
 
+import intccms.metrics.worker_tracker
+cloudpickle.register_pickle_by_value(intccms.metrics.worker_tracker) # needed to get scheduler to register functions
 from intccms.analysis.processor import UnifiedProcessor
 from intccms.skimming import FilesetManager
 from intccms.utils.filters import filter_by_process
@@ -206,6 +211,7 @@ def run_processor_workflow(
                     client.run_on_scheduler(start_tracking, interval=1.0)
                     logger.info("Started worker tracking on scheduler")
                 except Exception as e:
+                    traceback.print_exc(limit=None, file=sys.stdout)
                     logger.warning(f"Failed to start worker tracking: {e}")
 
         # Run processor over fileset or workitems
@@ -267,6 +273,7 @@ def run_processor_workflow(
                     save_worker_timeline(tracking_data, measurement_path)
                     logger.info(f"Saved worker timeline to {measurement_path}")
                 except Exception as e:
+                    traceback.print_exc(limit=None, file=sys.stdout)
                     logger.warning(f"Failed to save worker tracking data: {e}")
 
             # Collect all processing metrics
