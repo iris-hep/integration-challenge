@@ -62,6 +62,13 @@ from intccms.metrics.reporter import (
     format_resources_table,
     format_timing_table,
 )
+from intccms.metrics.visualization import (
+    plot_worker_count_timeline,
+    plot_memory_utilization_timeline,
+    plot_cpu_utilization_timeline,
+    plot_scaling_efficiency,
+    plot_summary_dashboard,
+)
 
 __all__ = [
     # Measurements
@@ -86,4 +93,10 @@ __all__ = [
     "format_event_processing_table",
     "format_resources_table",
     "format_timing_table",
+    # Visualization
+    "plot_worker_count_timeline",
+    "plot_memory_utilization_timeline",
+    "plot_cpu_utilization_timeline",
+    "plot_scaling_efficiency",
+    "plot_summary_dashboard",
 ]

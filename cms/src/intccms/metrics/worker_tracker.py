@@ -42,6 +42,8 @@ def start_tracking(dask_scheduler, interval: float = 1.0):
     # Initialize tracking state on scheduler
     dask_scheduler.worker_counts = {}
     dask_scheduler.worker_memory = {}
+    dask_scheduler.worker_memory_limit = {}  # Track memory limits
+    dask_scheduler.worker_active_tasks = {}  # Track active tasks
     dask_scheduler.track_count = True
 
     # Capture cores_per_worker from first worker
@@ -60,16 +62,35 @@ def start_tracking(dask_scheduler, interval: float = 1.0):
             num_workers = len(dask_scheduler.workers)
             dask_scheduler.worker_counts[timestamp] = num_workers
 
-            # Record memory for each worker
+            # Record memory, memory limit, and active tasks for each worker
             for worker_id, worker_state in dask_scheduler.workers.items():
-                # Get memory from worker metrics
+                # Get memory from worker metrics (safe dict access)
                 memory_bytes = worker_state.metrics.get("memory", 0)
 
+                # Get memory limit (direct attribute, fallback to 0)
+                memory_limit = getattr(worker_state, "memory_limit", 0)
+
+                # Get active tasks (processing is a set, fallback to empty set)
+                processing = getattr(worker_state, "processing", set())
+                active_tasks = len(processing) if processing else 0
+
+                # Initialize worker-specific lists if not present
                 if worker_id not in dask_scheduler.worker_memory:
                     dask_scheduler.worker_memory[worker_id] = []
+                if worker_id not in dask_scheduler.worker_memory_limit:
+                    dask_scheduler.worker_memory_limit[worker_id] = []
+                if worker_id not in dask_scheduler.worker_active_tasks:
+                    dask_scheduler.worker_active_tasks[worker_id] = []
 
+                # Append timestamped data
                 dask_scheduler.worker_memory[worker_id].append(
                     (timestamp, memory_bytes)
+                )
+                dask_scheduler.worker_memory_limit[worker_id].append(
+                    (timestamp, memory_limit)
+                )
+                dask_scheduler.worker_active_tasks[worker_id].append(
+                    (timestamp, active_tasks)
                 )
 
             # Sleep for interval
@@ -83,7 +104,7 @@ def stop_tracking(dask_scheduler) -> Dict:
     """Stop tracking and return collected data.
 
     Stops the tracking task and returns all collected worker count,
-    memory data, and cores_per_worker information.
+    memory data, memory limits, active tasks, and cores_per_worker information.
 
     Parameters
     ----------
@@ -96,6 +117,8 @@ def stop_tracking(dask_scheduler) -> Dict:
         Dictionary containing:
         - worker_counts: {datetime -> count} mapping
         - worker_memory: {worker_id -> [(datetime, memory_bytes), ...]}
+        - worker_memory_limit: {worker_id -> [(datetime, memory_limit_bytes), ...]}
+        - worker_active_tasks: {worker_id -> [(datetime, num_active_tasks), ...]}
         - cores_per_worker: int or None, number of threads per worker
 
     Examples
@@ -113,6 +136,8 @@ def stop_tracking(dask_scheduler) -> Dict:
     tracking_data = {
         "worker_counts": dask_scheduler.worker_counts,
         "worker_memory": dask_scheduler.worker_memory,
+        "worker_memory_limit": getattr(dask_scheduler, "worker_memory_limit", {}),
+        "worker_active_tasks": getattr(dask_scheduler, "worker_active_tasks", {}),
         "cores_per_worker": getattr(dask_scheduler, "cores_per_worker", None),
     }
 
@@ -151,6 +176,8 @@ def save_worker_timeline(
     # Convert datetime keys to ISO format strings
     worker_counts = tracking_data["worker_counts"]
     worker_memory = tracking_data["worker_memory"]
+    worker_memory_limit = tracking_data.get("worker_memory_limit", {})
+    worker_active_tasks = tracking_data.get("worker_active_tasks", {})
 
     # Build JSON-serializable structure
     timeline_data = {
@@ -163,6 +190,8 @@ def save_worker_timeline(
         },
         "worker_counts": [],
         "worker_memory": {},
+        "worker_memory_limit": {},
+        "worker_active_tasks": {},
     }
 
     # Convert worker counts timeline
@@ -191,6 +220,26 @@ def save_worker_timeline(
             for timestamp, memory_bytes in memory_timeline
         ]
 
+    # Convert worker memory limit timeline
+    for worker_id, limit_timeline in worker_memory_limit.items():
+        timeline_data["worker_memory_limit"][worker_id] = [
+            {
+                "timestamp": timestamp.isoformat(),
+                "memory_limit_bytes": memory_limit_bytes,
+            }
+            for timestamp, memory_limit_bytes in limit_timeline
+        ]
+
+    # Convert worker active tasks timeline
+    for worker_id, tasks_timeline in worker_active_tasks.items():
+        timeline_data["worker_active_tasks"][worker_id] = [
+            {
+                "timestamp": timestamp.isoformat(),
+                "active_tasks": num_tasks,
+            }
+            for timestamp, num_tasks in tasks_timeline
+        ]
+
     # Save to JSON
     output_file = measurement_path / "worker_timeline.json"
     with open(output_file, "w") as f:
@@ -213,6 +262,8 @@ def load_worker_timeline(measurement_path: Path) -> Dict:
         Dictionary containing:
         - worker_counts: {datetime -> count} mapping
         - worker_memory: {worker_id -> [(datetime, memory_bytes), ...]}
+        - worker_memory_limit: {worker_id -> [(datetime, memory_limit_bytes), ...]}
+        - worker_active_tasks: {worker_id -> [(datetime, num_active_tasks), ...]}
         - cores_per_worker: int or None, number of threads per worker
 
     Raises
@@ -236,13 +287,13 @@ def load_worker_timeline(measurement_path: Path) -> Dict:
 
     # Convert ISO strings back to datetime objects
     worker_counts = {}
-    for entry in timeline_data["worker_counts"]:
+    for entry in timeline_data.get("worker_counts", []):
         timestamp = datetime.datetime.fromisoformat(entry["timestamp"])
         worker_counts[timestamp] = entry["worker_count"]
 
     # Convert worker memory timeline
     worker_memory = {}
-    for worker_id, memory_timeline in timeline_data["worker_memory"].items():
+    for worker_id, memory_timeline in timeline_data.get("worker_memory", {}).items():
         worker_memory[worker_id] = [
             (
                 datetime.datetime.fromisoformat(entry["timestamp"]),
@@ -251,12 +302,36 @@ def load_worker_timeline(measurement_path: Path) -> Dict:
             for entry in memory_timeline
         ]
 
+    # Convert worker memory limit timeline
+    worker_memory_limit = {}
+    for worker_id, limit_timeline in timeline_data.get("worker_memory_limit", {}).items():
+        worker_memory_limit[worker_id] = [
+            (
+                datetime.datetime.fromisoformat(entry["timestamp"]),
+                entry["memory_limit_bytes"],
+            )
+            for entry in limit_timeline
+        ]
+
+    # Convert worker active tasks timeline
+    worker_active_tasks = {}
+    for worker_id, tasks_timeline in timeline_data.get("worker_active_tasks", {}).items():
+        worker_active_tasks[worker_id] = [
+            (
+                datetime.datetime.fromisoformat(entry["timestamp"]),
+                entry["active_tasks"],
+            )
+            for entry in tasks_timeline
+        ]
+
     # Load cores_per_worker from metadata
     cores_per_worker = timeline_data.get("metadata", {}).get("cores_per_worker")
 
     return {
         "worker_counts": worker_counts,
         "worker_memory": worker_memory,
+        "worker_memory_limit": worker_memory_limit,
+        "worker_active_tasks": worker_active_tasks,
         "cores_per_worker": cores_per_worker,
     }
 

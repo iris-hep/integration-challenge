@@ -124,9 +124,8 @@ def fetch_file_sizes(
 
     Notes
     -----
-    The helper performs one ``get_file_meta`` call per LFN. This keeps the logic simple
-    and avoids needing resolved dataset names. For large campaigns you may want to layer
-    caching on top (e.g. store the returned summary to JSON).
+    The helper queries Rucio replicas for each logical file name. For large campaigns
+    you may want to cache the returned summary to avoid repeated lookups.
     """
     if rucio_client is None:
         if rucio_utils is None:
@@ -166,16 +165,44 @@ def fetch_file_sizes(
         if max_files_per_process is not None:
             lfns = lfns[:max_files_per_process]
 
+        # Group LFNs by dataset name derived from the LFN structure
+        dataset_groups: Dict[str, Dict[str, any]] = {}
+        for lfn in lfns:
+            parts = lfn.strip("/").split("/")
+            if len(parts) < 6:
+                summary["errors"].append({"dataset": process, "lfn": lfn, "error": "unable_to_parse_dataset"})
+                continue
+            prefix = "/" + "/".join(parts[:3])  # /store/mc/Run...
+            dataset_name = "/" + "/".join(parts[3:6])  # /ZPrime.../NANOAODSIM/...
+            dataset_groups.setdefault(dataset_name, {"prefix": prefix, "lfns": set()})["lfns"].add(lfn)
+
+        size_map: Dict[str, int] = {}
+        for dataset_name, info in dataset_groups.items():
+            try:
+                files_iter = rucio_client.list_files(scope=scope, name=dataset_name)
+            except Exception as error:
+                logger.warning("Failed to list files for dataset %s: %s", dataset_name, error)
+                for lfn in info["lfns"]:
+                    summary["errors"].append({"dataset": process, "lfn": lfn, "error": str(error)})
+                continue
+
+            for entry in files_iter:
+                name = entry.get("name")
+                if not name:
+                    continue
+                full_lfn = f"{info['prefix']}/{dataset_name.strip('/')}/{name}"
+                if full_lfn in info["lfns"]:
+                    try:
+                        size_map[full_lfn] = int(entry.get("bytes", 0))
+                    except Exception:
+                        size_map[full_lfn] = 0
+
         dataset_files = []
         for lfn in lfns:
             filepath = _build_filepath(lfn, redirector)
-            try:
-                meta = rucio_client.get_file_meta(scope=scope, name=lfn.lstrip("/"))
-                size_bytes = int(meta.get("bytes", 0))
-            except Exception as error:  # pragma: no cover - exercised via unit tests
-                logger.warning("Failed to fetch size for %s: %s", lfn, error)
-                summary["errors"].append({"dataset": process, "lfn": lfn, "error": str(error)})
-                size_bytes = 0
+            size_bytes = size_map.get(lfn, 0)
+            if not size_bytes:
+                summary["errors"].append({"dataset": process, "lfn": lfn, "error": "size_not_found"})
 
             entry = {
                 "dataset": process,
