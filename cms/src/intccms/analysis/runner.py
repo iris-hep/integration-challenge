@@ -197,7 +197,7 @@ def run_processor_workflow(
 
         if metrics_enabled:
             t0 = time.perf_counter()
-            measurement_path = output_manager.measurements_dir / "latest"
+            measurement_path = output_manager.benchmarks_dir / "latest"
 
             # Start worker tracking if configured
             if config.general.metrics.track_workers and hasattr(executor, 'client'):
