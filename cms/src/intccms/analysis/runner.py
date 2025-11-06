@@ -6,14 +6,16 @@ path (for iterating on statistical models without re-processing).
 """
 
 import logging
+import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from lzma import LZMAError
 
 from coffea.nanoevents import NanoAODSchema
 from coffea.processor import Runner
 from coffea.processor.executor import WorkItem
 from coffea.processor.executor import UprootMissTreeError
+from dask.distributed import performance_report
 
 from intccms.analysis.processor import UnifiedProcessor
 from intccms.skimming import FilesetManager
@@ -23,6 +25,13 @@ from intccms.utils.output import (
     load_histograms_from_pickle,
 )
 from intccms.schema import Config
+from intccms.metrics import (
+    start_tracking,
+    stop_tracking,
+    save_worker_timeline,
+    collect_processing_metrics,
+    save_measurement,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +44,16 @@ def run_processor_workflow(
     executor: Any = None,
     schema: Any = NanoAODSchema,
     chunksize: Optional[int] = None,
-) -> Dict[str, Any]:
-    """Execute processor workflow or load saved histograms.
+) -> Tuple[Dict[str, Any], Dict[str, Any], Optional[Dict[str, Any]]]:
+    """Execute processor workflow or load saved histograms with optional metrics collection.
 
     This function provides a unified entry point for the processor-based workflow.
     When run_processor=True, it runs the UnifiedProcessor over data and saves
     histograms. When run_processor=False, it loads previously saved histograms,
     enabling fast iteration on statistical models without re-processing events.
+
+    Metrics collection is controlled by config.general.metrics.enable. When enabled,
+    collects throughput, event rates, worker utilization, and efficiency metrics.
 
     Parameters
     ----------
@@ -64,11 +76,15 @@ def run_processor_workflow(
 
     Returns
     -------
-    Dict[str, Any]
+    output : Dict[str, Any]
         Output dictionary containing:
         - "histograms": Filled histograms (if run_histogramming=True)
         - "processed_events": Number of input events (if run_processor=True)
         - "skimmed_events": Number of events after filtering (if run_processor=True)
+    report : Dict[str, Any]
+        Coffea's performance report (bytesread, entries, processtime, chunks)
+    metrics : Dict[str, Any] or None
+        Processing metrics (if config.general.metrics.enable=True), otherwise None
 
     Raises
     ------
@@ -174,6 +190,24 @@ def run_processor_workflow(
             skipbadfiles=(OSError, LZMAError, UprootMissTreeError, Exception),
         )
 
+        # Setup metrics collection if enabled
+        metrics_enabled = hasattr(config.general, 'metrics') and config.general.metrics.enable
+        t0 = None
+        measurement_path = None
+
+        if metrics_enabled:
+            t0 = time.perf_counter()
+            measurement_path = output_manager.measurements_dir / "latest"
+
+            # Start worker tracking if configured
+            if config.general.metrics.track_workers and hasattr(executor, 'client'):
+                client = executor.client
+                try:
+                    client.run_on_scheduler(start_tracking, interval=1.0)
+                    logger.info("Started worker tracking on scheduler")
+                except Exception as e:
+                    logger.warning(f"Failed to start worker tracking: {e}")
+
         # Run processor over fileset or workitems
         if use_fileset:
             logger.info(f"Processing fileset with {len(fileset)} datasets, chunksize={chunksize}")
@@ -184,24 +218,87 @@ def run_processor_workflow(
                 treename = dataset_info["metadata"].get("treename", "Events")
                 coffea_fileset[dataset_name] = {treename: files}
 
-            output, report = runner(
-                coffea_fileset,
-                treename="Events",  # Will be overridden by fileset structure
-                processor_instance=unified_processor,
-            )
+            # Wrap with performance report if metrics enabled
+            if metrics_enabled:
+                perf_report_path = measurement_path / "dask_performance.html"
+                with performance_report(filename=str(perf_report_path)):
+                    output, report = runner(
+                        coffea_fileset,
+                        treename="Events",  # Will be overridden by fileset structure
+                        processor_instance=unified_processor,
+                    )
+            else:
+                output, report = runner(
+                    coffea_fileset,
+                    treename="Events",  # Will be overridden by fileset structure
+                    processor_instance=unified_processor,
+                )
         else:
             logger.info(f"Processing {len(workitems)} work items with chunksize={chunksize}")
-            output, report = runner(
-                workitems,
-                processor_instance=unified_processor,
-            )
+
+            # Wrap with performance report if metrics enabled
+            if metrics_enabled:
+                perf_report_path = measurement_path / "dask_performance.html"
+                with performance_report(filename=str(perf_report_path)):
+                    output, report = runner(
+                        workitems,
+                        processor_instance=unified_processor,
+                    )
+            else:
+                output, report = runner(
+                    workitems,
+                    processor_instance=unified_processor,
+                )
 
         logger.info(
             f"Processor complete: {output.get('processed_events', 0):,} events processed, "
             f"{output.get('skimmed_events', 0):,} events after skim"
         )
 
-        return output, report
+        # Collect metrics if enabled
+        metrics = None
+        if metrics_enabled:
+            t1 = time.perf_counter()
+
+            # Stop worker tracking and save timeline
+            if config.general.metrics.track_workers and hasattr(executor, 'client'):
+                try:
+                    tracking_data = client.run_on_scheduler(stop_tracking)
+                    save_worker_timeline(tracking_data, measurement_path)
+                    logger.info(f"Saved worker timeline to {measurement_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to save worker tracking data: {e}")
+
+            # Collect all processing metrics
+            try:
+                metrics = collect_processing_metrics(
+                    coffea_report=report,
+                    t_start=t0,
+                    t_end=t1,
+                    custom_metrics=output.get("_metrics", None),
+                    measurement_path=measurement_path if config.general.metrics.track_workers else None,
+                )
+
+                # Save measurements if configured
+                if config.general.metrics.save_measurements:
+                    save_measurement(metrics, t0, t1, measurement_path)
+                    logger.info(f"Saved metrics measurement to {measurement_path}")
+
+                # Log performance report location
+                if config.general.metrics.track_workers:
+                    logger.info(f"📊 Dask performance report: {perf_report_path}")
+
+                # Log key metrics
+                logger.info(
+                    f"📈 Metrics: {metrics.get('overall_rate_gbps', 0):.2f} Gbps, "
+                    f"{metrics.get('event_rate_wall_khz', 0):.1f} kHz"
+                )
+
+            except Exception as e:
+                logger.error(f"Failed to collect metrics: {e}")
+                metrics = None
+
+        return output, report, metrics
 
     else:
         # Skip processor and load saved histograms
@@ -219,5 +316,5 @@ def run_processor_workflow(
         histograms = load_histograms_from_pickle(histograms_pkl)
         logger.info(f"Loaded histograms from {histograms_pkl}")
 
-        # Return in same format as processor output
-        return {"histograms": histograms}, {}
+        # Return in same format as processor output (no report or metrics when loading)
+        return {"histograms": histograms}, {}, None

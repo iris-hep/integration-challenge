@@ -24,7 +24,7 @@ def start_tracking(dask_scheduler, interval: float = 1.0):
 
     Creates an async task on the scheduler that records worker count and
     memory usage every `interval` seconds. Data is stored in-memory on
-    the scheduler.
+    the scheduler. Also captures cores_per_worker from the first worker.
 
     Parameters
     ----------
@@ -43,6 +43,13 @@ def start_tracking(dask_scheduler, interval: float = 1.0):
     dask_scheduler.worker_counts = {}
     dask_scheduler.worker_memory = {}
     dask_scheduler.track_count = True
+
+    # Capture cores_per_worker from first worker
+    if dask_scheduler.workers:
+        first_worker = list(dask_scheduler.workers.values())[0]
+        dask_scheduler.cores_per_worker = first_worker.nthreads
+    else:
+        dask_scheduler.cores_per_worker = None
 
     async def track_worker_metrics():
         """Async task to track worker metrics."""
@@ -75,8 +82,8 @@ def start_tracking(dask_scheduler, interval: float = 1.0):
 def stop_tracking(dask_scheduler) -> Dict:
     """Stop tracking and return collected data.
 
-    Stops the tracking task and returns all collected worker count
-    and memory data.
+    Stops the tracking task and returns all collected worker count,
+    memory data, and cores_per_worker information.
 
     Parameters
     ----------
@@ -89,6 +96,7 @@ def stop_tracking(dask_scheduler) -> Dict:
         Dictionary containing:
         - worker_counts: {datetime -> count} mapping
         - worker_memory: {worker_id -> [(datetime, memory_bytes), ...]}
+        - cores_per_worker: int or None, number of threads per worker
 
     Examples
     --------
@@ -105,6 +113,7 @@ def stop_tracking(dask_scheduler) -> Dict:
     tracking_data = {
         "worker_counts": dask_scheduler.worker_counts,
         "worker_memory": dask_scheduler.worker_memory,
+        "cores_per_worker": getattr(dask_scheduler, "cores_per_worker", None),
     }
 
     return tracking_data
@@ -150,6 +159,7 @@ def save_worker_timeline(
             "start_time": None,
             "end_time": None,
             "num_workers_range": None,
+            "cores_per_worker": tracking_data.get("cores_per_worker"),
         },
         "worker_counts": [],
         "worker_memory": {},
@@ -203,6 +213,7 @@ def load_worker_timeline(measurement_path: Path) -> Dict:
         Dictionary containing:
         - worker_counts: {datetime -> count} mapping
         - worker_memory: {worker_id -> [(datetime, memory_bytes), ...]}
+        - cores_per_worker: int or None, number of threads per worker
 
     Raises
     ------
@@ -240,9 +251,13 @@ def load_worker_timeline(measurement_path: Path) -> Dict:
             for entry in memory_timeline
         ]
 
+    # Load cores_per_worker from metadata
+    cores_per_worker = timeline_data.get("metadata", {}).get("cores_per_worker")
+
     return {
         "worker_counts": worker_counts,
         "worker_memory": worker_memory,
+        "cores_per_worker": cores_per_worker,
     }
 
 
