@@ -38,7 +38,7 @@ from intccms.metrics.inspector.format import (
     format_dataset_stats_table,
     format_compression_stats_table,
 )
-from intccms.metrics.inspector import plot
+from intccms.metrics.inspector import plot, rucio
 
 __all__ = [
     # Core inspection
@@ -62,4 +62,6 @@ __all__ = [
     "format_compression_stats_table",
     # Plotting
     "plot",
+    # Rucio helper module
+    "rucio",
 ]

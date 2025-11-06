@@ -477,6 +477,7 @@ def plot_branch_distributions_by_dataset(
 
 def plot_file_size_distribution(
     results: List[Dict],
+    size_summary: Optional[Dict] = None,
     title: str = "File Size Distribution",
     figsize: tuple = (10, 6),
     save_path: Optional[str] = None,
@@ -487,6 +488,10 @@ def plot_file_size_distribution(
     ----------
     results : List[dict]
         File inspection results
+    size_summary : Dict, optional
+        Optional size summary produced by :func:`inspector.rucio.fetch_file_sizes`.
+        When provided, histogram data is derived from this summary. Otherwise the
+        ``file_size_bytes`` attribute from *results* is used (suitable for local files).
     title : str
         Plot title
     figsize : tuple
@@ -497,13 +502,21 @@ def plot_file_size_distribution(
     Examples
     --------
     >>> plot_file_size_distribution(results)
+    >>> size_summary = fetch_file_sizes(dataset_manager, processes=["signal"])
+    >>> plot_file_size_distribution(results, size_summary=size_summary)
     """
-    # Filter out files with zero size (remote files)
-    file_sizes_gb = [
-        r["file_size_bytes"] / 1024**3
-        for r in results
-        if r["file_size_bytes"] > 0
-    ]
+    if size_summary:
+        file_sizes_gb = [
+            entry["bytes"] / 1024**3
+            for entry in size_summary.get("files", [])
+            if entry.get("bytes", 0) > 0
+        ]
+    else:
+        file_sizes_gb = [
+            r["file_size_bytes"] / 1024**3
+            for r in results
+            if r["file_size_bytes"] > 0
+        ]
 
     if not file_sizes_gb:
         print("No file size data available (all files are remote)")
