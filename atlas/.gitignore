@@ -214,3 +214,5 @@ ntuple_production/production_status.json
 preprocess_output.json
 # Dask reports
 *html
+# figures
+*png
