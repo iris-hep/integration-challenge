@@ -25,13 +25,13 @@ from intccms.utils.output import (
     load_histograms_from_pickle,
 )
 from intccms.schema import Config
-from intccms.metrics import (
+from intccms.metrics.worker_tracker import (
     start_tracking,
     stop_tracking,
     save_worker_timeline,
-    collect_processing_metrics,
-    save_measurement,
 )
+from intccms.metrics.collector import collect_processing_metrics
+from intccms.metrics.measurements import save_measurement
 
 logger = logging.getLogger(__name__)
 
