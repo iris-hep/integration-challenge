@@ -9,6 +9,7 @@ import cloudpickle
 import logging
 import time
 import traceback
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from lzma import LZMAError
@@ -199,10 +200,13 @@ def run_processor_workflow(
         metrics_enabled = hasattr(config.general, 'metrics') and config.general.metrics.enable
         t0 = None
         measurement_path = None
+        measurement_name = None
 
         if metrics_enabled:
             t0 = time.perf_counter()
-            measurement_path = output_manager.benchmarks_dir / "latest"
+            # Create timestamped measurement directory (YYYYMMDD-HHMMSS)
+            measurement_name = datetime.now().strftime("%Y%m%d-%H%M%S")
+            measurement_path = output_manager.benchmarks_dir / measurement_name
 
             # Start worker tracking if configured
             if config.general.metrics.track_workers and hasattr(executor, 'client'):
@@ -288,7 +292,7 @@ def run_processor_workflow(
 
                 # Save measurements if configured
                 if config.general.metrics.save_measurements:
-                    saved_path = save_measurement(metrics, t0, t1, output_manager, measurement_name="latest")
+                    saved_path = save_measurement(metrics, t0, t1, output_manager, measurement_name=measurement_name)
                     logger.info(f"Saved metrics measurement to {saved_path}")
 
                 # Log performance report location
