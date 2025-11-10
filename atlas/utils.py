@@ -6,13 +6,14 @@ import datetime
 import functools
 import math
 import re
-import uproot
 import urllib.request
 
 import coffea
 import dask.bag
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import uproot
 
 
 ##################################################
@@ -55,6 +56,37 @@ def plot_worker_count(worker_count_dict: dict):
     ax.set_ylim([0, ax.get_ylim()[1]])
     ax.set_xlabel("time")
     ax.set_ylabel("number of workers")
+    return fig, ax
+
+
+def plot_taskstream(ts: dict):
+    """simplified version of Dask html report task stream"""
+    fig, ax = plt.subplots()
+    t0 = min(min(t["start"] for t in ts_["startstops"]) for ts_ in ts)
+    tmax = max(max(t["start"] for t in ts_["startstops"]) for ts_ in ts) - t0
+    y_next = 0
+    worker_pos = {}
+    for task in ts:
+        # get y position for worker or create new one for new worker
+        y_pos = worker_pos.get(task["worker"], None)
+        if y_pos is None:
+            y_pos = y_next
+            worker_pos[task["worker"]] = y_pos
+            y_next += 1
+
+        for subtask in task["startstops"]:
+            if subtask["action"] != "compute":
+                continue
+            start = subtask["start"] - t0
+            stop = subtask["stop"] - t0
+            c = "yellow" if subtask["action"] == "compute" else "red"
+            patch = mpl.patches.Rectangle((start, y_pos-0.4), stop-start, 0.8, facecolor=c, edgecolor="black")
+            ax.add_patch(patch)
+
+    ax.set_xlim(0, tmax)
+    ax.set_ylim(-0.5, y_next-0.5)
+    ax.set_xlabel("time [sec]")
+    ax.set_ylabel("unique workers")
     return fig, ax
 
 
