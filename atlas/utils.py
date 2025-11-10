@@ -1,10 +1,56 @@
 # saving preprocessing output
+import asyncio
 import base64
 import dataclasses
+import datetime
 import re
 import urllib.request
 
 import coffea
+import matplotlib.pyplot as plt
+
+
+##################################################
+### Dask task tracking
+##################################################
+
+def start_tracking(dask_scheduler) -> None:
+    """"run on scheduler to track worker count"""
+    dask_scheduler.worker_counts = {}
+    dask_scheduler.track_count = True
+
+    async def track_count() -> None:
+        while dask_scheduler.track_count:
+            dask_scheduler.worker_counts[datetime.datetime.now()] = len(dask_scheduler.workers)
+            await asyncio.sleep(1)
+
+    asyncio.create_task(track_count())
+
+
+def stop_tracking(dask_scheduler) -> dict:
+    """obtain worker count and stop tracking"""
+    dask_scheduler.track_count = False
+    return dask_scheduler.worker_counts
+
+
+def get_avg_num_workers(worker_count_dict: dict) -> float:
+    """get time-averaged worker count"""
+    worker_info = list(worker_count_dict.items())
+    nworker_dt = 0
+    for (t0, nw0), (t1, nw1) in zip(worker_info[:-1], worker_info[1:]):
+        nworker_dt += (nw1 + nw0) / 2 * (t1 - t0).total_seconds()
+    return nworker_dt / (worker_info[-1][0] - worker_info[0][0]).total_seconds()
+
+
+def plot_worker_count(worker_count_dict: dict):
+    """plot worker count over time"""
+    fig, ax = plt.subplots()
+    ax.plot(worker_count_dict.keys(), worker_count_dict.values())
+    ax.tick_params(axis="x", labelrotation=45)
+    ax.set_ylim([0, ax.get_ylim()[1]])
+    ax.set_xlabel("time")
+    ax.set_ylabel("number of workers")
+    return fig, ax
 
 
 ##################################################
