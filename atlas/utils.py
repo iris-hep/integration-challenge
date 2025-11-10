@@ -3,11 +3,16 @@ import asyncio
 import base64
 import dataclasses
 import datetime
+import functools
+import math
 import re
+import uproot
 import urllib.request
 
 import coffea
+import dask.bag
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 ##################################################
@@ -51,6 +56,74 @@ def plot_worker_count(worker_count_dict: dict):
     ax.set_xlabel("time")
     ax.set_ylabel("number of workers")
     return fig, ax
+
+
+##################################################
+### custom pre-processing
+##################################################
+
+def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom_func=None):
+    """Dask-based pre-processing similar to coffea, can run user-provided function for more metadata"""
+    files_to_preprocess = []
+    for category_info in fileset.values():
+        files_to_preprocess += [(k, v) for k, v in category_info["files"].items()]
+
+    preprocess_input = dask.bag.from_sequence(files_to_preprocess, partition_size=1)
+
+    def extract_metadata(fname_and_treename: str, custom_func) -> dict:
+        """read file and extract relevant information"""
+        fname, treename = fname_and_treename
+        meta = {"treename": treename}
+        with uproot.open(fname) as f:
+            meta["fileuuid"] = f.file.uuid.bytes
+            meta["num_entries"] = f[treename].num_entries if treename in f else 0  # handle missing trees
+            print("calling custom_func", custom_func, "on file", f)
+            if custom_func:
+                meta.update({"custom_meta": custom_func(f)})
+        return {fname: meta}
+
+    print(f"pre-processing {len(files_to_preprocess)} file(s)")
+    futures = preprocess_input.map(functools.partial(extract_metadata, custom_func=custom_func))
+    result = client.compute(futures).result()
+
+    # turn into dict for easier use
+    result_dict = {k: v for res in result for k, v in res.items()}
+
+    # join back together per-file information with fileset-level information and turn into WorkItem list for coffea
+    workitems = []
+    for category_name, category_info in fileset.items():
+        for fname, treename in category_info["files"].items():
+            preprocess_meta = result_dict[fname]
+            # split into chunks as done in coffea, taken from
+            # https://github.com/scikit-hep/coffea/blob/f7e1249745484567d1e380865dc05fae83165084/src/coffea/dataset_tools/preprocess.py#L129-L140
+            n_steps_target = max(round(preprocess_meta["num_entries"] / chunksize), 1)
+            actual_step_size = math.ceil(preprocess_meta["num_entries"] / n_steps_target)
+            chunks = np.array(
+                [
+                    [
+                        i * actual_step_size,
+                        min((i + 1) * actual_step_size, preprocess_meta["num_entries"]),
+                    ]
+                    for i in range(n_steps_target)
+                ],
+                dtype="int64",
+            )
+            for entry_start, entry_stop in chunks:
+                if entry_stop - entry_start == 0:
+                    continue
+                workitems.append(
+                    coffea.processor.executor.WorkItem(
+                        dataset=category_name,
+                        filename=fname,
+                        treename=treename,
+                        entrystart=int(entry_start),
+                        entrystop=int(entry_stop),
+                        fileuuid=preprocess_meta["fileuuid"],
+                        usermeta=category_info["metadata"] | preprocess_meta["custom_meta"]
+                    )
+                )
+
+    return workitems
 
 
 ##################################################
