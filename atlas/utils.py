@@ -8,7 +8,7 @@ import math
 import re
 import urllib.request
 
-import coffea
+import coffea.processor
 import dask.bag
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -100,8 +100,6 @@ def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom
     for category_info in fileset.values():
         files_to_preprocess += [(k, v) for k, v in category_info["files"].items()]
 
-    preprocess_input = dask.bag.from_sequence(files_to_preprocess, partition_size=1)
-
     def extract_metadata(fname_and_treename: str, custom_func) -> dict:
         """read file and extract relevant information"""
         fname, treename = fname_and_treename
@@ -114,6 +112,7 @@ def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom
                 meta.update({"custom_meta": custom_func(f)})
         return {fname: meta}
 
+    preprocess_input = dask.bag.from_sequence(files_to_preprocess, partition_size=1)
     print(f"pre-processing {len(files_to_preprocess)} file(s)")
     futures = preprocess_input.map(functools.partial(extract_metadata, custom_func=custom_func))
     result = client.compute(futures).result()
