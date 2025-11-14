@@ -39,7 +39,7 @@ import uproot
 from coffea.nanoevents import NanoEventsFactory
 from coffea.processor import Accumulatable, accumulate
 from coffea.processor.executor import WorkItem
-from coffea.util import coffea_console, rich_bar
+from coffea.util import rich_bar
 from dask.distributed import Client
 from dask.tokenize import tokenize
 from rich.console import Group
@@ -47,6 +47,14 @@ from rich.live import Live
 from rich.progress import Progress
 
 from util._futures import DynamicAsCompleted, FutureLike
+
+try:
+    from coffea.util import coffea_console
+except ImportError:
+    from rich.console import Console
+
+    coffea_console = Console()
+
 
 _processing_sentinel = object()
 _final_merge_sentinel = object()
