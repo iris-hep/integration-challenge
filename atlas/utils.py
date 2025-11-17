@@ -4,10 +4,13 @@ import base64
 import dataclasses
 import datetime
 import functools
+import gzip
+import json
 import math
 import re
 import urllib.request
 
+from atlas_schema.schema import NtupleSchema
 import coffea.processor
 import dask.bag
 import matplotlib as mpl
@@ -88,97 +91,6 @@ def plot_taskstream(ts: dict):
     ax.set_xlabel("time [sec]")
     ax.set_ylabel("unique workers")
     return fig, ax
-
-
-##################################################
-### custom pre-processing
-##################################################
-
-def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom_func=None):
-    """Dask-based pre-processing similar to coffea, can run user-provided function for more metadata"""
-    files_to_preprocess = []
-    for category_info in fileset.values():
-        files_to_preprocess += [(k, v) for k, v in category_info["files"].items()]
-
-    def extract_metadata(fname_and_treename: str, custom_func) -> dict:
-        """read file and extract relevant information"""
-        fname, treename = fname_and_treename
-        meta = {"treename": treename}
-        with uproot.open(fname) as f:
-            meta["fileuuid"] = f.file.uuid.bytes
-            meta["num_entries"] = f[treename].num_entries if treename in f else 0  # handle missing trees
-            print("calling custom_func", custom_func, "on file", f)
-            if custom_func:
-                meta.update({"custom_meta": custom_func(f)})
-        return {fname: meta}
-
-    preprocess_input = dask.bag.from_sequence(files_to_preprocess, partition_size=1)
-    print(f"pre-processing {len(files_to_preprocess)} file(s)")
-    futures = preprocess_input.map(functools.partial(extract_metadata, custom_func=custom_func))
-    result = client.compute(futures).result()
-
-    # turn into dict for easier use
-    result_dict = {k: v for res in result for k, v in res.items()}
-
-    # join back together per-file information with fileset-level information and turn into WorkItem list for coffea
-    workitems = []
-    for category_name, category_info in fileset.items():
-        for fname, treename in category_info["files"].items():
-            preprocess_meta = result_dict[fname]
-            # split into chunks as done in coffea, taken from
-            # https://github.com/scikit-hep/coffea/blob/f7e1249745484567d1e380865dc05fae83165084/src/coffea/dataset_tools/preprocess.py#L129-L140
-            n_steps_target = max(round(preprocess_meta["num_entries"] / chunksize), 1)
-            actual_step_size = math.ceil(preprocess_meta["num_entries"] / n_steps_target)
-            chunks = np.array(
-                [
-                    [
-                        i * actual_step_size,
-                        min((i + 1) * actual_step_size, preprocess_meta["num_entries"]),
-                    ]
-                    for i in range(n_steps_target)
-                ],
-                dtype="int64",
-            )
-            for entry_start, entry_stop in chunks:
-                if entry_stop - entry_start == 0:
-                    continue
-                workitems.append(
-                    coffea.processor.executor.WorkItem(
-                        dataset=category_name,
-                        filename=fname,
-                        treename=treename,
-                        entrystart=int(entry_start),
-                        entrystop=int(entry_stop),
-                        fileuuid=preprocess_meta["fileuuid"],
-                        usermeta=category_info["metadata"] | preprocess_meta["custom_meta"]
-                    )
-                )
-
-    return workitems
-
-
-##################################################
-### fileset saving / loading
-##################################################
-
-def preprocess_to_json(samples):
-    # encode bytes
-    serializable = []
-    for s in samples:
-        chunk = dataclasses.asdict(s)
-        chunk["fileuuid"] = base64.b64encode(chunk["fileuuid"]).decode("ascii")
-        serializable.append(chunk)
-
-    return serializable
-
-
-def json_to_preprocess(samples):
-    # decode bytes
-    for i in range(len(samples)):
-        samples[i]["fileuuid"] = base64.b64decode(samples[i]["fileuuid"])
-        samples[i] = coffea.processor.executor.WorkItem(**samples[i])
-
-    return samples
 
 
 ##################################################
@@ -278,3 +190,149 @@ def sample_xs(campaign: str, dsid: str) -> float:
 
     # return x-sec [pb] * filter efficiency * k-factor
     return float(xsec_dict[dsid][0]) * float(xsec_dict[dsid][1]) * float(xsec_dict[dsid][2])
+
+
+##################################################
+### fileset handling
+##################################################
+
+def get_fileset(campaign_filter: list | None = None, dsid_filter: list | None = None, max_files_per_sample: int | None = None):
+    """prepare fileset, with possibility to only include subset of input files"""
+    # load metadata from file
+    fname = "ntuple_production/file_metadata.json.gz"
+    with gzip.open(fname) as f:
+        dataset_info = json.loads(f.read().decode())
+
+    if max_files_per_sample is not None:
+        print(f"[WARNING] limiting files per sample to {max_files_per_sample}, input size estimate is invalid")
+
+    # construct fileset
+    fileset = {}
+    input_size_GB = 0
+    for category, containers_for_category in dataset_info.items():
+        for container, metadata in containers_for_category.items():
+            if metadata["files_output"] is None:
+                # print(f"[DEBUG] skipping missing {container}")
+                continue
+
+            dsid, _, campaign = dsid_rtag_campaign(container)
+
+            # debugging shortcuts / reducing workload
+            if campaign_filter is not None and campaign not in campaign_filter:
+                continue
+
+            if dsid_filter is not None and dsid not in dsid_filter:
+                continue
+
+            weight_xs = sample_xs(campaign, dsid)
+            lumi = integrated_luminosity(campaign)
+            num_files = len(metadata["files_output"]) if max_files_per_sample is None else max_files_per_sample
+            fileset[container] = {
+                "files": dict((path, "reco") for path in metadata["files_output"][:num_files]),
+                "metadata": {"dsid": dsid, "campaign": campaign, "category": category, "weight_xs": weight_xs, "lumi": lumi}
+            }
+            input_size_GB += metadata["size_output_GB"]
+
+    print(f"[INFO] fileset has {len(fileset)} categories with {sum([len(f["files"]) for f in fileset.values()])} files total, size is {input_size_GB:.2f} GB")
+    return fileset
+
+
+def preprocess_to_json(samples):
+    """encode bytes"""
+    serializable = []
+    for s in samples:
+        chunk = dataclasses.asdict(s)
+        chunk["fileuuid"] = base64.b64encode(chunk["fileuuid"]).decode("ascii")
+        serializable.append(chunk)
+
+    return serializable
+
+
+def json_to_preprocess(samples):
+    """decode bytes"""
+    for i in range(len(samples)):
+        samples[i]["fileuuid"] = base64.b64decode(samples[i]["fileuuid"])
+        samples[i] = coffea.processor.executor.WorkItem(**samples[i])
+
+    return samples
+
+
+##################################################
+### schema for TopCPToolkit
+##################################################
+
+class TCPTSchema(NtupleSchema):
+    # mcChannelNumber not defined for data
+    event_ids = {"actualInteractionsPerCrossing", "averageInteractionsPerCrossing", "eventNumber", "mcChannelNumber", "runNumber"}
+    mixins = {
+        "globalTriggerEffSF": "Weight",  # events["NOSYS"]["globalTriggerEffSF"]["emu"]
+        "globalTriggerMatch": "Pass",  # https://github.com/scipp-atlas/atlas-schema/issues/79
+        **NtupleSchema.mixins
+    }
+
+
+##################################################
+### custom pre-processing
+##################################################
+
+def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom_func=None):
+    """Dask-based pre-processing similar to coffea, can run user-provided function for more metadata"""
+    files_to_preprocess = []
+    for category_info in fileset.values():
+        files_to_preprocess += [(k, v) for k, v in category_info["files"].items()]
+
+    def extract_metadata(fname_and_treename: str, custom_func) -> dict:
+        """read file and extract relevant information"""
+        fname, treename = fname_and_treename
+        meta = {"treename": treename}
+        with uproot.open(fname) as f:
+            meta["fileuuid"] = f.file.uuid.bytes
+            meta["num_entries"] = f[treename].num_entries if treename in f else 0  # handle missing trees
+            print("calling custom_func", custom_func, "on file", f)
+            if custom_func:
+                meta.update({"custom_meta": custom_func(f)})
+        return {fname: meta}
+
+    preprocess_input = dask.bag.from_sequence(files_to_preprocess, partition_size=1)
+    print(f"pre-processing {len(files_to_preprocess)} file(s)")
+    futures = preprocess_input.map(functools.partial(extract_metadata, custom_func=custom_func))
+    result = client.compute(futures).result()
+
+    # turn into dict for easier use
+    result_dict = {k: v for res in result for k, v in res.items()}
+
+    # join back together per-file information with fileset-level information and turn into WorkItem list for coffea
+    workitems = []
+    for category_name, category_info in fileset.items():
+        for fname, treename in category_info["files"].items():
+            preprocess_meta = result_dict[fname]
+            # split into chunks as done in coffea, taken from
+            # https://github.com/scikit-hep/coffea/blob/f7e1249745484567d1e380865dc05fae83165084/src/coffea/dataset_tools/preprocess.py#L129-L140
+            n_steps_target = max(round(preprocess_meta["num_entries"] / chunksize), 1)
+            actual_step_size = math.ceil(preprocess_meta["num_entries"] / n_steps_target)
+            chunks = np.array(
+                [
+                    [
+                        i * actual_step_size,
+                        min((i + 1) * actual_step_size, preprocess_meta["num_entries"]),
+                    ]
+                    for i in range(n_steps_target)
+                ],
+                dtype="int64",
+            )
+            for entry_start, entry_stop in chunks:
+                if entry_stop - entry_start == 0:
+                    continue
+                workitems.append(
+                    coffea.processor.executor.WorkItem(
+                        dataset=category_name,
+                        filename=fname,
+                        treename=treename,
+                        entrystart=int(entry_start),
+                        entrystop=int(entry_stop),
+                        fileuuid=preprocess_meta["fileuuid"],
+                        usermeta=category_info["metadata"] | preprocess_meta["custom_meta"]
+                    )
+                )
+
+    return workitems
