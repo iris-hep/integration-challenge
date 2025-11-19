@@ -10,7 +10,6 @@ import math
 import re
 import urllib.request
 
-from atlas_schema.schema import NtupleSchema
 import coffea.processor
 import dask.bag
 import matplotlib as mpl
@@ -255,20 +254,6 @@ def json_to_preprocess(samples):
         samples[i] = coffea.processor.executor.WorkItem(**samples[i])
 
     return samples
-
-
-##################################################
-### schema for TopCPToolkit
-##################################################
-
-class TCPTSchema(NtupleSchema):
-    # mcChannelNumber not defined for data
-    event_ids = {"actualInteractionsPerCrossing", "averageInteractionsPerCrossing", "eventNumber", "mcChannelNumber", "runNumber"}
-    mixins = {
-        "globalTriggerEffSF": "Weight",  # events["NOSYS"]["globalTriggerEffSF"]["emu"]
-        "globalTriggerMatch": "Pass",  # https://github.com/scipp-atlas/atlas-schema/issues/79
-        **NtupleSchema.mixins
-    }
 
 
 ##################################################
