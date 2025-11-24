@@ -32,6 +32,9 @@ def parse_job_json(fname):
             continue
 
         containernames = set([dataset["containername"] for dataset in job["datasets"]])
+        if job["dsinfo"]["nfiles"] == 0:
+            # handle jobs which timed out with zero files processed
+            continue
         assert len(containernames) == 2  # one input, one output
         container_in = next(c for c in containernames if "out" not in c)
         container_out = next(c for c in containernames if "out" in c)
@@ -84,8 +87,8 @@ def rucio_file_paths(name, num_files_expected):
     unique_paths = []
     for filename in filenames:
         fpaths = [rp for rp in rses_and_paths if filename in rp[1]]
-        # pick NET2_LOCALGROUPDISK match by default, otherwise first in the list
-        fpath = next((fp for fp in fpaths if fp[0] == "NET2_LOCALGROUPDISK"), fpaths[0])[1]
+        # pick MWT2_UC_LOCALGROUPDISK match by default, otherwise first in the list
+        fpath = next((fp for fp in fpaths if fp[0] == "MWT2_UC_LOCALGROUPDISK"), fpaths[0])[1]
         unique_paths.append(fpath)
 
     assert len(unique_paths) == num_files_expected
