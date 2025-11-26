@@ -1,4 +1,4 @@
-[project]
+[workspace]
 name = "atlas-integration-challenge"
 version = "0.0.1"
 description = "IRIS-HEP ATLAS integration challenge"
