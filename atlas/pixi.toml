@@ -15,8 +15,8 @@ description = "Get started with the repository"
 depends-on = ["lab"]
 
 [dependencies]
-notebook = ">=7.4.7,<8"
-jupyterlab = ">=4.4.9,<5"
+notebook = ">=7.5.0,<8"
+jupyterlab = ">=4.5.0,<5"
 mplhep = ">=0.4.1,<0.5"
 xrootd = ">=5.8.4,<6"
 fsspec-xrootd = ">=0.5.1,<0.6"
