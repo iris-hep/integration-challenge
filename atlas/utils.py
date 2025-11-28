@@ -8,8 +8,10 @@ import gzip
 import json
 import math
 import re
+import time
 import urllib.request
 
+import coffea.nanoevents
 import coffea.processor
 import dask.bag
 import matplotlib as mpl
@@ -233,7 +235,7 @@ def get_fileset(campaign_filter: list | None = None, dsid_filter: list | None = 
             input_size_GB += metadata["size_output_GB"]
 
     print(f"[INFO] fileset has {len(fileset)} categories with {sum([len(f["files"]) for f in fileset.values()])} files total, size is {input_size_GB:.2f} GB")
-    return fileset
+    return fileset, input_size_GB
 
 
 def preprocess_to_json(samples):
@@ -321,3 +323,59 @@ def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom
                 )
 
     return workitems
+
+
+##################################################
+### custom processing
+##################################################
+
+def custom_process(workitems, processor_class, schema, client, preload: list=[]):
+    """Dask-based processing similar to coffea, can return more metadata"""
+
+    def run_analysis(wi: coffea.processor.executor.WorkItem):
+        """workload to be distributed"""
+        t0 = time.perf_counter()
+        analysis_instance = processor_class()
+        array_cache = {}
+        f = uproot.open(wi.filename, array_cache=array_cache)
+        events = coffea.nanoevents.NanoEventsFactory.from_root(
+            f,
+            treepath=wi.treename,
+            mode="virtual",
+            access_log=(access_log := []),
+            preload=lambda b: b.name in preload,
+            schemaclass=schema,
+            entry_start=wi.entrystart,
+            entry_stop=wi.entrystop,
+        ).events()
+        events.metadata.update(wi.usermeta)
+        out = analysis_instance.process(events)
+        bytesread = f.file.source.num_requested_bytes
+        t1 = time.perf_counter()
+        report = {
+            "bytesread": bytesread,
+            "entries": wi.entrystop - wi.entrystart,
+            "processtime": t1 - t0,
+            "chunks": 1,
+            "columns": access_log,
+            "chunk_info": {(wi.filename, wi.entrystart, wi.entrystop): (t0, t1, bytesread)},
+        }
+        return out, report
+
+    def sum_output(a, b):
+        """accumulation function"""
+        return (
+            {"hist": a[0]["hist"] + b[0]["hist"]},
+            {
+                "bytesread": a[1]["bytesread"] + b[1]["bytesread"],
+                "entries": a[1]["entries"] + b[1]["entries"],
+                "processtime": a[1]["processtime"] + b[1]["processtime"],
+                "chunks": a[1]["chunks"] + b[1]["chunks"],
+                "columns": list(set(a[1]["columns"]) | set(b[1]["columns"])),
+                "chunk_info": a[1]["chunk_info"] | b[1]["chunk_info"],
+            }
+        )
+
+    workitems_bag = dask.bag.from_sequence(workitems, partition_size=1)
+    futures = workitems_bag.map(run_analysis).fold(sum_output)
+    return client.compute(futures).result()
