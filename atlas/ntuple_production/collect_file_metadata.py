@@ -1,5 +1,7 @@
 import collections
+import concurrent.futures
 import gzip
+import itertools
 import json
 import os
 import re
@@ -95,50 +97,63 @@ def rucio_file_paths(name, num_files_expected):
     return unique_paths
 
 
-def save_full_metadata(production_map, fname):
-    """combine all metadata into a file"""
-    metadata = collections.defaultdict(lambda: {})
-    for category, container_list in input_containers.containers.items():
-        print(category)
-        metadata[category] = {}
-        for container in container_list:
-            print(container)
-            # get input container information
-            info_input = rucio_container_metadata(container)
-            metadata[category][container] = {
-                "output": None,
-                "jeditaskid": None,
-                "nfiles_input": info_input["nfiles"],
-                "size_input_GB": info_input["size_GB"],
-                "nevts_input": info_input["nevts"],
-                "nfiles_output": None,
-                "size_output_GB": None,
-                "nevts_output": None,
-                "files_output": None,
-            }
+def process_one_category(category, container_list, production_map):
+    """combine all metadata for a category"""
+    print(f"starting {category}")
+    metadata = {}
+    for container in container_list:
+        print(container)
+        # get input container information
+        info_input = rucio_container_metadata(container)
+        metadata[container] = {
+            "output": None,
+            "jeditaskid": None,
+            "nfiles_input": info_input["nfiles"],
+            "size_input_GB": info_input["size_GB"],
+            "nevts_input": info_input["nevts"],
+            "nfiles_output": None,
+            "size_output_GB": None,
+            "nevts_output": None,
+            "files_output": None,
+        }
 
-            if container in production_map:
-                # job has run, combine bigpanda and rucio (information should match)
-                assert info_input["nfiles"] == production_map[container]["nfiles_input"]
-                assert info_input["nevts"] == production_map[container]["nevts_input"]
+        if container in production_map:
+            # job has run, combine bigpanda and rucio (information should match)
+            assert info_input["nfiles"] == production_map[container]["nfiles_input"]
+            assert info_input["nevts"] == production_map[container]["nevts_input"]
 
-                # update task information
-                metadata[category][container]["output"] = production_map[container]["output"]
-                metadata[category][container]["jeditaskid"] = production_map[container]["jeditaskid"]
+            # update task information
+            metadata[container]["output"] = production_map[container]["output"]
+            metadata[container]["jeditaskid"] = production_map[container]["jeditaskid"]
 
-                # update output container information
-                info_output = rucio_container_metadata(production_map[container]["output"])
-                metadata[category][container]["nfiles_output"] = info_output["nfiles"]
-                metadata[category][container]["size_output_GB"] = info_output["size_GB"]
+            # update output container information
+            info_output = rucio_container_metadata(production_map[container]["output"])
+            metadata[container]["nfiles_output"] = info_output["nfiles"]
+            metadata[container]["size_output_GB"] = info_output["size_GB"]
 
-                # add xrootd file paths
-                paths = rucio_file_paths(production_map[container]["output"], info_output["nfiles"])
-                metadata[category][container]["files_output"] = paths
+            # add xrootd file paths
+            paths = rucio_file_paths(production_map[container]["output"], info_output["nfiles"])
+            metadata[container]["files_output"] = paths
 
-        # write after each category to retain partial results, save compressed
-        json_enc = json.dumps(dict(metadata), sort_keys=True, indent=4).encode("utf-8")
-        with gzip.open(fname, "w") as f:
-            f.write(json_enc)
+    return {category: metadata}
+
+
+def save_full_metadata(production_map, fname, max_workers=8):
+    """combine all metadata into a file, multi-threaded"""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        res = executor.map(
+            process_one_category,
+            input_containers.containers.keys(),
+            input_containers.containers.values(),
+            itertools.repeat(production_map)
+        )
+
+    metadata = {k: v for r in res for k, v in r.items()}
+
+    # save compressed result
+    json_enc = json.dumps(metadata, sort_keys=True, indent=4).encode("utf-8")
+    with gzip.open(fname, "w") as f:
+        f.write(json_enc)
 
 
 if __name__ == "__main__":
