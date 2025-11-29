@@ -35,8 +35,8 @@ ipywidgets = ">=8.1.7,<9"
 nbstripout = ">=0.8.1,<0.9"
 
 [feature.lab.dependencies]
-notebook = ">=7.4.5,<8"
-jupyterlab = ">=4.4.5,<5"
+notebook = ">=7.5.0,<8"
+jupyterlab = ">=4.5.0,<5"
 
 [feature.lab.tasks.lab]
 description = "Start a JupyterLab instance"
