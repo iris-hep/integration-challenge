@@ -16,6 +16,7 @@ import coffea.nanoevents
 import coffea.processor
 import dask.bag
 import matplotlib as mpl
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import uproot
@@ -80,6 +81,7 @@ def plot_worker_count(worker_count_dict: dict, timestamps: Optional[list[float]]
     ax1.plot(worker_count_dict.keys(), worker_count_dict.values(), linewidth=2, color="C0")
     ax1.set_title("worker count and data rate over time")
     ax1.set_xlabel("time")
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
     ax1.tick_params(axis="x", labelrotation=45)
     ax1.set_ylabel("number of workers", color="C0")
     ax1.tick_params(axis="y", labelcolor="C0")
