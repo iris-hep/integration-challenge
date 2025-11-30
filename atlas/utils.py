@@ -9,6 +9,7 @@ import json
 import math
 import re
 import time
+from typing import Optional
 import urllib.request
 
 import coffea.nanoevents
@@ -52,15 +53,46 @@ def get_avg_num_workers(worker_count_dict: dict) -> float:
     return nworker_dt / (worker_info[-1][0] - worker_info[0][0]).total_seconds()
 
 
-def plot_worker_count(worker_count_dict: dict):
-    """plot worker count over time"""
-    fig, ax = plt.subplots()
-    ax.plot(worker_count_dict.keys(), worker_count_dict.values())
-    ax.tick_params(axis="x", labelrotation=45)
-    ax.set_ylim([0, ax.get_ylim()[1]])
-    ax.set_xlabel("time")
-    ax.set_ylabel("number of workers")
-    return fig, ax
+def calculate_instantaneous_rates(t0: float, t1: float, report: dict, num_samples: int = 10):
+    """calculate chunk-aggregated data rates in Gbps over time"""
+    if "chunk_info" not in report:
+        return None, None  # supported only for custom processing
+
+    chunk_info = np.asarray(list(report["chunk_info"].values()))
+    starts = chunk_info[:, 0]
+    ends = chunk_info[:, 1]
+    bytesread = chunk_info[:, 2]
+    rates_per_chunk = bytesread / (ends - starts)
+
+    t_samples = np.linspace(t0, t1, num_samples)
+    rate_samples = []
+    for t in t_samples:
+        mask = np.logical_and((starts <= t), (t < ends))
+        rate_samples.append(float(sum(rates_per_chunk[mask]) / 1000**3 * 8))
+
+    print(f"[INFO] total data read from data rate integral: {sum((t_samples[1] - t_samples[0]) * np.asarray(rate_samples)) / 8:.2f} GB")
+    return [datetime.datetime.fromtimestamp(t) for t in t_samples.tolist()], rate_samples
+
+
+def plot_worker_count(worker_count_dict: dict, timestamps: Optional[list[float]], datarates: Optional[list[float]]):
+    """plot worker count over time and data rate samples in Gbps"""
+    fig, ax1 = plt.subplots()
+    ax1.plot(worker_count_dict.keys(), worker_count_dict.values(), linewidth=2, color="C0")
+    ax1.set_title("worker count and data rate over time")
+    ax1.set_xlabel("time")
+    ax1.tick_params(axis="x", labelrotation=45)
+    ax1.set_ylabel("number of workers", color="C0")
+    ax1.tick_params(axis="y", labelcolor="C0")
+    ax1.set_ylim([0, ax1.get_ylim()[1] * 1.1])
+
+    if datarates is not None:
+        ax2 = ax1.twinx()
+        ax2.plot(timestamps, datarates, marker="v", linewidth=0, color="C2")
+        ax2.set_ylabel("data rate [Gbps]", color="C2")
+        ax2.set_ylim([0, ax2.get_ylim()[1] * 1.1])
+        ax2.tick_params(axis="y", labelcolor="C2")
+
+    return fig, ax1
 
 
 def plot_taskstream(ts: dict):
@@ -84,11 +116,11 @@ def plot_taskstream(ts: dict):
             start = subtask["start"] - t0
             stop = subtask["stop"] - t0
             c = "yellow" if subtask["action"] == "compute" else "red"
-            patch = mpl.patches.Rectangle((start, y_pos-0.4), stop-start, 0.8, facecolor=c, edgecolor="black")
+            patch = mpl.patches.Rectangle((start, y_pos - 0.4), stop - start, 0.8, facecolor=c, edgecolor="black")
             ax.add_patch(patch)
 
     ax.set_xlim(0, tmax)
-    ax.set_ylim(-0.5, y_next-0.5)
+    ax.set_ylim(-0.5, y_next - 0.5)
     ax.set_xlabel("time [sec]")
     ax.set_ylabel("unique workers")
     return fig, ax
@@ -329,12 +361,14 @@ def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom
 ### custom processing
 ##################################################
 
-def custom_process(workitems, processor_class, schema, client, preload: list=[]):
+def custom_process(workitems, processor_class, schema, client, preload: Optional[list] = None):
     """Dask-based processing similar to coffea, can return more metadata"""
+    if preload is None:
+        preload = []
 
     def run_analysis(wi: coffea.processor.executor.WorkItem):
         """workload to be distributed"""
-        t0 = time.perf_counter()
+        t0 = time.time()
         analysis_instance = processor_class()
         array_cache = {}
         f = uproot.open(wi.filename, array_cache=array_cache)
@@ -351,7 +385,7 @@ def custom_process(workitems, processor_class, schema, client, preload: list=[])
         events.metadata.update(wi.usermeta)
         out = analysis_instance.process(events)
         bytesread = f.file.source.num_requested_bytes
-        t1 = time.perf_counter()
+        t1 = time.time()
         report = {
             "bytesread": bytesread,
             "entries": wi.entrystop - wi.entrystart,
