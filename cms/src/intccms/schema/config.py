@@ -8,7 +8,7 @@ import copy
 from typing import Annotated, List, Optional
 
 from omegaconf import DictConfig, OmegaConf
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from intccms.schema.analysis import (
     ChannelConfig,
@@ -16,6 +16,7 @@ from intccms.schema.analysis import (
     GeneralConfig,
     GhostObservable,
     GoodObjectMasksBlockConfig,
+    MetricsConfig,
     PlottingConfig,
     StatisticalConfig,
     SystematicConfig,
@@ -23,6 +24,7 @@ from intccms.schema.analysis import (
 from intccms.schema.base import FunctorConfig, SubscriptableModel
 from intccms.schema.mva import MVAConfig
 from intccms.schema.skimming import PreprocessConfig
+from intccms.schema.datasets import DatasetManagerConfig
 
 
 class Config(SubscriptableModel):
@@ -90,6 +92,109 @@ class Config(SubscriptableModel):
             description="Global plotting configuration (all keys are optional)",
         ),
     ]
+    datasets: Annotated[
+        DatasetManagerConfig,
+        Field(description="Dataset management configuration (required)")
+    ]
+
+    @model_validator(mode="after")
+    def validate_config(self) -> "Config":
+        """Validate configuration for duplicates and consistency."""
+        # Check for duplicate channel names
+        channel_names = [channel.name for channel in self.channels]
+        if len(channel_names) != len(set(channel_names)):
+            raise ValueError("Duplicate channel names found in configuration.")
+
+        # Check for duplicate correction names
+        correction_names = [correction.name for correction in self.corrections]
+        if len(correction_names) != len(set(correction_names)):
+            raise ValueError(
+                "Duplicate correction names found in configuration."
+            )
+
+        # Check for duplicate systematic names
+        systematic_names = [systematic.name for systematic in self.systematics]
+        if len(systematic_names) != len(set(systematic_names)):
+            raise ValueError(
+                "Duplicate systematic names found in configuration."
+            )
+
+        if self.general.run_skimming and not self.preprocess:
+            raise ValueError(
+                "Skimming is enabled but no preprocess configuration provided."
+            )
+
+        if self.general.run_skimming and (not self.preprocess.skimming):
+            raise ValueError(
+                "Skimming is enabled but no skimming configuration provided. "
+                "Please provide a SkimmingConfig with function and use definitions."
+            )
+
+        if self.statistics is not None:
+            if (
+                self.general.run_statistics
+                and not self.statistics.cabinetry_config
+            ):
+                raise ValueError(
+                    "Statistical analysis run enabled but no cabinetry configuration "
+                    + "provided."
+                )
+
+        seen_ghost_obs = set()
+        for obs in self.ghost_observables:
+            names = obs.names if isinstance(obs.names, list) else [obs.names]
+            colls = (
+                obs.collections
+                if isinstance(obs.collections, list)
+                else [obs.collections] * len(names)
+            )
+
+            if len(names) != len(colls):
+                raise ValueError(
+                    f"In GhostObservable with function `{obs.function}`, "
+                    f"number of names and collections must match if both are lists."
+                )
+
+            for name, coll in zip(names, colls):
+                pair = (coll, name)
+                if pair in seen_ghost_obs:
+                    raise ValueError(
+                        f"Duplicate (collection, name) pair: {pair}"
+                    )
+                seen_ghost_obs.add(pair)
+
+        # check for duplicate object names in object masks
+        for object_mask in self.good_object_masks.analysis:
+            seen_objects = set()
+            if object_mask.object in seen_objects:
+                raise ValueError(
+                    f"Duplicate object '{object_mask.object}' found in good object"
+                    "masks collection 'analysis'."
+                )
+            seen_objects.add(object_mask.object)
+
+        for object_mask in self.good_object_masks.mva:
+            seen_objects = set()
+            if object_mask.object in seen_objects:
+                raise ValueError(
+                    f"Duplicate object '{object_mask.object}' found in good object"
+                    "masks collection 'mva'."
+                )
+            seen_objects.add(object_mask.object)
+
+        # check for duplicate mva parameter names
+        if self.mva is not None:
+            all_mva_params: List[str] = []
+            for net in self.mva:
+                for layer in net.layers:
+                    all_mva_params += [layer.weights, layer.bias]
+            duplicates = {p for p in all_mva_params if all_mva_params.count(p) > 1}
+            if duplicates:
+                raise ValueError(
+                    f"Duplicate NN parameter names across MVAs: {sorted(duplicates)}"
+                )
+
+        return self
 
 
 def load_config_with_restricted_cli(

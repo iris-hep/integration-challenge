@@ -88,6 +88,8 @@ class OutputDirectoryManager:
         Directory for histogram files. If None, uses root_output_dir/histograms/
     models_dir : str or Path, optional
         Directory for model files. If None, uses root_output_dir/models/
+    benchmarks_dir : str or Path, optional
+        Directory for benchmark measurements. If None, uses root_output_dir/benchmarks/
 
     Examples
     --------
@@ -117,6 +119,7 @@ class OutputDirectoryManager:
     skimmed_dir = DirectoryDescriptor("skimmed", configurable=True)
     histograms_dir = DirectoryDescriptor("histograms", configurable=True)
     models_dir = DirectoryDescriptor("models", configurable=True)
+    benchmarks_dir = DirectoryDescriptor("benchmarks", configurable=True)
 
     # Standard directories (always under root_output_dir)
     plots_dir = DirectoryDescriptor("plots", configurable=False)
@@ -130,6 +133,7 @@ class OutputDirectoryManager:
         "statistics": "statistics_dir",
         "metadata": "metadata_dir",
         "skimmed": "skimmed_dir",
+        "benchmarks": "benchmarks_dir",
     }
 
     def __init__(
@@ -140,6 +144,7 @@ class OutputDirectoryManager:
         skimmed_dir: Optional[Union[str, Path]] = None,
         histograms_dir: Optional[Union[str, Path]] = None,
         models_dir: Optional[Union[str, Path]] = None,
+        benchmarks_dir: Optional[Union[str, Path]] = None,
     ):
         # Normalize root output directory path
         self.root_output_dir = Path(root_output_dir).expanduser().resolve()
@@ -155,6 +160,7 @@ class OutputDirectoryManager:
         self._skimmed_dir_custom = Path(skimmed_dir).expanduser().resolve() if skimmed_dir else None
         self._histograms_dir_custom = Path(histograms_dir).expanduser().resolve() if histograms_dir else None
         self._models_dir_custom = Path(models_dir).expanduser().resolve() if models_dir else None
+        self._benchmarks_dir_custom = Path(benchmarks_dir).expanduser().resolve() if benchmarks_dir else None
 
         # Create root and cache directories
         self.root_output_dir.mkdir(parents=True, exist_ok=True)
@@ -169,6 +175,8 @@ class OutputDirectoryManager:
             logger.info(f"Using custom histograms directory: {self._histograms_dir_custom}")
         if self._models_dir_custom:
             logger.info(f"Using custom models directory: {self._models_dir_custom}")
+        if self._benchmarks_dir_custom:
+            logger.info(f"Using custom benchmarks directory: {self._benchmarks_dir_custom}")
 
     def get(self, name: str, subdir: Optional[str] = None) -> Path:
         """
@@ -274,5 +282,6 @@ class OutputDirectoryManager:
             "models_dir": str(self.models_dir),
             "plots_dir": str(self.plots_dir),
             "statistics_dir": str(self.statistics_dir),
+            "benchmarks_dir": str(self.benchmarks_dir),
         }
         return structure

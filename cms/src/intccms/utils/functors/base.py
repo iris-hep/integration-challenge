@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Tuple
 
 import awkward as ak
 
+from intccms.utils.functors.utils import get_function_arguments
 
 class FunctorExecutor(ABC):
     """Abstract base class for functor executors.
@@ -40,8 +41,6 @@ class FunctorExecutor(ABC):
         Tuple[List[ak.Array], Dict[str, Any]]
             Positional arguments and keyword arguments
         """
-        from intccms.utils.functors.utils import get_function_arguments
-
         return get_function_arguments(
             self.config.use,
             objects,
