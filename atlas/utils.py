@@ -238,9 +238,6 @@ def get_fileset(campaign_filter: list | None = None, dsid_filter: list | None = 
     with gzip.open(fname) as f:
         dataset_info = json.loads(f.read().decode())
 
-    if max_files_per_sample is not None:
-        print(f"[WARNING] limiting files per sample to {max_files_per_sample}, input size estimate is invalid")
-
     # construct fileset
     fileset = {}
     input_size_GB = 0
@@ -266,7 +263,7 @@ def get_fileset(campaign_filter: list | None = None, dsid_filter: list | None = 
                 "files": dict((path, "reco") for path in metadata["files_output"][:num_files]),
                 "metadata": {"dsid": dsid, "campaign": campaign, "category": category, "weight_xs": weight_xs, "lumi": lumi}
             }
-            input_size_GB += metadata["size_output_GB"]
+            input_size_GB += sum(metadata["sizes_output_GB"][:num_files])
 
     print(f"[INFO] fileset has {len(fileset)} categories with {sum([len(f["files"]) for f in fileset.values()])} files total, size is {input_size_GB:.2f} GB")
     return fileset, input_size_GB
