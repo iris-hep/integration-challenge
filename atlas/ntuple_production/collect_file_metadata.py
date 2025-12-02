@@ -82,19 +82,22 @@ def rucio_file_paths(name, num_files_expected):
     """file paths from rucio list-file-replicas call"""
     cmd = f"rucio list-file-replicas --protocols root {name}"
     output = subprocess.check_output(cmd, shell=True)
-    rses_and_paths = re.findall(r"(\w+): (root:\/\/.*?)\s", output.decode())
+    size_unit_rse_path = re.findall(r"(\d+\.\d+)\s(\wB).+?([\w-]+): (root:\/\/.*?)\s", output.decode())
 
     # select a single RSE for each file
-    filenames = sorted(set([rp[1].split("/")[-1] for rp in rses_and_paths]))
+    filenames = sorted(set([rp[-1].split("/")[-1] for rp in size_unit_rse_path]))
     unique_paths = []
+    sizes_GB = []
     for filename in filenames:
-        fpaths = [rp for rp in rses_and_paths if filename in rp[1]]
+        matches = [m for m in size_unit_rse_path if filename in m[-1]]
         # pick MWT2_UC_LOCALGROUPDISK match by default, otherwise first in the list
-        fpath = next((fp for fp in fpaths if fp[0] == "MWT2_UC_LOCALGROUPDISK"), fpaths[0])[1]
-        unique_paths.append(fpath)
+        match = next((m for m in matches if m[2] == "MWT2_UC_LOCALGROUPDISK"), matches[0])
+        unique_paths.append(match[3])
+        size_to_GB = lambda num, unit: float(num) * {"kB": 1e-6, "MB": 1e-3, "GB": 1}[unit]
+        sizes_GB.append(size_to_GB(*match[:2]))
 
     assert len(unique_paths) == num_files_expected
-    return unique_paths
+    return unique_paths, sizes_GB
 
 
 def process_one_category(category, container_list, production_map):
@@ -132,8 +135,10 @@ def process_one_category(category, container_list, production_map):
             metadata[container]["size_output_GB"] = info_output["size_GB"]
 
             # add xrootd file paths
-            paths = rucio_file_paths(production_map[container]["output"], info_output["nfiles"])
+            paths, sizes = rucio_file_paths(production_map[container]["output"], info_output["nfiles"])
             metadata[container]["files_output"] = paths
+            metadata[container]["sizes_output_GB"] = sizes
+            assert abs(sum(sizes) - info_output["size_GB"]) < 0.01  # agree within 10 MB
 
     return {category: metadata}
 
@@ -168,4 +173,4 @@ if __name__ == "__main__":
     production_map = parse_job_json(fname_bigpanda)
 
     fname_full = "file_metadata.json.gz"
-    metadata = save_full_metadata(production_map, fname_full)
+    metadata = save_full_metadata(production_map, fname_full, max_workers=8)
