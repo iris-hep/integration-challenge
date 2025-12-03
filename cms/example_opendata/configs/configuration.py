@@ -319,7 +319,7 @@ systematics_config = [
 #  Statistics Configuration
 # ==============================================================================
 
-statistics_config = {"cabinetry_config": "example/outputs/cabinetry/cabinetry_config.yaml"}
+statistics_config = {"cabinetry_config": "example_opendata/outputs/cabinetry/cabinetry_config.yaml"}
 
 # ==============================================================================
 #  Plotting Configuration

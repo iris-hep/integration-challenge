@@ -7,7 +7,7 @@ from coffea.analysis_tools import PackedSelection
 # Select good run data
 # ===================
 def lumi_mask(
-    run: ak.Array, lumiBlock: ak.Array, lumifile: str = "") -> ak.Array:
+    run: ak.Array, lumiBlock: ak.Array, goodruns: ak.Array = None) -> ak.Array:
     """
     Create a boolean mask selecting events that pass the good run/lumi criteria.
     https://github.com/cms-opendata-workshop/workshop2024-lesson-event-selection/blob/main/instructors/dpoa_workshop_utilities.py
@@ -33,7 +33,7 @@ def lumi_mask(
     # -----------------------------
     # Load good lumi sections JSON
     # -----------------------------
-    good_lumi_sections = ak.from_json(open(lumifile, "rb"))
+    good_lumi_sections = goodruns
 
     # Extract good run numbers (as integers)
     good_runs = np.array(good_lumi_sections.fields).astype(int)
