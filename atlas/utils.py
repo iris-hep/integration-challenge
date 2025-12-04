@@ -19,6 +19,7 @@ import matplotlib as mpl
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
+import tqdm.notebook
 import uproot
 
 
@@ -311,13 +312,16 @@ def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom
                 meta.update({"custom_meta": custom_func(f)})
         return {fname: meta}
 
-    preprocess_input = dask.bag.from_sequence(files_to_preprocess, partition_size=1)
     print(f"pre-processing {len(files_to_preprocess)} file(s)")
-    futures = preprocess_input.map(functools.partial(extract_metadata, custom_func=custom_func))
-    result = client.compute(futures).result()
+    tasks = client.map(functools.partial(extract_metadata, custom_func=custom_func), files_to_preprocess)
+    futures = client.compute(tasks)
+
+    with tqdm.notebook.tqdm(total=len(futures)) as pbar:
+      for _ in dask.distributed.as_completed(futures):
+        pbar.update(1)
 
     # turn into dict for easier use
-    result_dict = {k: v for res in result for k, v in res.items()}
+    result_dict = {k: v for res in [f.result() for f in futures] for k, v in res.items()}
 
     # join back together per-file information with fileset-level information and turn into WorkItem list for coffea
     workitems = []
@@ -410,5 +414,13 @@ def custom_process(workitems, processor_class, schema, client, preload: Optional
         )
 
     workitems_bag = dask.bag.from_sequence(workitems, partition_size=1)
-    futures = workitems_bag.map(run_analysis).fold(sum_output)
-    return client.compute(futures).result()
+    tasks = workitems_bag.map(run_analysis).to_delayed()
+    futures = client.compute(tasks)
+    workitems_bag = dask.bag.from_delayed(futures)
+    res = client.compute(workitems_bag.fold(sum_output))
+
+    with tqdm.notebook.tqdm(total=len(futures)) as pbar:
+        for _ in dask.distributed.as_completed(futures):
+            pbar.update(1)
+
+    return res.result()
