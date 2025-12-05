@@ -30,6 +30,7 @@ See also: `if __name__ == "__main__":` block for a complete example.
 from __future__ import annotations
 
 import dataclasses
+import time
 import typing as tp
 from collections import Counter, defaultdict
 from functools import partial
@@ -96,6 +97,7 @@ def wrapped_process(
     *,
     NanoEventsFactory_kwargs: dict[str, tp.Any] | None = None,
 ) -> Result:
+    t0 = time.time() # move t0 here to include potential preloading
     f = uproot.open(workitem.filename)
     if NanoEventsFactory_kwargs is None:
         NanoEventsFactory_kwargs = {}
@@ -111,15 +113,23 @@ def wrapped_process(
     events.metadata.update(workitem.usermeta)
     try:
         out = process_func(events)
+        t1 = time.time()
     except Exception as err:
         # return err as value, no metrics
         return err
     bytesread = f.file.source.num_requested_bytes
     report = {
         "bytesread": bytesread,
+        "entries": workitem.entrystop - workitem.entrystart,
+        "processtime": t1 - t0,
+        "chunks": 1,
         "columns": access_log,
-        "bytesread_per_chunk": {
-            (workitem.filename, workitem.entrystart, workitem.entrystop): bytesread
+        "chunk_info": {
+            (workitem.filename, workitem.entrystart, workitem.entrystop): (
+                t0,
+                t1,
+                bytesread,
+            )
         },
     }
     return {"out": out, "report": report}
