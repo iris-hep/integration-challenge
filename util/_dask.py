@@ -298,10 +298,10 @@ def dask_reduce(
             pbars[ds].update(dataset_merge_tasks[ds], advance=1, refresh=True)
             final_merge_futures[ds] = buf[0]
 
-        final_total = 0
+        final_total = len(final_merge_futures)
         final_merge_task = pbars[_final_merge_sentinel].add_task(
             f"[cyan]Merging {len(final_merge_futures)} merged datasets [italic](final)",
-            total=total,
+            total=final_total,
             unit="merge",
         )
 
@@ -310,6 +310,9 @@ def dask_reduce(
 
         # final merge across datasets
         buf = []
+
+        # track how much to advance
+        pbar_merge_count = {}
 
         dynac = DynamicAsCompleted(final_merge_futures.values())
         for future in dynac:
@@ -320,8 +323,7 @@ def dask_reduce(
                 # final merge progress
                 pbars[_final_merge_sentinel].update(
                     final_merge_task,
-                    advance=1,
-                    total=final_total,
+                    advance=pbar_merge_count[future.key],
                     refresh=True,
                 )
 
@@ -342,16 +344,26 @@ def dask_reduce(
                 # buffer in order to access the dataset later again
                 key2ds[future.key] = ds
 
+                # track number of merged items for the pbar
+                # when this future finished we advance len(buf) merge - 1
+                # the -1 comes from the fact that we get another merged output
+                pbar_merge_count[future.key] = len(buf) - 1
+
                 # reset buffer
                 buf.clear()
 
                 # add back to the ac, recursively merge
                 dynac.add(future)
 
-                # add one to the pbar
-                final_total += 1
-
+        # not needed anymore
         del dynac
+        pbar_merge_count.clear()
+
+        pbars[_final_merge_sentinel].update(
+            final_merge_task,
+            advance=1,
+            refresh=True,
+        )
 
         # final result
         assert len(buf) == 1
