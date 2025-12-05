@@ -239,9 +239,9 @@ def dask_reduce(
                 # update progress bars only for successful items
                 if future.key.startswith("accumulate-"):
                     # merging task
-                    pbars[ds].update(dataset_merge_tasks[ds], advance=1)
+                    pbars[ds].update(dataset_merge_tasks[ds], advance=1, refresh=True)
                 else:
-                    pbars[_processing_sentinel].update(processing_task, advance=1)
+                    pbars[_processing_sentinel].update(processing_task, advance=1, refresh=True)
 
                 # add future to buffer for merging
                 if future in buf:
@@ -285,7 +285,7 @@ def dask_reduce(
             if todo != 0 or len(buf) != 1:
                 msg = f"dataset {ds} has {len(buf)} items in merge-buffer (should only be 1); chunks left to merge: {todo}"
                 raise ReduceSchedulingError(msg)
-            pbars[ds].update(dataset_merge_tasks[ds], advance=1)
+            pbars[ds].update(dataset_merge_tasks[ds], advance=1, refresh=True)
             final_merge_futures[ds] = buf[0]
 
         final_total = 0
@@ -312,6 +312,7 @@ def dask_reduce(
                     final_merge_task,
                     advance=1,
                     total=final_total,
+                    refresh=True,
                 )
 
             buf.append(future)
