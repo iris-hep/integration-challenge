@@ -178,6 +178,8 @@ def dask_reduce(
         ds2buf = defaultdict(list)
         # future.key -> dataset item
         key2ds = {fk: wi.dataset for fk, wi in futurekey2item.items()}
+        # track how many items we merge for the pbar
+        pbar_merge_count = {}
 
         # initialize progress bars
         processing_task = pbars[_processing_sentinel].add_task(
@@ -239,7 +241,7 @@ def dask_reduce(
                 # update progress bars only for successful items
                 if future.key.startswith("accumulate-"):
                     # merging task
-                    pbars[ds].update(dataset_merge_tasks[ds], advance=1, refresh=True)
+                    pbars[ds].update(dataset_merge_tasks[ds], advance=pbar_merge_count[future.key], refresh=True)
                 else:
                     pbars[_processing_sentinel].update(processing_task, advance=1, refresh=True)
 
@@ -270,6 +272,11 @@ def dask_reduce(
                     # buffer in order to access the dataset later again
                     key2ds[work.key] = ds
 
+                    # track number of merged items for the pbar
+                    # when this future finished we advance len(buf) merge - 1
+                    # the -1 comes from the fact that we get another merged output
+                    pbar_merge_count[work.key] = len(buf) - 1
+
                     # reset buffer
                     buf.clear()
 
@@ -277,6 +284,9 @@ def dask_reduce(
                     dynac.add(work)
 
         del dynac
+
+        # not needed anymore
+        pbar_merge_count.clear()
 
         # make sure there's only 1 future per dataset in the buffer for the final merge
         final_merge_futures = {}
