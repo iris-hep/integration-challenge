@@ -186,8 +186,11 @@ def dask_reduce(
         dataset_merge_tasks = {}
         for ds in unique_datasets:
             total = ds2todo[ds]
+            dslabel = str(ds)
+            if len(dslabel) > 20:
+                dslabel = dslabel[:20] + "..."
             dataset_merge_tasks[ds] = pbars[ds].add_task(
-                f"[cyan]Merging {total} [italic]{ds}[/italic] datasets into 1",
+                f"[cyan]Merging {total} [italic]{dslabel}[/italic]",
                 total=total,
                 unit="merge",
             )
