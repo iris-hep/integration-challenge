@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 
 import awkward as ak
 from coffea.processor import ProcessorABC
+from roastcoffea import track_metrics, track_time
 
 from intccms.analysis.nondiff import NonDiffAnalysis
 from intccms.skimming.io.writers import get_writer
@@ -239,6 +240,7 @@ class UnifiedProcessor(ProcessorABC):
 
         return acc
 
+    @track_metrics
     def process(self, events: ak.Array) -> Dict[str, Any]:
         """Process a single chunk of events.
 
@@ -270,12 +272,14 @@ class UnifiedProcessor(ProcessorABC):
         input_events_count = len(events)
 
         # Step 1: Apply skim selection (always applies filter)
-        events = self._apply_skim_selection(events)
+        with track_time(self, "skim_selection"):
+            events = self._apply_skim_selection(events)
         output["skimmed_events"] = len(events)
 
         # Save filtered events to disk only if save_skimmed_output is enabled
         if self.config.general.save_skimmed_output and len(events) > 0:
-            self._save_skimmed_events(events, metadata)
+            with track_time(self, "save_skimmed"):
+                self._save_skimmed_events(events, metadata)
 
         # Step 2: Run analysis if enabled
         if self.config.general.run_analysis and len(events) > 0:
@@ -283,7 +287,8 @@ class UnifiedProcessor(ProcessorABC):
             # - Object selection and corrections
             # - Histogram filling (if run_histogramming=True)
             # - Systematics (if run_systematics=True)
-            self.analysis.process(events=events, metadata=metadata)
+            with track_time(self, "analysis"):
+                self.analysis.process(events=events, metadata=metadata)
 
             # Step 3: Collect histograms if histogramming was enabled
             if self.config.general.run_histogramming:
