@@ -43,7 +43,6 @@ general_config = {
         "lumi": 16400,
         "weight_branch": "genWeight",
         "analysis": "nondiff",
-        "run_skimming": False,
         "run_histogramming": True,
         "run_statistics": True,
         "run_systematics": True,

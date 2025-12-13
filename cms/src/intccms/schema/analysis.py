@@ -127,14 +127,6 @@ class GeneralConfig(SubscriptableModel):
             "Controls output behavior independent of input source.",
         ),
     ]
-    run_skimming: Annotated[
-        bool,
-        Field(
-            default=True,
-            description="DEPRECATED: Use save_skimmed_output instead. "
-            "If True, run the initial NanoAOD skimming and filtering step.",
-        ),
-    ]
     run_processor: Annotated[
         bool,
         Field(
@@ -176,15 +168,16 @@ class GeneralConfig(SubscriptableModel):
         bool,
         Field(
             default=False,
-            description="If True load cached results and generate plots "
-            "without re-running the analysis.",
+            description="TODO: Not yet implemented. "
+            "If True, load cached results and generate plots without re-running the analysis.",
         ),
     ]
     run_mva_training: Annotated[
         bool,
         Field(
             default=False,
-            description="If True, run the MVA model pre-training step.",
+            description="TODO: Not yet implemented. "
+            "If True, run the MVA model pre-training step.",
         ),
     ]
     run_metadata_generation: Annotated[
@@ -198,8 +191,8 @@ class GeneralConfig(SubscriptableModel):
         bool,
         Field(
             default=True,
-            description="If True, read preprocessed data from the cache directory "
-            "if available.",
+            description="TODO: Not yet implemented. "
+            "If True, read preprocessed data from the cache directory if available.",
         ),
     ]
     output_dir: Annotated[

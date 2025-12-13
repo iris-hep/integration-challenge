@@ -43,20 +43,20 @@ class UnifiedProcessor(ProcessorABC):
     **Workflow 1: Skim NanoAOD files**
         Process original NanoAOD → Apply event selection → Save filtered events to disk
         Use when: First time processing, want to create skimmed files for later analysis
-        Config: run_skimming=True, run_analysis=False
+        Config: save_skimmed_output=True, run_analysis=False
 
     **Workflow 2: Analyze pre-skimmed files**
         Load skimmed files → Run analysis → Fill histograms
         Use when: Analyzing previously skimmed data multiple times
-        Config: run_skimming=False, run_analysis=True
+        Config: save_skimmed_output=False, run_analysis=True
 
     Pipeline Stages
     ---------------
     - **Skimming** (via intccms.skimming.pipeline):
       - Event selection filter ALWAYS applies
-      - When run_skimming=True: Saves filtered events to disk in configured format
+      - When save_skimmed_output=True: Saves filtered events to disk in configured format
         (Parquet or ROOT). Writer automatically appends correct file extension.
-      - When run_skimming=False: No disk I/O (useful for analyzing pre-skimmed data)
+      - When save_skimmed_output=False: No disk I/O (useful for analyzing pre-skimmed data)
 
     - **Analysis** (via NonDiffAnalysis):
       - When run_analysis=True: Object selection, corrections, observable calculations
@@ -72,7 +72,7 @@ class UnifiedProcessor(ProcessorABC):
     Configuration Flags
     -------------------
     config.general flags control workflow behavior:
-    - run_skimming: Save filtered events to disk (filter always applies)
+    - save_skimmed_output: Save filtered events to disk (filter always applies)
     - run_analysis: Run analysis (object selection, corrections, observables)
     - run_histogramming: Fill histograms during analysis
     - run_systematics: Apply systematic variations
@@ -104,7 +104,7 @@ class UnifiedProcessor(ProcessorABC):
     >>> fileset = generator.get_coffea_fileset()  # Original NanoAOD
     >>>
     >>> # Configure for skimming
-    >>> config.general.run_skimming = True
+    >>> config.general.save_skimmed_output = True
     >>> config.general.run_analysis = False
     >>>
     >>> processor = UnifiedProcessor(
@@ -145,7 +145,7 @@ class UnifiedProcessor(ProcessorABC):
     ...         ))
     >>>
     >>> # Configure for analysis only
-    >>> config.general.run_skimming = False  # Don't re-skim
+    >>> config.general.save_skimmed_output = False  # Don't re-skim
     >>> config.general.run_analysis = True
     >>> config.general.run_histogramming = True
     >>>

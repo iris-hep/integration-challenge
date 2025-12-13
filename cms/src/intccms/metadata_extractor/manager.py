@@ -110,6 +110,15 @@ class DatasetMetadataManager:
         self.dataset_manager = dataset_manager
         self.output_manager = output_manager
         self.output_directory = self.output_manager.metadata_dir
+        self.config = config
+
+        # Extract config-derived attributes
+        if config:
+            self.generate_metadata = config.general.run_metadata_generation
+            self.processes_filter = getattr(config.general, 'processes', None)
+        else:
+            self.generate_metadata = True
+            self.processes_filter = None
 
         # Auto-extract chunksize from config if not provided
         if chunksize is None:
@@ -149,30 +158,26 @@ class DatasetMetadataManager:
     def run(
         self,
         identifiers: Optional[Union[int, List[int]]] = None,
-        generate_metadata: bool = True,
-        processes_filter: Optional[List[str]] = None,
     ) -> None:
         """
-        Generate or read all metadata.
+        Generate or load metadata based on config settings.
 
-        This is the main entry point that orchestrates the workflow.
+        Uses `config.general.run_metadata_generation` to decide whether to generate
+        new metadata or load existing files. Uses `config.general.processes` to
+        filter which processes to include.
 
         Parameters
         ----------
         identifiers : int or list of ints, optional
-            Specific listing file IDs to process. Only used if generate_metadata=True.
-        generate_metadata : bool, optional
-            If True, generate new metadata. If False, read existing metadata.
-        processes_filter : list of str, optional
-            If provided, only generate metadata for these processes.
+            Specific listing file IDs to process. Only used when generating metadata.
 
         Raises
         ------
         SystemExit
-            If generate_metadata=False and required metadata files are missing
+            If loading metadata and required files are missing
         """
-        if generate_metadata:
-            self._generate_metadata(identifiers, processes_filter)
+        if self.generate_metadata:
+            self._generate_metadata(identifiers, self.processes_filter)
         else:
             self._load_existing_metadata()
 

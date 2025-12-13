@@ -119,12 +119,12 @@ class Config(SubscriptableModel):
                 "Duplicate systematic names found in configuration."
             )
 
-        if self.general.run_skimming and not self.preprocess:
+        if self.general.save_skimmed_output and not self.preprocess:
             raise ValueError(
                 "Skimming is enabled but no preprocess configuration provided."
             )
 
-        if self.general.run_skimming and (not self.preprocess.skimming):
+        if self.general.save_skimmed_output and (not self.preprocess.skimming):
             raise ValueError(
                 "Skimming is enabled but no skimming configuration provided. "
                 "Please provide a SkimmingConfig with function and use definitions."
@@ -274,7 +274,7 @@ def load_config_with_restricted_cli(
             raise KeyError(
                 f"Cannot override non-existent setting: {key}. "
                 f"Valid settings in section '{top_key}':\
-                {', '.join(sorted(k for k in valid_keys
+                {', '.join(sorted(k for k in valid_keys \
                                   if k.startswith(top_key)))}"
             )
 
