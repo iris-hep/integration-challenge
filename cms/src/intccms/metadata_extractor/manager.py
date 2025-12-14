@@ -82,9 +82,6 @@ class DatasetMetadataManager:
         self,
         dataset_manager: DatasetManager,
         output_manager: Any,
-        executor: Any = None,
-        schema: Any = None,
-        chunksize: Optional[int] = None,
         config: Optional[Any] = None,
     ):
         """
@@ -96,31 +93,31 @@ class DatasetMetadataManager:
             Dataset manager instance
         output_manager : OutputDirectoryManager
             Output directory manager
-        executor : coffea executor, optional
-            Executor for coffea preprocessing (FuturesExecutor, DaskExecutor, etc.)
-            If None, uses FuturesExecutor
-        schema : coffea schema, optional
-            Schema for parsing ROOT files. If None, uses NanoAODSchema
-        chunksize : int, optional
-            Number of events per chunk for WorkItem splitting.
-            If None, reads from config.preprocess.skimming.chunk_size or defaults to 100_000
         config : Config, optional
-            Full configuration object to automatically extract chunk_size from
+            Configuration object. Used to extract run_metadata_generation,
+            processes filter, and chunksize settings.
         """
         self.dataset_manager = dataset_manager
         self.output_manager = output_manager
         self.output_directory = self.output_manager.metadata_dir
+        self.config = config
 
-        # Auto-extract chunksize from config if not provided
-        if chunksize is None:
-            if config and hasattr(config, 'preprocess') and hasattr(config.preprocess, 'skimming'):
-                chunksize = config.preprocess.skimming.chunk_size
+        # Extract config-derived attributes
+        if config:
+            self.generate_metadata = config.general.run_metadata_generation
+            self.processes_filter = getattr(config.general, 'processes', None)
+            # Extract chunksize from config
+            if hasattr(config, 'preprocess') and hasattr(config.preprocess, 'skimming'):
+                self.chunksize = config.preprocess.skimming.chunk_size
             else:
-                chunksize = 100_000
+                self.chunksize = 100_000
+        else:
+            self.generate_metadata = True
+            self.processes_filter = None
+            self.chunksize = 100_000
 
-        # Initialize components
+        # Initialize fileset builder (doesn't need executor)
         self.fileset_builder = FilesetBuilder(dataset_manager, output_manager)
-        self.metadata_extractor = CoffeaMetadataExtractor(executor, schema, chunksize)
 
         # Attributes to store generated/read metadata
         self.fileset: Optional[Dict[str, Dict[str, Any]]] = None
@@ -148,59 +145,77 @@ class DatasetMetadataManager:
 
     def run(
         self,
+        executor: Any = None,
+        schema: Any = None,
         identifiers: Optional[Union[int, List[int]]] = None,
-        generate_metadata: bool = True,
-        processes_filter: Optional[List[str]] = None,
     ) -> None:
         """
-        Generate or read all metadata.
+        Generate or load metadata based on config settings.
 
-        This is the main entry point that orchestrates the workflow.
+        Uses `config.general.run_metadata_generation` to decide whether to generate
+        new metadata or load existing files.
 
         Parameters
         ----------
+        executor : coffea executor, optional
+            Required when generating metadata (e.g., DaskExecutor, FuturesExecutor).
+            Not needed when loading existing metadata.
+        schema : coffea schema, optional
+            Schema for parsing ROOT files. Defaults to NanoAODSchema.
         identifiers : int or list of ints, optional
-            Specific listing file IDs to process. Only used if generate_metadata=True.
-        generate_metadata : bool, optional
-            If True, generate new metadata. If False, read existing metadata.
-        processes_filter : list of str, optional
-            If provided, only generate metadata for these processes.
+            Specific listing file IDs to process. Only used when generating metadata.
 
         Raises
         ------
+        ValueError
+            If generating metadata but no executor provided
         SystemExit
-            If generate_metadata=False and required metadata files are missing
+            If loading metadata and required files are missing
         """
-        if generate_metadata:
-            self._generate_metadata(identifiers, processes_filter)
+        if self.generate_metadata:
+            if executor is None:
+                raise ValueError(
+                    "executor is required when run_metadata_generation=True. "
+                    "Pass a DaskExecutor or FuturesExecutor."
+                )
+            self._generate_metadata(executor, schema, identifiers)
         else:
             self._load_existing_metadata()
 
     def _generate_metadata(
         self,
+        executor: Any,
+        schema: Any,
         identifiers: Optional[Union[int, List[int]]],
-        processes_filter: Optional[List[str]],
     ) -> None:
         """
         Generate metadata workflow.
 
         Parameters
         ----------
+        executor : coffea executor
+            Executor for coffea preprocessing
+        schema : coffea schema or None
+            Schema for parsing ROOT files. If None, uses NanoAODSchema.
         identifiers : int or list of ints, optional
             Listing file IDs to process
-        processes_filter : list of str, optional
-            Processes to include
         """
         logger.info("Starting metadata generation workflow...")
 
+        # Create extractor on-demand with provided executor
+        from coffea.nanoevents import NanoAODSchema
+        if schema is None:
+            schema = NanoAODSchema
+        metadata_extractor = CoffeaMetadataExtractor(executor, schema, self.chunksize)
+
         # Step 1: Build and save fileset and Dataset objects
         self.fileset, self.datasets = self.fileset_builder.build_fileset(
-            identifiers, processes_filter
+            identifiers, self.processes_filter
         )
         self.fileset_builder.save_fileset(self.fileset)
 
         # Step 2: Extract and save WorkItem metadata
-        self.workitems = self.metadata_extractor.extract_metadata(self.fileset)
+        self.workitems = metadata_extractor.extract_metadata(self.fileset)
         self._save_workitems()
 
         # Step 3: Aggregate event counts and save summary

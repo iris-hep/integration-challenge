@@ -152,7 +152,7 @@ class NonDiffAnalysis(Analysis):
                 mask = executor.execute(object_copies)
 
             if ak.sum(mask) == 0:
-                logger.warning(
+                logger.debug(
                     f"{analysis}:: No events left in {channel_name} for {process} with "
                     + f"variation {variation}"
                 )
