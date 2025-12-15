@@ -10,6 +10,8 @@ from lzma import LZMAError
 
 from coffea.processor.executor import WorkItem
 from coffea.processor.executor import UprootMissTreeError
+from coffea import processor
+from coffea.nanoevents import NanoAODSchema
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +44,7 @@ class CoffeaMetadataExtractor:
         chunksize : int, optional
             Number of events per chunk for WorkItem splitting, default 100_000
         """
-        from coffea import processor
-        from coffea.nanoevents import NanoAODSchema
+
 
         # Use defaults if not provided
         if executor is None:
@@ -99,4 +100,4 @@ class CoffeaMetadataExtractor:
             return workitems_list
         except Exception as e:
             logger.error(f"Error during coffea preprocessing: {e}")
-            raise
+            raise 
