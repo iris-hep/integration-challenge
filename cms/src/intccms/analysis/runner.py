@@ -43,9 +43,6 @@ def run_processor_workflow(
     histograms. When run_processor=False, it loads previously saved histograms,
     enabling fast iteration on statistical models without re-processing events.
 
-    Metrics collection should be handled externally using roastcoffea's
-    MetricsCollector context manager wrapping this function call.
-
     Parameters
     ----------
     config : Config
@@ -82,19 +79,14 @@ def run_processor_workflow(
 
     Examples
     --------
-    >>> # Full processor run with metrics via roastcoffea
-    >>> from roastcoffea import MetricsCollector
-    >>> with MetricsCollector(client=client, processor_instance=processor) as collector:
-    ...     output, report = run_processor_workflow(
-    ...         config=config,
-    ...         output_manager=output_manager,
-    ...         metadata_lookup=metadata_lookup,
-    ...         workitems=workitems,
-    ...         executor=DaskExecutor(client=client),
-    ...     )
-    ...     collector.extract_metrics_from_output(output)
-    ...     collector.set_coffea_report(report)
-    >>> metrics = collector.get_metrics()
+    >>> # Full processor run
+    >>> output, report = run_processor_workflow(
+    ...     config=config,
+    ...     output_manager=output_manager,
+    ...     metadata_lookup=metadata_lookup,
+    ...     workitems=workitems,
+    ...     executor=DaskExecutor(client=client),
+    ... )
 
     >>> # Load saved histograms (iterate on statistics)
     >>> config.general.run_processor = False
