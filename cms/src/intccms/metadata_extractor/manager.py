@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional, TypedDict, Union
 
 from rich.pretty import pretty_repr
 from coffea.processor.executor import WorkItem
+from coffea.nanoevents import NanoAODSchema
+
 
 from intccms.datasets import DatasetManager, Dataset
 from intccms.metadata_extractor.builders import FilesetBuilder
@@ -203,7 +205,6 @@ class DatasetMetadataManager:
         logger.info("Starting metadata generation workflow...")
 
         # Create extractor on-demand with provided executor
-        from coffea.nanoevents import NanoAODSchema
         if schema is None:
             schema = NanoAODSchema
         metadata_extractor = CoffeaMetadataExtractor(executor, schema, self.chunksize)
