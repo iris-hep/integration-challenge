@@ -33,6 +33,7 @@ from intccms.utils.functors import SelectionExecutor
 
 logger = logging.getLogger(__name__)
 
+import warnings
 
 class UnifiedProcessor(ProcessorABC):
     """Coffea processor for distributed skimming and/or analysis.
@@ -364,7 +365,7 @@ class UnifiedProcessor(ProcessorABC):
         # Save events
         save_events(self.writer, output_columns, str(output_path), **writer_kwargs)
 
-        logger.debug(
+        logger.info(
             f"Saved {len(events)} events for {process}/{variation} to {output_path}"
         )
 
@@ -388,6 +389,7 @@ class UnifiedProcessor(ProcessorABC):
             f"Postprocessing complete: {accumulator.get('processed_events', 0)} total events"
         )
 
+        logger.info(f"Files saved in {self.output_manager.skimmed_dir}")
         # Save histograms to disk if they were produced
         if self.config.general.run_histogramming and "histograms" in accumulator:
             # Save pickle format (for loading when run_processor=False)
