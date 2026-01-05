@@ -3,6 +3,9 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# SX tokens
+ml_framework/servicex.yaml
+
 # C extensions
 *.so
 
