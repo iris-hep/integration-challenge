@@ -4,7 +4,7 @@ version = "0.0.1"
 description = "IRIS-HEP ATLAS integration challenge"
 authors = ["Alexander Held <alexander.held@cern.ch>"]
 channels = ["conda-forge"]
-platforms = ["osx-arm64", "linux-64"]
+platforms = ["osx-arm64", "linux-64", "osx-64"]
 
 [tasks.lab]
 description = "Start a JupyterLab instance"
@@ -24,3 +24,7 @@ ipywidgets = ">=8.1.7,<9"
 coffea = ">=2025.10.1,<2026"
 atlas-schema = ">=0.4.1,<0.5"
 atlasopenmagic = ">=1.6.1,<2"
+awkward = ">=2.8.11,<3"
+servicex = ">=3.2.3,<4"
+servicex-analysis-utils = ">=1.2.1,<2"
+func_adl_servicex_xaodr25 = ">=2.4.5.25.2.41,<3"
