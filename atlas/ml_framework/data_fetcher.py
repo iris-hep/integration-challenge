@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from servicex import query, deliver
 from servicex_analysis_utils import ds_type_resolver, to_awk
 import awkward as ak
+import logging
 
 
 # -------------------------
@@ -14,39 +15,10 @@ import awkward as ak
 @dataclass
 class RunConfig:
     tree_name: str
+    dataset: str
     request_name: str = "ML_Training_Data"
-    output_path: str = "training_data.parquet"
+    output_path: str = "./data/training_samples.parquet"
     ignore_cache: bool = False
-
-
-# -------------------------
-# Pure cut functions
-# One cut = one branch
-# -------------------------
-
-
-def make_jet_pt_cut(pt_min: float):
-    def cut(evt) -> bool:
-        return evt["jet_pt_NOSYS"].Where(lambda pt: pt > pt_min).Count() > 0
-
-    return cut
-
-
-def make_jet_eta_cut(eta_max: float):
-    def cut(evt) -> bool:
-        return evt["truth_alp_eta"].Where(lambda eta: abs(eta) < eta_max).Count() > 0
-
-    return cut
-
-
-def make_jet_select():
-    def select(evt):
-        return {
-            "jet_pt": evt["jet_pt_NOSYS"],
-            "jet_eta": evt["truth_alp_eta"],
-        }
-
-    return select
 
 
 # -------------------------
@@ -54,20 +26,10 @@ def make_jet_select():
 # -------------------------
 
 
-class JetQuery:
-    def __init__(self):
-        self._cuts = []
-        self._select_fn = None
-
-    def add_cut(self, cut_fn):
-        # cut_fn MUST be: f(evt) -> bool
-        self._cuts.append(cut_fn)
-        return self
-
-    def select(self, select_fn):
-        # select_fn must be f(evt) -> dict
-        self._select_fn = select_fn
-        return self
+class ServiceXQuery:
+    def __init__(self, cuts=[None], selection=None):
+        self._cuts = cuts  # list of cut functions
+        self._select_fn = selection  # selection function
 
     def build(self, tree_name: str):
         q = query.FuncADL_Uproot().FromTree(tree_name)
@@ -87,67 +49,30 @@ class JetQuery:
 
 
 class ServiceXExecutor:
-    def __init__(self, ds):
-        self._dataset = ds_type_resolver(ds)
+    def __init__(self, query_builder: ServiceXQuery, config: RunConfig):
+        self._query_builder = query_builder
+        self._cfg = config
 
-    def run(self, query_builder: JetQuery, config: RunConfig):
-        funcadl_query = query_builder.build(config.tree_name)
+    def write_to_file(self, files: dict, **kwargs):
+        arrays = to_awk(files, **kwargs)[self._cfg.request_name]
+
+        ak.to_parquet(
+            arrays, self._cfg.output_path, compression="GZIP", compression_level=9
+        )
+
+    def deliver(self, **kwargs):
+        funcadl_query = self._query_builder.build(self._cfg.tree_name)
 
         spec = {
             "Sample": [
                 {
-                    "Name": config.request_name,
-                    "Dataset": self._dataset,
+                    "Name": self._cfg.request_name,
+                    "Dataset": ds_type_resolver(self._cfg.dataset),
                     "Query": funcadl_query,
                 }
-            ]
+            ],
         }
-
-        return spec
-
-
-# -------------------------
-# User code
-# -------------------------
-
-"""
-def fetch_training_data_to_file(ds_name: str, config: RunConfig):
-    result_list = fetch_training_data(ds_name, config)
-
-    # Finally, write it out into a training file.
-    ak.to_parquet(
-        result_list, config.output_path, compression="GZIP", compression_level=9
-    )
-"""
-
-files = [
-    "root://eospublic.cern.ch//eos/opendata/atlas/rucio/data16_13TeV/"
-    "DAOD_PHYSLITE.37019878._000001.pool.root.1"
-]
-
-my_DS = "user.acordeir:michigan-tutorial.displaced-signal.root"
-
-query_builder = (
-    JetQuery()
-    .add_cut(make_jet_pt_cut(pt_min=30_000))
-    .add_cut(make_jet_eta_cut(eta_max=2.5))
-    .select(make_jet_select())
-)
-
-config = RunConfig(tree_name="reco", request_name="testin2")
-
-executor = ServiceXExecutor(my_DS)
-result = executor.run(query_builder, config)
-print(result)
-
-
-f = deliver(result, ignore_local_cache=config.ignore_cache)
-print(f)
-
-result_list = to_awk(f)
-print(ak.mean(result_list["testin2"]["jet_pt"]))  # just to show we have data
-
-# NEXT STEP
-# USER CODE OUTSIDE THE FRAMEWORK:
-# ak.to_parquet as well
-# modular choices for cuts and selections
+        files = deliver(spec, ignore_local_cache=self._cfg.ignore_cache, **kwargs)
+        self.write_to_file(files, **kwargs)
+        # Logging
+        logging.info("Data written to %s", self._cfg.output_path)
