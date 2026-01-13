@@ -75,4 +75,4 @@ class ServiceXExecutor:
         files = deliver(spec, ignore_local_cache=self._cfg.ignore_cache, **kwargs)
         self.write_to_file(files, **kwargs)
         # Logging
-        logging.info("Data written to %s", self._cfg.output_path)
+        logging.warning("Fetched data written to %s", self._cfg.output_path)
