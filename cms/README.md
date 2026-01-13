@@ -5,23 +5,28 @@ This project uses [pixi](https://pixi.sh/) for environment management. To set up
 
 ```sh
 pixi install
-source pixi_activate.sh # for conda-like environment
+source pixi_activate.sh     # optional helper for a conda-like shell
+```
+
+For notebooks, start JupyterLab via:
+
+```sh
+pixi run lab
 ```
 
 ## Code structure
-The main codebase is organized as follows:
-
-```
+``` 
 cms/
-  analysis.py                # Main analysis script
-  pixi.toml, pixi.lock       # Environment configuration (pixi)
-  analysis/                  # Analysis logic and base classes
-  example_opendata/          # Open-data example configs, cuts, datasets
-  example_cms/               # CMS internal-style example configs
-  utils/                     # Utility modules (output manager, skimming, schema, etc.)
+├── example_cms/                # CMS-style configs, cuts, datasets
+├── example_opendata/           # Open-data configs
+├── pixi.toml / pixi.lock       # Environment definition
+└── src/intccms/
+    ├── analysis/               # Runner, processor glue
+    ├── metrics/                # Inspector + metrics tooling
+    ├── utils/                  # Output manager, schema, skimming helpers, …
+    └── ...
 ```
-- Start from the example configurations in `example_opendata/configs/` or `example_cms/configs/`—they provide complete analysis dictionaries (datasets, skimming, channels) that you can copy and adapt for your own campaign.
-- Main scripts and entry points are in `cms/`.
+Use the example configurations as templates—they already tie together datasets, skimming, channels, and systematics. The notebooks show how to drive the full pipeline interactively.
 
 ## Metadata and preprocessing
 Metadata extraction and preprocessing are handled before the main analysis. Metadata includes information about datasets, event counts, and cross-sections, and is used to configure the analysis and normalization. Preprocessing steps may include filtering, object selection, and preparing input files for skimming and analysis.
@@ -51,17 +56,38 @@ The file suffix is fixed to `{dataset}/file_{index}/part_{chunk}.{ext}`, so swit
 - Downstream steps load the same path, so no separate cache copy is needed; cached Awkward objects are still produced automatically for faster reruns.
 - Dataset-level options such as lumi masks live next to each dataset definition (for example `lumi_mask`: `{ "function": cuts.lumi_mask, "use": [...], "static_kwargs": {"lumifile": "...json"} }`).
 
-## Running code
-To run the main analysis chain, execute the relevant Python scripts or notebooks. Outputs such as histograms and fit results will be saved in the `outputs/` directory. For example:
+## Running the workflows
+Three notebooks cover the common workflows:
 
-```sh
-python analysis.py
-```
+1. **Full processing** – runs the production chain (metadata → skimming → histogramming) over Run‑2.
+2. **Processing + metrics** – identical pipeline plus worker/throughput dashboards (uses `metrics.worker_tracker`).
+3. **Input inspector** – characterises inputs (event counts, branch/compression sizes, optional Rucio-backed file sizes) without running the full analysis.
 
-Check the configuration files for additional options and details on running systematic variations or fits.
-
-The following is guaranteed to produce a result if skimming is already performed
 
 ```sh
 python3 analysis.py general.run_skimming=False general.read_from_cache=True general.run_mva_training=False general.run_plots_only=False general.run_metadata_generation=False
 ```
+
+## Developer guidance
+Some practical knobs you’re likely to tweak:
+
+- **Executors**  
+  - Local Dask (default): set up via `analysis.runner` which spawns a `LocalCluster`.
+  - Remote Dask/coffea executors: write a client factory (e.g., `Client("tcp://scheduler:8786")`) and pass it through the runner, or switch coffea backends via CLI flags (`analysis.py general.executor="futures"`).
+  - For custom setups, create your own `Client` wrapper (set env vars, install dependencies) and hand it to the runner before calling `run()`.
+
+- **Skimming mode**  
+  - Toggle `general.run_skimming` / `general.use_skimmed_input` to control whether new skims are produced or existing ones are consumed.
+  - Adjust `preprocess.skimming.output` (`format`, `local`, `base_uri`) to change serialization (parquet, ROOT, etc.) and storage destination. Use the `inspector.rucio` helper if you want accurate file sizes when skims live remotely.
+  - To swap in custom logic, provide your own `preprocess.skimming.function` and `use` arguments (mirrors coffea processors) or set `general.analysis="skip"` and plug in a bespoke skimmer.
+
+- **Redirectors**  
+  - Configured per dataset (`redirector` field). Override them to point at XCache/local storage as needed; `DatasetManager.get_redirector()` exposes the current value.
+  - When changing redirectors remember to regenerate metadata/skims so downstream references stay in sync.
+
+- **Rucio helpers**  
+  - `src/intccms/metrics/inspector/rucio.py` can resolve datasets via the shared queries logic and fetch byte counts using the official client. Feed its output into `aggregate_statistics(..., size_summary=...)` or `plot_file_size_distribution(..., size_summary=...)`.
+
+- **Custom client setup**  
+  - For bespoke clusters, write a helper that creates the `Client` you want (e.g., Dask Gateway, SLURM, YARN) and pass it into the analysis runner. Ensure environment packages match `pixi.toml` (use `pixi export` or `conda-pack` if needed).
+  - When running under coffea-casa, use the provided notebooks—cells already demonstrate how to register plugins, set env vars, and integrate the metrics dashboard.

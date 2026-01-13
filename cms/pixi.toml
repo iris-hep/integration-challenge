@@ -10,7 +10,7 @@ version = "0.1.0"
 awkward = ">=2.8.9"
 cabinetry = ">=0.6.0,<0.7"
 cloudpickle = ">=3.1.1,<4"
-coffea = ">=2025.10.0"
+coffea = ">=2025.10.2,<2026"
 correctionlib = ">=2.7.0,<3"
 dask-awkward = ">=2025.5.0,<2026"
 hist = ">=2.8.1,<3"
@@ -34,9 +34,17 @@ ipykernel = ">=6.30.1,<7"
 ipywidgets = ">=8.1.7,<9"
 nbstripout = ">=0.8.1,<0.9"
 
+[feature.dev.dependencies]
+scikit-hep-testdata = ">=0.4.0"
+pytest = ">=8.0.0"
+pytest-cov = ">=4.0.0"
+
+[feature.dev.pypi-dependencies]
+rucio = ">=37.7.1, <38"
+
 [feature.lab.dependencies]
-notebook = ">=7.4.5,<8"
-jupyterlab = ">=4.4.5,<5"
+notebook = ">=7.5.0,<8"
+jupyterlab = ">=4.5.0,<5"
 
 [feature.lab.tasks.lab]
 description = "Start a JupyterLab instance"
@@ -48,6 +56,8 @@ depends-on = ["lab"]
 
 [environments]
 lab = ["lab"]
+dev = ["dev"]
 
 [pypi-dependencies]
 rucio = ">=37.7.1, <38"
+intccms = { path = ".", editable = true }
