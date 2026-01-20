@@ -41,7 +41,7 @@ from coffea.nanoevents import NanoEventsFactory
 from coffea.processor import Accumulatable, accumulate
 from coffea.processor.executor import WorkItem
 from coffea.util import rich_bar
-from dask.distributed import Client, as_completed
+from dask.distributed import as_completed, Client
 from dask.tokenize import tokenize
 from rich.console import Group
 from rich.live import Live
