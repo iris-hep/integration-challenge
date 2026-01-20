@@ -201,12 +201,7 @@ def dask_reduce(
         ac = as_completed(futures)
 
         # in-dataset merging loop, we merge first within datasets to avoid large accumulators in memory
-        # some reasonable value for the batch_size:
-        # yield in batches of treereduction, and we want at least 1 item per batch
-        batch_size = min(
-            treereduction, max(int(len(futures) / 100), 1)
-        )  # this is heuristic, can be tuned
-        for batch in ac.batches(batch_size):
+        for batch in ac.batches():
             for future in batch:
                 ds = key2ds[future.key]
 
@@ -283,6 +278,8 @@ def dask_reduce(
                     # add back to the ac, recursively merge
                     ac.add(work)
 
+        del ac
+
         # not needed anymore
         pbar_merge_count.clear()
 
@@ -354,6 +351,7 @@ def dask_reduce(
                 ac.add(future)
 
         # not needed anymore
+        del ac
         pbar_merge_count.clear()
 
         pbars[_final_merge_sentinel].update(
