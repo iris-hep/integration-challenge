@@ -290,7 +290,7 @@ def dask_reduce(
             if todo != 0 or len(buf) != 1:
                 msg = f"dataset {ds} has {len(buf)} items in merge-buffer (should only be 1); chunks left to merge: {todo}"
                 raise ReduceSchedulingError(msg)
-            pbars[ds].update(dataset_merge_tasks[ds], advance=1, visible=False, refresh=True)
+            pbars[ds].update(dataset_merge_tasks[ds], advance=1, refresh=True)
             final_merge_futures[ds] = buf[0]
 
         final_total = len(final_merge_futures)
@@ -357,7 +357,6 @@ def dask_reduce(
         pbars[_final_merge_sentinel].update(
             final_merge_task,
             advance=1,
-            visible=False,
             refresh=True,
         )
 
