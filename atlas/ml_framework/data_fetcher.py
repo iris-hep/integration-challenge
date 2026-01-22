@@ -7,6 +7,7 @@ from servicex import query, deliver
 from servicex_analysis_utils import ds_type_resolver, to_awk
 import awkward as ak
 import logging
+import os
 
 
 # -------------------------
@@ -15,10 +16,20 @@ import logging
 @dataclass
 class RunConfig:
     tree_name: str
-    dataset: str
+    dataset: str | list[str]
     request_name: str = "ML_Training_Data"
-    output_path: str = "./data/training_samples.parquet"
-    ignore_cache: bool = False
+    output_folder: str = "./data/"
+    files_per_sample: int = None
+
+    def __post_init__(self):
+        if isinstance(self.dataset, str):
+            self.dataset = [self.dataset]
+
+        if not self.output_folder.endswith("/"):
+            self.output_folder += "/"
+
+        if not os.path.exists(self.output_folder):
+            os.makedirs(self.output_folder)
 
 
 # -------------------------
@@ -53,26 +64,40 @@ class ServiceXExecutor:
         self._query_builder = query_builder
         self._cfg = config
 
-    def write_to_file(self, files: dict, **kwargs):
-        arrays = to_awk(files, **kwargs)[self._cfg.request_name]
+    def write_to_parquet(self, files: dict, **kwargs):
+        arrays = to_awk(files, **kwargs)
 
-        ak.to_parquet(
-            arrays, self._cfg.output_path, compression="GZIP", compression_level=9
-        )
+        for key, arr in arrays.items():
+            logging.info("Key: %s, Entries: %d", key, len(arr))
+            file_path = self._cfg.output_folder + f"{key}.parquet"
+
+            ak.to_parquet(
+                arr,
+                file_path,
+                compression="GZIP",
+                compression_level=9,
+            )
 
     def deliver(self, **kwargs):
         funcadl_query = self._query_builder.build(self._cfg.tree_name)
 
-        spec = {
-            "Sample": [
+        queries = []
+        for sample in self._cfg.dataset:
+            if not isinstance(sample, str):
+                raise ValueError("Input sample must be a string or list of strings")
+
+            queries.append(
                 {
-                    "Name": self._cfg.request_name,
-                    "Dataset": ds_type_resolver(self._cfg.dataset),
+                    "NFiles": self._cfg.files_per_sample,
+                    "Name": sample,
+                    "Dataset": ds_type_resolver(sample),
                     "Query": funcadl_query,
                 }
-            ],
-        }
-        files = deliver(spec, ignore_local_cache=self._cfg.ignore_cache, **kwargs)
-        self.write_to_file(files, **kwargs)
+            )
+
+        spec = {"General": {"Delivery": "LocalCache"}, "Sample": queries}
+
+        files = deliver(spec, **kwargs)
+        self.write_to_parquet(files, **kwargs)
         # Logging
-        logging.warning("Fetched data written to %s", self._cfg.output_path)
+        logging.warning("Fetched data written to %s", self._cfg.output_folder)

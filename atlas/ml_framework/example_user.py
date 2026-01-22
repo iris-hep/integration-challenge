@@ -1,35 +1,30 @@
 import data_fetcher as fetcher
-import os
 
 # Example user code
 
 # Define run configuration daata class
 my_DS = "user.acordeir:michigan-tutorial.displaced-signal.root"
+my_DS2 = "user.alheld:user.alheld.410470.PhPy8EG.DAOD_PHYSLITE.e6337_s3681_r13144_r13146_p6697.IC-v1_output/"
 config = fetcher.RunConfig(
     tree_name="reco",
-    request_name="testin2",
-    dataset=my_DS,
-    output_path="testin2.parquet",
+    dataset=my_DS2,
+    output_folder="./ml_framework/data/",
+    files_per_sample=2,
 )
 
 
 # Define cuts functions with FuncADL
 def jet_pt_cut(evt):
-    return evt["jet_pt_NOSYS"].Where(lambda pt: pt > 31_000).Count() > 0
+    return evt["jet_pt_NOSYS"].Where(lambda pt: pt > 33_000).Count() > 0
 
 
-def jet_eta_cut(evt):
-    return evt["truth_alp_eta"].Where(lambda eta: abs(eta) < 2.5).Count() > 0
-
-
-cuts = [jet_pt_cut, jet_eta_cut]
+cuts = [jet_pt_cut]
 
 
 # Define selection function
 def branch_select(evt):
     return {
         "jet_pt": evt["jet_pt_NOSYS"].Select(lambda pt: pt / 1000.0),
-        "jet_eta": evt["truth_alp_eta"],
     }
 
 
