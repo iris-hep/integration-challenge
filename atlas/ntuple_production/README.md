@@ -5,9 +5,9 @@
     ```bash
     git clone ssh://git@gitlab.cern.ch:7999/atlasphys-top/reco/TopCPToolkit.git
     cd TopCPToolkit
-    git checkout v2.22.0
+    git checkout c863f11c
     setupATLAS
-    asetup AnalysisBase,25.2.66
+    asetup AnalysisBase,25.2.82  # for https://gitlab.cern.ch/atlas/athena/-/merge_requests/85645
     cmake -S source -B build
     cmake --build build --parallel 4
     source build/*/setup.sh
