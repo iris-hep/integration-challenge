@@ -48,13 +48,17 @@ class RunConfig:
 # Query builder
 # -------------------------
 class ServiceXQuery:
-    def __init__(self, cuts=[], selection=None, config=None):
+    def __init__(self, cuts=[], selection=None, config=None, do_FuncADL=False):
         self.cuts = cuts
         self.selection = selection
         self.config = config
-        self.func_adl_query = self.build()
+        if do_FuncADL:
+            self.query = self.build_FuncADL_query()
+        else:
+            self.query = self.build_Uproot_query()
+        self.spec = self.build_spec()
 
-    def build(self):
+    def build_FuncADL_query(self):
         if self.config.tree_name is None:
             raise RuntimeError("No tree name defined in configuration")
         q = query.FuncADL_Uproot().FromTree(self.config.tree_name)
@@ -66,6 +70,39 @@ class ServiceXQuery:
             raise RuntimeError("No Select() defined")
 
         return q.Select(self.selection)
+
+    def build_Uproot_query(self):
+        q = query.UprootRaw(
+            [
+                {
+                    "treename": self.config.tree_name,
+                    "filter_name": self.selection,
+                    "cut": " & ".join(self.cuts) if self.cuts else None,
+                }
+            ]
+        )
+
+        return q
+
+    def build_spec(self):
+        queries = []
+
+        for sample, name in zip(self.config.dataset, self.config.request_name):
+            logging.info("Preparing query for sample: %s", name)
+            if not isinstance(sample, str):
+                raise ValueError("Input sample must be a string or list of strings")
+
+            queries.append(
+                {
+                    "NFiles": self.config.files_per_sample,
+                    "Name": name,
+                    "Dataset": ds_type_resolver(sample),
+                    "Query": self.query,
+                }
+            )
+
+        spec = {"General": {"Delivery": "LocalCache"}, "Sample": queries}
+        return spec
 
     def write_to_parquet(self, files: dict, **kwargs):
         arrays = to_awk(files, **kwargs)
@@ -82,24 +119,8 @@ class ServiceXQuery:
             )
 
     def deliver(self, **kwargs):
-        queries = []
-
-        for sample, name in zip(self.config.dataset, self.config.request_name):
-            if not isinstance(sample, str):
-                raise ValueError("Input sample must be a string or list of strings")
-
-            queries.append(
-                {
-                    "NFiles": self.config.files_per_sample,
-                    "Name": name,
-                    "Dataset": ds_type_resolver(sample),
-                    "Query": self.func_adl_query,
-                }
-            )
-
-        spec = {"General": {"Delivery": "LocalCache"}, "Sample": queries}
-
-        files = deliver(spec, **kwargs)
+        logging.info("submitting to ServiceX...")
+        files = deliver(self.spec, **kwargs)
         if self.config.join_result_parquet:
             self.write_to_parquet(files, **kwargs)
             # Logging
