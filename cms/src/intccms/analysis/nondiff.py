@@ -108,6 +108,7 @@ class NonDiffAnalysis(Analysis):
         is_data: bool = False,
         event_syst: Optional[dict[str, Any]] = None,
         direction: Literal["up", "down", "nominal"] = "nominal",
+        year: Optional[str] = None,
     ) -> Optional[ak.Array]:
         """
         Apply physics selections and fill histograms.
@@ -130,6 +131,8 @@ class NonDiffAnalysis(Analysis):
             Event-level systematic to apply.
         direction : str, optional
             Systematic direction: 'up', 'down', or 'nominal'.
+        year : str, optional
+            Correction year for year-keyed configs.
 
         Returns
         -------
@@ -174,7 +177,11 @@ class NonDiffAnalysis(Analysis):
 
             if event_syst and not is_data:
                 weights = self.apply_event_weight_correction(
-                    weights, event_syst, direction, object_copies_channel
+                    weights=weights,
+                    correction=event_syst,
+                    direction=direction,
+                    events=object_copies_channel,
+                    year=year,
                 )
 
             logger.debug(
@@ -208,7 +215,7 @@ class NonDiffAnalysis(Analysis):
         events : ak.Array
             Input NanoAOD events.
         metadata : dict
-            Metadata with keys 'process', 'xsec', 'nevts', and 'dataset'.
+            Metadata with keys 'process', 'xsec', 'nevts', 'dataset', and optionally 'year'.
 
         Returns
         -------
@@ -220,12 +227,17 @@ class NonDiffAnalysis(Analysis):
         process = metadata["process"]
         variation = metadata.get("variation", "nominal")
         is_data = metadata.get("is_data", False)
-        logger.debug(f"Processing {process} with variation {variation}")
+        year = metadata.get("year")
+        logger.debug(f"Processing {process} with variation {variation}, year={year}")
         xsec = metadata["xsec"]
         n_gen = metadata["nevts"]
 
         lumi = self.config.general.lumi
         xsec_weight = 1.0 if is_data else (xsec * lumi / n_gen)
+
+        # Get year-specific corrections and systematics
+        corrections = self.get_corrections_for_year(year)
+        systematics = self.get_systematics_for_year(year)
 
         # Nominal processing
         obj_copies = self.get_object_copies(events)
@@ -258,7 +270,7 @@ class NonDiffAnalysis(Analysis):
         # apply event-level corrections
         # apply nominal corrections
         obj_copies_corrected = self.apply_object_corrections(
-            obj_copies, self.corrections, direction="nominal"
+            obj_copies, corrections, direction="nominal", year=year
         )
 
         # apply selection and fill histograms
@@ -271,11 +283,12 @@ class NonDiffAnalysis(Analysis):
                 xsec_weight,
                 analysis,
                 is_data=is_data,
+                year=year,
             )
 
-        if self.config.general.run_systematics and self.config.general.run_histogramming:
+        if self.config.general.run_systematics and self.config.general.run_histogramming and not is_data:
             # Systematic variations
-            for syst in self.systematics + self.corrections:
+            for syst in systematics + corrections:
                 if syst.name == "nominal":
                     continue
                 for direction in ["up", "down"]:
@@ -284,7 +297,7 @@ class NonDiffAnalysis(Analysis):
 
                     # apply corrections
                     obj_copies_corrected = self.apply_object_corrections(
-                        obj_copies, [syst], direction=direction
+                        obj_copies, [syst], direction=direction, year=year
                     )
                     varname = f"{syst.name}_{direction}"
                     self.histogramming(
@@ -297,6 +310,7 @@ class NonDiffAnalysis(Analysis):
                         is_data=is_data,
                         event_syst=syst,
                         direction=direction,
+                        year=year,
                     )
 
     def run_fit(

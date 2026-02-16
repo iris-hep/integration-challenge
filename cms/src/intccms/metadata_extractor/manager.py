@@ -48,6 +48,7 @@ class MetadataEntry(TypedDict):
     is_data: bool  # True if real data, False if Monte Carlo
     lumi_mask_config: Optional[object]  # FunctorConfig for luminosity mask, or None
     dataset: str  # Dataset key/identifier
+    year: Optional[str]  # Correction year (e.g., "2016preVFP", "2017", "2018"), or None
 
 
 # Type alias for the metadata lookup dictionary
@@ -303,7 +304,7 @@ class DatasetMetadataManager:
         # Reconstruct Dataset objects from fileset
         # Group fileset keys by process name
         from collections import defaultdict
-        process_groups = defaultdict(lambda: {"keys": [], "xsecs": []})
+        process_groups = defaultdict(lambda: {"keys": [], "xsecs": [], "years": []})
 
         for dataset_key, entry in self.fileset.items():
             metadata = entry.get("metadata", {})
@@ -311,10 +312,12 @@ class DatasetMetadataManager:
             xsec = metadata.get("xsec", 1.0)
             is_data = metadata.get("is_data", False)
             variation = metadata.get("variation", "nominal")
+            year = metadata.get("year")
 
             if process:
                 process_groups[process]["keys"].append(dataset_key)
                 process_groups[process]["xsecs"].append(xsec)
+                process_groups[process]["years"].append(year)
                 process_groups[process]["is_data"] = is_data
                 process_groups[process]["variation"] = variation
 
@@ -335,6 +338,7 @@ class DatasetMetadataManager:
                 cross_sections=data["xsecs"],
                 is_data=data["is_data"],
                 lumi_mask_configs=lumi_mask_configs,
+                years=data["years"],
                 events=None,
             )
             self.datasets.append(dataset)
@@ -407,21 +411,33 @@ class DatasetMetadataManager:
 
         for dataset in self.datasets:
             for fileset_key in dataset.fileset_keys:
-                # Get cross-section for this fileset_key
+                # Get index for this fileset_key
                 try:
                     idx = dataset.fileset_keys.index(fileset_key)
+                except ValueError as e:
+                    logger.error(f"Failed to find index for {fileset_key}: {e}")
+                    idx = 0
+
+                # Get cross-section for this fileset_key
+                try:
                     xsec = dataset.cross_sections[idx]
-                except (ValueError, IndexError) as e:
+                except IndexError as e:
                     logger.error(f"Failed to get cross-section for {fileset_key}: {e}")
                     xsec = 1.0
 
                 # Get lumi_mask_config for this fileset_key
                 try:
-                    idx = dataset.fileset_keys.index(fileset_key)
                     lumi_mask_config = dataset.lumi_mask_configs[idx] if dataset.lumi_mask_configs else None
-                except (ValueError, IndexError) as e:
+                except IndexError as e:
                     logger.warning(f"Failed to get lumi_mask_config for {fileset_key}: {e}")
                     lumi_mask_config = None
+
+                # Get year for this fileset_key
+                try:
+                    year = dataset.years[idx] if dataset.years else None
+                except IndexError as e:
+                    logger.warning(f"Failed to get year for {fileset_key}: {e}")
+                    year = None
 
                 # Extract nevts from summary
                 nevts = extract_nevts_from_summary(
@@ -438,6 +454,7 @@ class DatasetMetadataManager:
                     "is_data": dataset.is_data,
                     "lumi_mask_config": lumi_mask_config,
                     "dataset": fileset_key,
+                    "year": year,
                 }
 
         logger.info(f"Built metadata lookup for {len(lookup)} fileset keys")

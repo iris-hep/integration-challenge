@@ -27,6 +27,7 @@ class FilesetMetadata(TypedDict):
     xsec: float  # Cross-section in picobarns
     is_data: bool  # True if real data
     dataset: str  # Dataset key/identifier
+    year: Optional[str]  # Correction year (e.g., "2016preVFP", "2017", "2018")
 
 
 class FilesetEntry(TypedDict):
@@ -173,6 +174,7 @@ class FilesetBuilder:
         tree_name = self.dataset_manager.get_tree_name(process_name)
         redirector = self.dataset_manager.get_redirector(process_name)
         is_data = self.dataset_manager.is_data_dataset(process_name)
+        years = self.dataset_manager.get_years(process_name)
 
         # Validate configuration
         if len(listing_dirs) != len(cross_sections):
@@ -180,20 +182,27 @@ class FilesetBuilder:
                 f"Mismatch between number of directories ({len(listing_dirs)}) "
                 f"and cross-sections ({len(cross_sections)}) for process {process_name}"
             )
+        if len(listing_dirs) != len(years):
+            raise ValueError(
+                f"Mismatch between number of directories ({len(listing_dirs)}) "
+                f"and years ({len(years)}) for process {process_name}"
+            )
 
         # Build fileset entries for each directory
         fileset_entries = {}
         fileset_keys = []
         lumi_mask_configs = []
+        years_list = []
         variation_label = "nominal"
 
-        for idx, (listing_dir, xsec) in enumerate(zip(listing_dirs, cross_sections)):
+        for idx, (listing_dir, xsec, year) in enumerate(zip(listing_dirs, cross_sections, years)):
             # Get lumi_mask_config for this directory
             directory_index = idx if len(listing_dirs) > 1 else None
             lumi_mask_config = self.dataset_manager.get_lumi_mask_config(
                 process_name, directory_index=directory_index
             )
             lumi_mask_configs.append(lumi_mask_config)
+            years_list.append(year)
 
             # Collect file paths
             file_paths = collect_file_paths(listing_dir, identifiers, redirector)
@@ -218,10 +227,11 @@ class FilesetBuilder:
                 variation=variation_label,
                 xsec=xsec,
                 is_data=is_data,
+                year=year,
             )
 
             fileset_keys.append(dataset_key)
-            logger.debug(f"Added {len(file_paths)} files for {dataset_key} with xsec={xsec}")
+            logger.debug(f"Added {len(file_paths)} files for {dataset_key} with xsec={xsec}, year={year}")
 
         # Create Dataset object
         dataset = Dataset(
@@ -232,6 +242,7 @@ class FilesetBuilder:
             cross_sections=cross_sections,
             is_data=is_data,
             lumi_mask_configs=lumi_mask_configs,
+            years=years_list,
             events=None,  # Will be populated during skimming
         )
 

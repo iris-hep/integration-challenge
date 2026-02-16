@@ -5,7 +5,7 @@ configurations, plus utility functions for loading and managing configs.
 """
 
 import copy
-from typing import Annotated, List, Optional
+from typing import Annotated, Dict, List, Optional, Union
 
 from omegaconf import DictConfig, OmegaConf
 from pydantic import Field, model_validator
@@ -63,12 +63,12 @@ class Config(SubscriptableModel):
         List[ChannelConfig], Field(description="List of analysis channels")
     ]
     corrections: Annotated[
-        List[CorrectionConfig],
-        Field(description="Corrections to apply to data"),
+        Union[List[CorrectionConfig], Dict[str, List[CorrectionConfig]]],
+        Field(description="Corrections to apply - either a flat list or year-keyed dict"),
     ]
     systematics: Annotated[
-        List[SystematicConfig],
-        Field(description="Systematic variations to apply"),
+        Union[List[SystematicConfig], Dict[str, List[SystematicConfig]]],
+        Field(description="Systematic variations - either a flat list or year-keyed dict"),
     ]
     preprocess: Annotated[
         Optional[PreprocessConfig],
@@ -105,19 +105,37 @@ class Config(SubscriptableModel):
         if len(channel_names) != len(set(channel_names)):
             raise ValueError("Duplicate channel names found in configuration.")
 
-        # Check for duplicate correction names
-        correction_names = [correction.name for correction in self.corrections]
-        if len(correction_names) != len(set(correction_names)):
-            raise ValueError(
-                "Duplicate correction names found in configuration."
-            )
+        # Check for duplicate correction names (handle both list and dict formats)
+        # For year-keyed dicts, duplicates are checked within each year only.
+        # Same name across years is allowed (for correlated systematics).
+        if isinstance(self.corrections, dict):
+            for year, corr_list in self.corrections.items():
+                correction_names = [c.name for c in corr_list]
+                if len(correction_names) != len(set(correction_names)):
+                    raise ValueError(
+                        f"Duplicate correction names found in year '{year}'."
+                    )
+        else:
+            correction_names = [correction.name for correction in self.corrections]
+            if len(correction_names) != len(set(correction_names)):
+                raise ValueError(
+                    "Duplicate correction names found in configuration."
+                )
 
-        # Check for duplicate systematic names
-        systematic_names = [systematic.name for systematic in self.systematics]
-        if len(systematic_names) != len(set(systematic_names)):
-            raise ValueError(
-                "Duplicate systematic names found in configuration."
-            )
+        # Check for duplicate systematic names (handle both list and dict formats)
+        if isinstance(self.systematics, dict):
+            for year, syst_list in self.systematics.items():
+                systematic_names = [s.name for s in syst_list]
+                if len(systematic_names) != len(set(systematic_names)):
+                    raise ValueError(
+                        f"Duplicate systematic names found in year '{year}'."
+                    )
+        else:
+            systematic_names = [systematic.name for systematic in self.systematics]
+            if len(systematic_names) != len(set(systematic_names)):
+                raise ValueError(
+                    "Duplicate systematic names found in configuration."
+                )
 
         if self.general.save_skimmed_output and not self.preprocess:
             raise ValueError(

@@ -212,6 +212,36 @@ class DatasetManager:
             lumi_mask, index=directory_index, context=f"lumi_masks for process '{process}'"
         )
 
+    def get_years(self, process: str) -> List[Optional[str]]:
+        """
+        Get correction year(s) from config as a list.
+
+        Parameters
+        ----------
+        process : str
+            Process name (e.g., 'signal', 'ttbar_semilep', etc.)
+
+        Returns
+        -------
+        List[Optional[str]]
+            List of correction years for each directory. Returns list of None
+            if years not configured. If a single year is configured but multiple
+            directories exist, the year is replicated for each directory.
+
+        Raises
+        ------
+        KeyError
+            If process is not found in configuration
+        """
+        config = self._validate_process(process)
+        num_dirs = count_directories(config.directories)
+
+        if config.years is None:
+            return [None] * num_dirs
+
+        years = normalize_to_list(config.years)
+        return replicate_single(years, num_dirs)
+
     def list_processes(self) -> List[str]:
         """
         Get list of all configured process names.

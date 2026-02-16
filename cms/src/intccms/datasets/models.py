@@ -31,6 +31,9 @@ class Dataset:
     lumi_mask_configs : List[Optional[Any]]
         List of luminosity mask configurations (FunctorConfig) for data, one per fileset_key.
         None entries for MC or if not configured. Length must match fileset_keys.
+    years : List[Optional[str]]
+        List of correction years for each fileset_key (e.g., "2016preVFP", "2017", "2018").
+        None entries if not configured. Length must match fileset_keys.
     events : Optional[List[Tuple[Any, Dict]]]
         Processed events from skimming, added after skimming completes.
         Each tuple contains (events_array, metadata_dict) for one fileset entry.
@@ -43,6 +46,7 @@ class Dataset:
     cross_sections: List[float]
     is_data: bool = False
     lumi_mask_configs: List[Optional[Any]] = field(default_factory=list)
+    years: List[Optional[str]] = field(default_factory=list)
     events: Optional[List[Tuple[Any, Dict]]] = field(default=None)
 
     def __repr__(self) -> str:

@@ -5,13 +5,15 @@ This example assumes you are running from the `cms/` directory.
 '''
 import numpy as np
 
+from intccms.schema.base import ObjVar
+
 from .cuts import (
     Zprime_hardcuts,
     Zprime_hardcuts_no_fj,
     Zprime_workshop_cuts,
 )
 from .observables import get_mtt, get_mva_vars
-from .systematics import jet_pt_resolution, jet_pt_scale
+from .systematics import corrections_config, systematics_config
 from .skim import dataset_manager_config, skimming_config
 
 
@@ -27,10 +29,10 @@ LIST_OF_VARS = [
         "label": r"$M(t\bar{t})$ [GeV]",
         "function": get_mtt,
         "use": [
-            ("Muon", None),
-            ("Jet", None),
-            ("FatJet", None),
-            ("PuppiMET", None),
+            ObjVar("Muon", None),
+            ObjVar("Jet", None),
+            ObjVar("FatJet", None),
+            ObjVar("PuppiMET", None),
         ],
     },
 ]
@@ -65,7 +67,7 @@ preprocess_config = {
         "branches": {
             "Muon": ["pt", "eta", "phi", "mass", "miniIsoId", "tightId", "charge"],
             "FatJet": ["particleNet_TvsQCD", "pt", "eta", "phi", "mass"],
-            "Jet": ["btagDeepB", "jetId", "pt", "eta", "phi", "mass"],
+            "Jet": ["btagDeepB", "jetId", "pt", "eta", "phi", "mass", "hadronFlavour"],
             "PuppiMET": ["pt", "phi"],
             "HLT": ["Mu50"],
             "Pileup": ["nTrueInt"],
@@ -87,8 +89,8 @@ preprocess_config = {
 baseline_selection_config = {
     "function": Zprime_hardcuts_no_fj,
     "use": [
-        ("Muon", None),
-        ("Jet", None),
+        ObjVar("Muon", None),
+        ObjVar("Jet", None),
     ],
 }
 
@@ -102,21 +104,24 @@ good_object_masks_config = {
                 & (muons.tightId)
                 & (muons.miniIsoId > 1)
             ),
-            "use": [("Muon", None)],
+            "use": [ObjVar("Muon", None)],
         },
         {
             "object": "Jet",
             "function": lambda jets: (
-                (jets.jetId >= 4) & (jets.btagDeepB > 0.5)
+                (jets.jetId >= 4) 
+                #& (jets.btagDeepB > 0.5)
+                & (abs(jets.eta) < 2.5)
+                & (jets.pt > 30)
             ),
-            "use": [("Jet", None)],
+            "use": [ObjVar("Jet", None)],
         },
         {
             "object": "FatJet",
             "function": lambda fatjets: (
                 (fatjets.pt > 500) & (fatjets.particleNet_TvsQCD > 0.5)
             ),
-            "use": [("FatJet", None)],
+            "use": [ObjVar("FatJet", None)],
         },
     ],
     "mva": [
@@ -128,14 +133,14 @@ good_object_masks_config = {
                 & (muons.tightId)
                 & (muons.miniIsoId > 1)
             ),
-            "use": [("Muon", None)],
+            "use": [ObjVar("Muon", None)],
         },
         {
             "object": "FatJet",
             "function": lambda fatjets: (
                 (fatjets.pt > 500) & (fatjets.particleNet_TvsQCD > 0.5)
             ),
-            "use": [("FatJet", None)],
+            "use": [ObjVar("FatJet", None)],
         },
     ],
 }
@@ -152,10 +157,10 @@ channels_config = [
         "selection": {
             "function": Zprime_workshop_cuts,
             "use": [
-                ("Muon", None),
-                ("Jet", None),
-                ("FatJet", None),
-                ("PuppiMET", None),
+                ObjVar("Muon", None),
+                ObjVar("Jet", None),
+                ObjVar("FatJet", None),
+                ObjVar("PuppiMET", None),
             ],
         },
     },
@@ -182,8 +187,8 @@ ghost_observables_config = [
         "collections": "mva",
         "function": get_mva_vars,
         "use": [
-            ("Muon", None),
-            ("Jet", None),
+            ObjVar("Muon", None),
+            ObjVar("Jet", None),
         ],
     },
 ]
@@ -270,49 +275,8 @@ ghost_observables_config = [
 # ==============================================================================
 #  Corrections & Systematics
 # ==============================================================================
-
-corrections_config = [
-    {
-        "name": "pu_weight",
-        "file": "./example_cms/corrections/puWeights.json.gz",
-        "type": "event",  # event or object
-        "use": [("Pileup", "nTrueInt")],
-        "op": "mult",  # or add or subtract
-        "key": "Collisions16_UltraLegacy_goldenJSON",
-        "use_correctionlib": True,
-    },
-    {
-        "name": "muon_id_sf",
-        "file": "./example_cms/corrections/muon_Z.json.gz",
-        "use": [("Muon", "eta"), ("Muon", "pt")],
-        "transform": lambda eta, pt: (np.abs(eta)[:, 0], pt[:, 0]),
-        "type": "event",
-        "key": "NUM_TightID_DEN_TrackerMuons",
-        "use_correctionlib": True,
-        "op": "mult",
-        "up_and_down_idx": ["systup", "systdown"],
-    },
-]
-
-systematics_config = [
-    {
-        "name": "jet_pt_resolution",
-        "up_function": jet_pt_resolution,
-        "target": ("Jet", "pt"),
-        "use": [("Jet", "pt")],
-        "symmetrise": True,  # not implemented
-        "op": "mult",  # or add or subtract
-        "type": "object",
-    },
-    {
-        "name": "jet_pt_scale",
-        "up_function": jet_pt_scale,
-        "target": ("Jet", "pt"),
-        "symmetrise": True,  # not implemented
-        "op": "mult",  # or add or subtract
-        "type": "object",
-    },
-]
+# Imported from systematics.py - corrections_config and systematics_config
+# are year-keyed dicts: {"2016preVFP": [...], "2017": [...], "2018": [...]}
 
 # ==============================================================================
 #  Statistics Configuration
