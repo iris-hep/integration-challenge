@@ -70,7 +70,7 @@ Electrons:
         correlationModelId: 'TOTAL'
         correlationModelIso: 'TOTAL'
         correlationModelReco: 'TOTAL'
-        forceFullSimConfig: True  # for v1.1
+        forceFullSimConfig: True
     PtEtaSelection:
         minPt: 25000.
         maxEta: 2.47
