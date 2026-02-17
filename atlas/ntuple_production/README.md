@@ -52,7 +52,7 @@ First production:
 
 Second production:
 - use `forceFullSimConfig: True` by default and simplified electron NPs
-- add `generator: 'default'` only for 545027/8 in v2.1
+- add `generator: 'default'` only for 545027/8 in v2.2
 - two containers missing (exist in p7017):
   - mc23_13p6TeV.700789.Sh_2214_Zmumu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6491
   - mc23_13p6TeV.700790.Sh_2214_Zmumu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6491
