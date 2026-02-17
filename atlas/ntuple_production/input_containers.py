@@ -67,11 +67,11 @@ containers = {
         "mc23_13p6TeV.601399.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e8514_s4159_r15530_p6697",
         "mc23_13p6TeV.601399.PhPy8EG_A14_ttbar_hdamp517p5_dil.deriv.DAOD_PHYSLITE.e8514_s4369_r16083_p6697",
     ],
-    "ttbar_pthard": [
-        # TODO (low priority) incomplete in mc23
-        # centralpage --scope=mc20_13TeV --physlite Top TTbar Systematic pThard1
-        # centralpage --scope=mc23_13p6TeV --physlite Top TTbar Systematic PowhegPythia8_pTHard1
-    ],
+    # "ttbar_pthard": [
+    #     # TODO (low priority) incomplete in mc23
+    #     # centralpage --scope=mc20_13TeV --physlite Top TTbar Systematic pThard1
+    #     # centralpage --scope=mc23_13p6TeV --physlite Top TTbar Systematic PowhegPythia8_pTHard1
+    # ],
 
     #
     # single top baseline
@@ -161,11 +161,11 @@ containers = {
         "mc23_13p6TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_a911_r15530_p6697",
         "mc23_13p6TeV.602236.PhH7EG_tW_dyn_DR_incl_antitop.deriv.DAOD_PHYSLITE.e8551_a934_r16083_p6697",
     ],
-    "Wt_pthard": [
-        # TODO (low priority) incomplete in mc23
-        # centralpage --scope=mc20_13TeV --physlite Top SingleTop Systematic pthard1-DynScale-Wt
-        # centralpage --scope=mc23_13p6TeV --physlite Top SingleTop Systematic PowhegPythia8-tW_pTHard1
-    ],
+    # "Wt_pthard": [
+    #     # TODO (low priority) incomplete in mc23
+    #     # centralpage --scope=mc20_13TeV --physlite Top SingleTop Systematic pthard1-DynScale-Wt
+    #     # centralpage --scope=mc23_13p6TeV --physlite Top SingleTop Systematic PowhegPythia8-tW_pTHard1
+    # ],
 
     #
     # ttV
