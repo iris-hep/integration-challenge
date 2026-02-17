@@ -43,11 +43,19 @@
 
 - After ntuple production: `collect_file_metadata.py` saves relevant metadata of input and output containers plus xrootd ntuple file paths to disk.
 
-## Notes for first and potential second production
+## Notes for first and second production
 
+First production:
 - workaround for electron efficiency in Run-3 fastsim for v1.1 production: `forceFullSimConfig: True`
 - MCMC SFs for 545027/8 in v1.2: `generator: 'default'`, should be fixed for next production via https://gitlab.cern.ch/atlas/athena/-/merge_requests/82736
 - electron efficiency: use (and test first) `correlationModelId` / `correlationModelIso` / `correlationModelReco` set to `TOTAL` for less NPs
+
+Second production:
+- use `forceFullSimConfig: True` by default and simplified electron NPs
+- add `generator: 'default'` only for 545027/8 in v2.1
+- two containers missing (exist in p7017):
+  - mc23_13p6TeV.700789.Sh_2214_Zmumu_maxHTpTV2_BFilter.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6491
+  - mc23_13p6TeV.700790.Sh_2214_Zmumu_maxHTpTV2_CFilterBVeto.deriv.DAOD_PHYSLITE.e8514_s4162_r15540_p6491
 
 ## More information
 
