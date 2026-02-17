@@ -1,5 +1,6 @@
 CommonServices:
     systematicsHistogram: 'listOfSystematics'
+    enableExpertMode: True
     filterSystematics: "^(EG_|EL_|MUON_|FT_|JET_|MET_).*$|^$"
     # onlySystematicsCategories:
     #   - jets
@@ -32,8 +33,9 @@ Jets:
     runJvtUpdate: False
     runNNJvtUpdate: True
     runGhostMuonAssociation: True
-    systematicsModelJES: 'Category'
-    systematicsModelJER: 'Full'
+    Uncertainties:
+      systematicsModelJES: 'Category'
+      systematicsModelJER: 'Full'
     JVT: {}
     PtEtaSelection:
         minPt: 25000.0
@@ -55,7 +57,7 @@ Jets:
       - containerName: 'AnaJets.baselineJvt'
         btagger: 'GN2v01'
         btagWP: 'Continuous'
-        # generator: 'default'  # for v1.2
+        # generator: 'default'  # for 545027/8
 
 Electrons:
   - containerName: 'AnaElectrons'
@@ -65,10 +67,10 @@ Electrons:
       - selectionName: 'tight'
         identificationWP: 'TightLH'
         isolationWP: 'Tight_VarRad'
-        # correlationModelId: 'TOTAL'
-        # correlationModelIso: 'TOTAL'
-        # correlationModelReco: 'TOTAL'
-        # forceFullSimConfig: True  # for v1.1
+        correlationModelId: 'TOTAL'
+        correlationModelIso: 'TOTAL'
+        correlationModelReco: 'TOTAL'
+        forceFullSimConfig: True
     PtEtaSelection:
         minPt: 25000.
         maxEta: 2.47
@@ -200,5 +202,8 @@ Output:
       # Turn output branches on and off with 'enable' and 'disable'
       - disable jet_jvtEfficiency.*
       - disable trigPassed_HLT.*
+  propertyOverrides:
+    TreeMaker.TreeAutoFlush: 2000
+  defaultBasketSize: 128000
 
 AddConfigBlocks: []
