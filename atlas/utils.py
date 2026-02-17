@@ -126,6 +126,7 @@ def plot_taskstream(ts: dict):
     ax.set_ylim(-0.5, y_next - 0.5)
     ax.set_xlabel("time [sec]")
     ax.set_ylabel("unique workers")
+    fig.savefig("taskstream.pdf")
     return fig, ax
 
 
@@ -415,9 +416,9 @@ def custom_process(workitems, processor_class, schema, client, preload: Optional
 
     workitems_bag = dask.bag.from_sequence(workitems, partition_size=1)
     tasks = workitems_bag.map(run_analysis).to_delayed()
-    futures = client.compute(tasks)
+    futures = client.compute(tasks, rerun_exceptions_locally=True)
     workitems_bag = dask.bag.from_delayed(futures)
-    res = client.compute(workitems_bag.fold(sum_output))
+    res = client.compute(workitems_bag.fold(sum_output), rerun_exceptions_locally=True)
 
     with tqdm.notebook.tqdm(total=len(futures)) as pbar:
         for _ in dask.distributed.as_completed(futures):
