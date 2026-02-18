@@ -110,7 +110,8 @@ class ServiceXQuery:
         for key, arr in arrays.items():
             logging.info("Key: %s, Entries: %d", key, len(arr))
             file_path = self.config.output_folder + f"{key}.parquet"
-
+            if len(arr) == 0:
+                continue
             ak.to_parquet(
                 arr,
                 file_path,
