@@ -6,8 +6,10 @@ respects configuration flags to control which stages run.
 """
 
 import hashlib
+import json
 import logging
 import uuid
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -237,6 +239,7 @@ class UnifiedProcessor(ProcessorABC):
 
         if self.config.general.save_skimmed_output:
             acc["skimmed_events"] = 0
+            acc["manifest_entries"] = []
 
         return acc
 
@@ -279,7 +282,8 @@ class UnifiedProcessor(ProcessorABC):
         # Save filtered events to disk only if save_skimmed_output is enabled
         if self.config.general.save_skimmed_output and len(events) > 0:
             with track_time(self, "save_skimmed"):
-                self._save_skimmed_events(events, metadata)
+                manifest_entry = self._save_skimmed_events(events, metadata)
+            output["manifest_entries"] = [manifest_entry]
 
         # Step 2: Run analysis if enabled
         if self.config.general.run_analysis and len(events) > 0:
@@ -323,8 +327,8 @@ class UnifiedProcessor(ProcessorABC):
 
         return filtered_events
 
-    def _save_skimmed_events(self, events: ak.Array, metadata: Dict[str, Any]) -> None:
-        """Save filtered events to disk in the configured format.
+    def _save_skimmed_events(self, events: ak.Array, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """Save filtered events to disk and return a manifest entry.
 
         Parameters
         ----------
@@ -332,6 +336,11 @@ class UnifiedProcessor(ProcessorABC):
             Filtered events to save
         metadata : dict
             Metadata dict with process, variation, dataset info
+
+        Returns
+        -------
+        dict
+            ManifestEntry-compatible dict tracking the output file
         """
         # Extract columns based on is_data flag
         is_data = metadata.get("is_data", False)
@@ -342,37 +351,76 @@ class UnifiedProcessor(ProcessorABC):
             is_data=is_data,
         )
 
-        # Build output path
-        # Use dataset name + unique chunk identifier
         dataset_name = metadata.get("dataset", "unknown")
         process = metadata.get("process", "unknown")
         variation = metadata.get("variation", "nominal")
 
-        # Generate unique chunk ID
         chunk_id = hashlib.md5(str(uuid.uuid4()).encode()).hexdigest()[:8]
 
-        # Build path: skimmed_dir/dataset/chunk_id (no extension - writer adds it)
-        output_dir = Path(self.output_manager.skimmed_dir) / dataset_name
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_path = output_dir / chunk_id
+        base_dir = (
+            self.skim_config.output.output_dir
+            or str(self.output_manager.skimmed_dir)
+        ).rstrip("/")
+        output_path = f"{base_dir}/{dataset_name}/{chunk_id}"
 
         # Prepare writer kwargs
         writer_kwargs = self.writer_kwargs.copy()
-        if self.skim_config.output.format == "root_ttree":
+        if self.skim_config.output.format in ("ttree", "rntuple"):
             writer_kwargs["tree_name"] = self.skim_config.tree_name
 
-        # Save events
-        save_events(self.writer, output_columns, str(output_path), **writer_kwargs)
+        # Save events and capture actual output path (with extension)
+        actual_path = save_events(self.writer, output_columns, output_path, **writer_kwargs)
 
         logger.debug(
-            f"Saved {len(events)} events for {process}/{variation} to {output_path}"
+            f"Saved {len(events)} events for {process}/{variation} to {actual_path}"
         )
+
+        return {
+            "source_file": events.metadata["filename"],
+            "entrystart": events.metadata["entrystart"],
+            "entrystop": events.metadata["entrystop"],
+            "dataset": dataset_name,
+            "treename": self.skim_config.tree_name,
+            "output_file": actual_path,
+            "processed_events": len(events),
+            "total_events": events.metadata["entrystop"] - events.metadata["entrystart"],
+        }
+
+    def _write_manifests(self, manifest_entries: List[Dict[str, Any]]) -> None:
+        """Write manifest JSON files grouping output files by dataset.
+
+        Mirrors the logic in ``skimming/dask.py._save_manifest()``.
+        Manifests are always written locally to ``output_manager.skimmed_dir``,
+        even when output files are on remote storage.
+
+        Parameters
+        ----------
+        manifest_entries : list of dict
+            ManifestEntry-compatible dicts from all chunks
+        """
+        if not manifest_entries:
+            logger.info("No manifest entries to save")
+            return
+
+        by_dataset = defaultdict(list)
+        for entry in manifest_entries:
+            by_dataset[entry["dataset"]].append(entry)
+
+        base_dir = Path(self.output_manager.skimmed_dir)
+        for dataset, entries in by_dataset.items():
+            manifest_path = base_dir / dataset / "manifest.json"
+            manifest_path.parent.mkdir(parents=True, exist_ok=True)
+
+            with open(manifest_path, "w") as f:
+                json.dump(entries, f, indent=2)
+
+            logger.info(f"Saved manifest for {dataset}: {manifest_path} ({len(entries)} entries)")
 
     def postprocess(self, accumulator: Dict) -> Dict:
         """Finalize accumulator after all chunks processed.
 
         Called once by coffea after all chunks are merged.
-        Saves histograms to disk and optionally runs statistical analysis.
+        Saves manifests and histograms to disk, and optionally runs statistical analysis.
 
         Parameters
         ----------
@@ -387,6 +435,10 @@ class UnifiedProcessor(ProcessorABC):
         logger.info(
             f"Postprocessing complete: {accumulator.get('processed_events', 0)} total events"
         )
+
+        # Write skimming manifests if any were produced
+        if accumulator.get("manifest_entries"):
+            self._write_manifests(accumulator["manifest_entries"])
 
         # Save histograms to disk if they were produced
         if self.config.general.run_histogramming and "histograms" in accumulator:

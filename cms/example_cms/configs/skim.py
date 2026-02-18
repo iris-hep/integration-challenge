@@ -294,8 +294,7 @@ skimming_config = {
     "tree_name": "Events",
     # "output": {
     #     "format": "parquet",
-    #     "local": False,  # Set to True for local filesystem
-    #     "base_uri": "s3://",  # S3 endpoint
+    #     "output_dir": "s3://bucket/path",
     #     # To switch to local Ceph: change endpoint_url to
     #     # "http://rook-ceph-rgw-my-store.rook-ceph.svc/triton-116ed3e4-b173-48c1-aea0-affee451feda"
     #     "to_kwargs": {
@@ -319,8 +318,6 @@ skimming_config = {
     #     }
     # }
     "output": {
-        "format": "root_ttree",
-        "local": True,  # Set to True for local filesystem
-        #"base_uri": "/home/cms-jovyan/integration-challenge/cms/"
+        "format": "ttree",
     }
 }
