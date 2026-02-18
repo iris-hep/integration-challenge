@@ -26,5 +26,9 @@ atlas-schema = ">=0.4.1,<0.5"
 atlasopenmagic = ">=1.6.1,<2"
 awkward = ">=2.8.11,<3"
 servicex = ">=3.2.3,<4"
-servicex-analysis-utils = ">=1.2.1,<2"
+#servicex-analysis-utils = ">=1.2.2,<2" not updated in conda-forge yet
 func_adl_servicex_xaodr25 = ">=2.4.5.25.2.41,<3"
+
+[pypi-dependencies]
+servicex-analysis-utils = ">=1.2.2,<2"
+
