@@ -27,14 +27,17 @@ import uproot
 ### Dask task tracking
 ##################################################
 
+
 def start_tracking(dask_scheduler) -> None:
-    """"run on scheduler to track worker count"""
+    """ "run on scheduler to track worker count"""
     dask_scheduler.worker_counts = {}
     dask_scheduler.track_count = True
 
     async def track_count() -> None:
         while dask_scheduler.track_count:
-            dask_scheduler.worker_counts[datetime.datetime.now()] = len(dask_scheduler.workers)
+            dask_scheduler.worker_counts[datetime.datetime.now()] = len(
+                dask_scheduler.workers
+            )
             await asyncio.sleep(1)
 
     asyncio.create_task(track_count())
@@ -55,7 +58,9 @@ def get_avg_num_workers(worker_count_dict: dict) -> float:
     return nworker_dt / (worker_info[-1][0] - worker_info[0][0]).total_seconds()
 
 
-def calculate_instantaneous_rates(t0: float, t1: float, report: dict, num_samples: int = 10):
+def calculate_instantaneous_rates(
+    t0: float, t1: float, report: dict, num_samples: int = 10
+):
     """calculate chunk-aggregated data rates in Gbps over time"""
     if "chunk_info" not in report:
         return None, None  # supported only for custom processing
@@ -72,17 +77,27 @@ def calculate_instantaneous_rates(t0: float, t1: float, report: dict, num_sample
         mask = np.logical_and((starts <= t), (t < ends))
         rate_samples.append(float(sum(rates_per_chunk[mask]) / 1000**3 * 8))
 
-    print(f"[INFO] total data read from data rate integral: {sum((t_samples[1] - t_samples[0]) * np.asarray(rate_samples)) / 8:.2f} GB")
-    return [datetime.datetime.fromtimestamp(t) for t in t_samples.tolist()], rate_samples
+    print(
+        f"[INFO] total data read from data rate integral: {sum((t_samples[1] - t_samples[0]) * np.asarray(rate_samples)) / 8:.2f} GB"
+    )
+    return [
+        datetime.datetime.fromtimestamp(t) for t in t_samples.tolist()
+    ], rate_samples
 
 
-def plot_worker_count(worker_count_dict: dict, timestamps: Optional[list[float]], datarates: Optional[list[float]]):
+def plot_worker_count(
+    worker_count_dict: dict,
+    timestamps: Optional[list[float]],
+    datarates: Optional[list[float]],
+):
     """plot worker count over time and data rate samples in Gbps"""
     fig, ax1 = plt.subplots()
-    ax1.plot(worker_count_dict.keys(), worker_count_dict.values(), linewidth=2, color="C0")
+    ax1.plot(
+        worker_count_dict.keys(), worker_count_dict.values(), linewidth=2, color="C0"
+    )
     ax1.set_title("worker count and data rate over time")
     ax1.set_xlabel("time")
-    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
     ax1.tick_params(axis="x", labelrotation=45)
     ax1.set_ylabel("number of workers", color="C0")
     ax1.tick_params(axis="y", labelcolor="C0")
@@ -119,7 +134,9 @@ def plot_taskstream(ts: dict):
             start = subtask["start"] - t0
             stop = subtask["stop"] - t0
             c = "yellow" if subtask["action"] == "compute" else "red"
-            patch = mpl.patches.Rectangle((start, y_pos - 0.4), stop - start, 0.8, facecolor=c, edgecolor="black")
+            patch = mpl.patches.Rectangle(
+                (start, y_pos - 0.4), stop - start, 0.8, facecolor=c, edgecolor="black"
+            )
             ax.add_patch(patch)
 
     ax.set_xlim(0, tmax)
@@ -132,6 +149,7 @@ def plot_taskstream(ts: dict):
 ##################################################
 ### container and sample handling
 ##################################################
+
 
 def dsid_rtag_campaign(name: str) -> tuple[str, str, str]:
     """extract information from container name"""
@@ -160,12 +178,11 @@ def dsid_rtag_campaign(name: str) -> tuple[str, str, str]:
 
     return dsid, rtag, campaign
 
+
 def hplus_signal_mass(name: str) -> str:
     """get the mass from these signal samples"""
-    m = re.search(r'(?i)mhc(\d+)(?=\.)', name)  # case-insensitive, stop at the dot
-    return str(m.group(1)+"GeV") if m else None
-
-    
+    m = re.search(r"(?i)mhc(\d+)(?=\.)", name)  # case-insensitive, stop at the dot
+    return str(m.group(1) + "GeV") if m else None
 
 
 def integrated_luminosity(campaign: str, total=False) -> float:
@@ -202,26 +219,54 @@ def sample_xs(campaign: str, dsid: str) -> float:
     if "mc20" in campaign:
         if MC16_XSEC_DICT is None:
             try:
-                with open("/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc16.txt") as f:
+                with open(
+                    "/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc16.txt"
+                ) as f:
                     content = f.readlines()
             except FileNotFoundError:
                 print("falling back to reading cross-section information over https")
-                content = urllib.request.urlopen("https://atlas-groupdata.web.cern.ch/atlas-groupdata/dev/PMGTools/PMGxsecDB_mc16.txt").read().decode().split("\n")
+                content = (
+                    urllib.request.urlopen(
+                        "https://atlas-groupdata.web.cern.ch/atlas-groupdata/dev/PMGTools/PMGxsecDB_mc16.txt"
+                    )
+                    .read()
+                    .decode()
+                    .split("\n")
+                )
 
-            MC16_XSEC_DICT = dict([(line.strip().split("\t\t")[0], (line.split("\t\t")[2:5])) for line in content[1:]])
+            MC16_XSEC_DICT = dict(
+                [
+                    (line.strip().split("\t\t")[0], (line.split("\t\t")[2:5]))
+                    for line in content[1:]
+                ]
+            )
 
         xsec_dict = MC16_XSEC_DICT
 
     elif "mc23" in campaign:
         if MC23_XSEC_DICT is None:
             try:
-                with open("/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc23.txt") as f:
+                with open(
+                    "/cvmfs/atlas.cern.ch/repo/sw/database/GroupData/dev/PMGTools/PMGxsecDB_mc23.txt"
+                ) as f:
                     content = f.readlines()
             except FileNotFoundError:
                 print("falling back to reading cross-section information over https")
-                content = urllib.request.urlopen("https://atlas-groupdata.web.cern.ch/atlas-groupdata/dev/PMGTools/PMGxsecDB_mc23.txt").read().decode().split("\n")
+                content = (
+                    urllib.request.urlopen(
+                        "https://atlas-groupdata.web.cern.ch/atlas-groupdata/dev/PMGTools/PMGxsecDB_mc23.txt"
+                    )
+                    .read()
+                    .decode()
+                    .split("\n")
+                )
 
-            MC23_XSEC_DICT = dict([(line.strip().split("\t\t")[0], (line.split("\t\t")[2:5])) for line in content[1:]])
+            MC23_XSEC_DICT = dict(
+                [
+                    (line.strip().split("\t\t")[0], (line.split("\t\t")[2:5]))
+                    for line in content[1:]
+                ]
+            )
 
         xsec_dict = MC23_XSEC_DICT
 
@@ -232,14 +277,43 @@ def sample_xs(campaign: str, dsid: str) -> float:
         raise ValueError(f"cannot parse campaign {campaign}")
 
     # return x-sec [pb] * filter efficiency * k-factor
-    return float(xsec_dict[dsid][0]) * float(xsec_dict[dsid][1]) * float(xsec_dict[dsid][2])
+    return (
+        float(xsec_dict[dsid][0])
+        * float(xsec_dict[dsid][1])
+        * float(xsec_dict[dsid][2])
+    )
+
+
+def check_for_ntuples(dataset_info):
+    keys_with_ntuples = {}
+
+    for key, sample in dataset_info.items():
+        container_with_ntuples = 0
+        total_output = 0
+        n_containers = len(sample.keys())
+        for info in sample.values():
+            if info["output"] is not None:
+                container_with_ntuples += 1
+                total_output += info["size_output_GB"]
+        if container_with_ntuples > 0:
+            keys_with_ntuples[key] = {
+                "samples": n_containers,
+                "samples_with_ntuples": container_with_ntuples,
+                "total_output_GB": round(total_output, 2),
+            }
+    return keys_with_ntuples
 
 
 ##################################################
 ### fileset handling
 ##################################################
 
-def get_fileset(campaign_filter: list | None = None, dsid_filter: list | None = None, max_files_per_sample: int | None = None):
+
+def get_fileset(
+    campaign_filter: list | None = None,
+    dsid_filter: list | None = None,
+    max_files_per_sample: int | None = None,
+):
     """prepare fileset, with possibility to only include subset of input files"""
     # load metadata from file
     fname = "ntuple_production/file_metadata.json.gz"
@@ -266,14 +340,28 @@ def get_fileset(campaign_filter: list | None = None, dsid_filter: list | None = 
 
             weight_xs = sample_xs(campaign, dsid)
             lumi = integrated_luminosity(campaign)
-            num_files = len(metadata["files_output"]) if max_files_per_sample is None else max_files_per_sample
+            num_files = (
+                len(metadata["files_output"])
+                if max_files_per_sample is None
+                else max_files_per_sample
+            )
             fileset[container] = {
-                "files": dict((path, "reco") for path in metadata["files_output"][:num_files]),
-                "metadata": {"dsid": dsid, "campaign": campaign, "category": category, "weight_xs": weight_xs, "lumi": lumi}
+                "files": dict(
+                    (path, "reco") for path in metadata["files_output"][:num_files]
+                ),
+                "metadata": {
+                    "dsid": dsid,
+                    "campaign": campaign,
+                    "category": category,
+                    "weight_xs": weight_xs,
+                    "lumi": lumi,
+                },
             }
             input_size_GB += sum(metadata["sizes_output_GB"][:num_files])
 
-    print(f"[INFO] fileset has {len(fileset)} categories with {sum([len(f["files"]) for f in fileset.values()])} files total, size is {input_size_GB:.2f} GB")
+    print(
+        f"[INFO] fileset has {len(fileset)} categories with {sum([len(f["files"]) for f in fileset.values()])} files total, size is {input_size_GB:.2f} GB"
+    )
     return fileset, input_size_GB
 
 
@@ -301,7 +389,10 @@ def json_to_preprocess(samples):
 ### custom pre-processing
 ##################################################
 
-def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom_func=None):
+
+def custom_preprocess(
+    fileset: dict, *, client, chunksize: int = 100_000, custom_func=None
+):
     """Dask-based pre-processing similar to coffea, can run user-provided function for more metadata"""
     files_to_preprocess = []
     for category_info in fileset.values():
@@ -313,22 +404,29 @@ def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom
         meta = {"treename": treename}
         with uproot.open(fname) as f:
             meta["fileuuid"] = f.file.uuid.bytes
-            meta["num_entries"] = f[treename].num_entries if treename in f else 0  # handle missing trees
+            meta["num_entries"] = (
+                f[treename].num_entries if treename in f else 0
+            )  # handle missing trees
             print("calling custom_func", custom_func, "on file", f)
             if custom_func:
                 meta.update({"custom_meta": custom_func(f)})
         return {fname: meta}
 
     print(f"pre-processing {len(files_to_preprocess)} file(s)")
-    tasks = client.map(functools.partial(extract_metadata, custom_func=custom_func), files_to_preprocess)
+    tasks = client.map(
+        functools.partial(extract_metadata, custom_func=custom_func),
+        files_to_preprocess,
+    )
     futures = client.compute(tasks)
 
     with tqdm.notebook.tqdm(total=len(futures)) as pbar:
-      for _ in dask.distributed.as_completed(futures):
-        pbar.update(1)
+        for _ in dask.distributed.as_completed(futures):
+            pbar.update(1)
 
     # turn into dict for easier use
-    result_dict = {k: v for res in [f.result() for f in futures] for k, v in res.items()}
+    result_dict = {
+        k: v for res in [f.result() for f in futures] for k, v in res.items()
+    }
 
     # join back together per-file information with fileset-level information and turn into WorkItem list for coffea
     workitems = []
@@ -338,7 +436,9 @@ def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom
             # split into chunks as done in coffea, taken from
             # https://github.com/scikit-hep/coffea/blob/f7e1249745484567d1e380865dc05fae83165084/src/coffea/dataset_tools/preprocess.py#L129-L140
             n_steps_target = max(round(preprocess_meta["num_entries"] / chunksize), 1)
-            actual_step_size = math.ceil(preprocess_meta["num_entries"] / n_steps_target)
+            actual_step_size = math.ceil(
+                preprocess_meta["num_entries"] / n_steps_target
+            )
             chunks = np.array(
                 [
                     [
@@ -360,7 +460,8 @@ def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom
                         entrystart=int(entry_start),
                         entrystop=int(entry_stop),
                         fileuuid=preprocess_meta["fileuuid"],
-                        usermeta=category_info["metadata"] | preprocess_meta["custom_meta"]
+                        usermeta=category_info["metadata"]
+                        | preprocess_meta["custom_meta"],
                     )
                 )
 
@@ -371,7 +472,10 @@ def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom
 ### custom processing
 ##################################################
 
-def custom_process(workitems, processor_class, schema, client, preload: Optional[list] = None):
+
+def custom_process(
+    workitems, processor_class, schema, client, preload: Optional[list] = None
+):
     """Dask-based processing similar to coffea, can return more metadata"""
     if preload is None:
         preload = []
@@ -402,7 +506,9 @@ def custom_process(workitems, processor_class, schema, client, preload: Optional
             "processtime": t1 - t0,
             "chunks": 1,
             "columns": access_log,
-            "chunk_info": {(wi.filename, wi.entrystart, wi.entrystop): (t0, t1, bytesread)},
+            "chunk_info": {
+                (wi.filename, wi.entrystart, wi.entrystop): (t0, t1, bytesread)
+            },
         }
         return out, report
 
@@ -417,7 +523,7 @@ def custom_process(workitems, processor_class, schema, client, preload: Optional
                 "chunks": a[1]["chunks"] + b[1]["chunks"],
                 "columns": list(set(a[1]["columns"]) | set(b[1]["columns"])),
                 "chunk_info": a[1]["chunk_info"] | b[1]["chunk_info"],
-            }
+            },
         )
 
     workitems_bag = dask.bag.from_sequence(workitems, partition_size=1)
