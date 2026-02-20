@@ -30,7 +30,7 @@ def parse_job_json(fname):
     production_map = {}
 
     for job in job_info:
-        if job["superstatus"] not in ["done", "finished"]:
+        if job["superstatus"] not in ["done", "finished", "exhausted"]:
             continue
 
         containernames = set([dataset["containername"] for dataset in job["datasets"] if ".tgz" not in dataset["containername"]])
