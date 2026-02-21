@@ -9,7 +9,7 @@ This module contains:
 Correction sources:
 - Scale factors: https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVRun2LegacyAnalysis
 - POG JSON files: https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/
-- Common JSON SFs: https://cms-xpog.docs.cern.ch/commonJSONSFs/
+- POG Corrections: https://cms-analysis-corrections.docs.cern.ch/
 
 Systematics naming convention:
 - Correlated across years: simple name (e.g., "muon_id_sf", "btag_hf")
@@ -17,6 +17,7 @@ Systematics naming convention:
 """
 
 import awkward as ak
+import correctionlib
 import numpy as np
 
 from intccms.schema.base import ObjVar, Sys
@@ -81,6 +82,125 @@ DEEPCSV_WP_THRESHOLDS = {
     "2018": {"loose": 0.1208, "medium": 0.4168, "tight": 0.7665},
 }
 
+# JES sys-string templates accepted by the deepJet_shape btag evaluator.
+# Used in reruns_with to declare btag sensitivity to JEC object corrections.
+# Convention: {direction}_<name> where <name> matches the object correction name.
+# Only individual sources (not regrouped or total) — matches JecConfigAK4.json Full set.
+# Year-correlated sources (17 individual, same across all years):
+_BTAG_JES_CORRELATED = [
+    "{direction}_jesAbsoluteMPFBias",
+    "{direction}_jesAbsoluteScale",
+    "{direction}_jesFlavorQCD",
+    "{direction}_jesFragmentation",
+    "{direction}_jesPileUpDataMC",
+    "{direction}_jesPileUpPtBB",
+    "{direction}_jesPileUpPtEC1",
+    "{direction}_jesPileUpPtEC2",
+    "{direction}_jesPileUpPtHF",
+    "{direction}_jesPileUpPtRef",
+    "{direction}_jesRelativeBal",
+    "{direction}_jesRelativeFSR",
+    "{direction}_jesRelativeJERHF",
+    "{direction}_jesRelativePtBB",
+    "{direction}_jesRelativePtHF",
+    "{direction}_jesSinglePionECAL",
+    "{direction}_jesSinglePionHCAL",
+]
+
+# Year-decorrelated sources (10 individual, suffixed with year)
+_BTAG_JES_DECORRELATED_BASES = [
+    "jesAbsoluteStat",
+    "jesRelativeJEREC1",
+    "jesRelativeJEREC2",
+    "jesRelativePtEC1",
+    "jesRelativePtEC2",
+    "jesRelativeSample",
+    "jesRelativeStatEC",
+    "jesRelativeStatFSR",
+    "jesRelativeStatHF",
+    "jesTimePtEta",
+]
+
+
+def _get_btag_jes_reruns_with(year: str) -> list:
+    """Build the full btag JES reruns_with list including year-decorrelated sources."""
+    # 2016preVFP/postVFP both use "2016" as the year suffix in btag sys strings
+    year_suffix = "2016" if year.startswith("2016") else year
+    year_specific = [
+        f"{{direction}}_{base}_{year_suffix}"
+        for base in _BTAG_JES_DECORRELATED_BASES
+    ]
+    return _BTAG_JES_CORRELATED + year_specific
+
+
+# ==============================================================================
+#  JEC Configuration
+# ==============================================================================
+
+# MC campaign names per year (from JecConfigAK4.json tag names)
+JEC_CAMPAIGNS = {
+    "2016preVFP": "Summer19UL16APV_V7_MC",
+    "2016postVFP": "Summer19UL16_V7_MC",
+    "2017": "Summer19UL17_V5_MC",
+    "2018": "Summer19UL18_V5_MC",
+}
+
+# Individual JEC uncertainty sources from the Full set (JecConfigAK4.json).
+# Evaluator names: {Campaign}_{SourceName}_AK4PFchs
+# Correlated across years (17 sources — no year suffix in CMS name):
+_JEC_UNC_CORRELATED = [
+    "AbsoluteMPFBias", "AbsoluteScale", "FlavorQCD", "Fragmentation",
+    "PileUpDataMC", "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2",
+    "PileUpPtHF", "PileUpPtRef", "RelativeBal", "RelativeFSR",
+    "RelativeJERHF", "RelativePtBB", "RelativePtHF",
+    "SinglePionECAL", "SinglePionHCAL",
+]
+
+# Decorrelated by year (10 sources — CMS name has _YEAR suffix):
+_JEC_UNC_DECORRELATED = [
+    "AbsoluteStat", "RelativeJEREC1", "RelativeJEREC2",
+    "RelativePtEC1", "RelativePtEC2", "RelativeSample",
+    "RelativeStatEC", "RelativeStatFSR", "RelativeStatHF",
+    "TimePtEta",
+]
+
+# Module-level cache for correctionlib CorrectionSets
+_jec_correction_sets = {}
+
+
+def _get_jec_evaluator(file_path, evaluator_key):
+    """Lazily load and cache correctionlib CorrectionSets."""
+    if file_path not in _jec_correction_sets:
+        _jec_correction_sets[file_path] = correctionlib.CorrectionSet.from_file(
+            file_path
+        )
+    return _jec_correction_sets[file_path][evaluator_key]
+
+
+def _make_jec_nominal_func(file_path, evaluator_key):
+    """L1L2L3Res compound correction: (area, eta, pt, rho) -> multiplicative factor."""
+    def func(area, eta, pt, rho):
+        evaluator = _get_jec_evaluator(file_path, evaluator_key)
+        counts = ak.num(eta)
+        flat = [
+            np.asarray(ak.flatten(x), dtype=np.float64)
+            for x in (area, eta, pt, rho)
+        ]
+        result = evaluator.evaluate(*flat)
+        return ak.unflatten(result, counts)
+    return func
+
+
+def _make_jec_unc_func(file_path, evaluator_key, sign):
+    """JEC uncertainty: (eta, pt) -> (1 +/- delta). sign: +1 for up, -1 for down."""
+    def func(eta, pt):
+        evaluator = _get_jec_evaluator(file_path, evaluator_key)
+        counts = ak.num(eta)
+        flat_eta = np.asarray(ak.flatten(eta), dtype=np.float64)
+        flat_pt = np.asarray(ak.flatten(pt), dtype=np.float64)
+        delta = evaluator.evaluate(flat_eta, flat_pt)
+        return ak.unflatten(1.0 + sign * delta, counts)
+    return func
 
 
 # ==============================================================================
@@ -148,7 +268,70 @@ def _get_corrections_for_year(year: str) -> list:
     list
         List of correction configuration dictionaries
     """
+    # JEC file and campaign for this year
+    jec_file = get_correction_file(year, "jet_jerc")
+    campaign = JEC_CAMPAIGNS[year]
+    year_suffix = "2016" if year.startswith("2016") else year
+
     corrections = [
+        # ------------------------------------------------------------------
+        # JEC nominal (L1L2L3Res compound) — baseline, always applied
+        # Custom function: (area, eta, pt, rho) -> multiplicative factor
+        # ------------------------------------------------------------------
+        {
+            "name": "jec_nominal",
+            "type": "object",
+            "use_correctionlib": False,
+            "file": jec_file,
+            "target": ObjVar("Jet", "pt"),
+            "args": [
+                ObjVar("Jet", "area"), ObjVar("Jet", "eta"),
+                ObjVar("Jet", "pt"), ObjVar("Rho", "fixedGridRhoFastjetAll"),
+            ],
+            "op": "mult",
+            "nominal_function": _make_jec_nominal_func(
+                jec_file, f"{campaign}_L1L2L3Res_AK4PFchs"
+            ),
+        },
+    ]
+
+    # ------------------------------------------------------------------
+    # JEC uncertainty sources (correlated across years)
+    # Custom function: (eta, pt) -> (1 +/- delta)
+    # ------------------------------------------------------------------
+    for source in _JEC_UNC_CORRELATED:
+        evaluator_key = f"{campaign}_{source}_AK4PFchs"
+        corrections.append({
+            "name": f"jes{source}",
+            "type": "object",
+            "use_correctionlib": False,
+            "file": jec_file,
+            "target": ObjVar("Jet", "pt"),
+            "args": [ObjVar("Jet", "eta"), ObjVar("Jet", "pt")],
+            "op": "mult",
+            "up_function": _make_jec_unc_func(jec_file, evaluator_key, +1),
+            "down_function": _make_jec_unc_func(jec_file, evaluator_key, -1),
+        })
+
+    # ------------------------------------------------------------------
+    # JEC uncertainty sources (decorrelated by year)
+    # Custom function: (eta, pt) -> (1 +/- delta)
+    # ------------------------------------------------------------------
+    for source in _JEC_UNC_DECORRELATED:
+        evaluator_key = f"{campaign}_{source}_AK4PFchs"
+        corrections.append({
+            "name": f"jes{source}_{year_suffix}",
+            "type": "object",
+            "use_correctionlib": False,
+            "file": jec_file,
+            "target": ObjVar("Jet", "pt"),
+            "args": [ObjVar("Jet", "eta"), ObjVar("Jet", "pt")],
+            "op": "mult",
+            "up_function": _make_jec_unc_func(jec_file, evaluator_key, +1),
+            "down_function": _make_jec_unc_func(jec_file, evaluator_key, -1),
+        })
+
+    corrections += [
         # ------------------------------------------------------------------
         # Pileup reweighting (decorrelated by year)
         # Signature: (nTrueInt, systematic)
@@ -229,6 +412,8 @@ def _get_corrections_for_year(year: str) -> list:
         ObjVar("Jet", "btagDeepB"),
     ]
 
+    btag_jes_reruns_with = _get_btag_jes_reruns_with(year)
+
     # hf/lf systematics - apply to b and light jets (c-jets get SF=1)
     for syst in ["hf", "lf"]:
         corrections.append({
@@ -244,6 +429,7 @@ def _get_corrections_for_year(year: str) -> list:
             "op": "mult",
             "nominal_idx": "central",
             "up_and_down_idx": [f"up_{syst}", f"down_{syst}"],
+            "reruns_with": btag_jes_reruns_with,
         })
 
     # cferr systematics - apply to c jets only (b/light jets get SF=1)
@@ -261,6 +447,7 @@ def _get_corrections_for_year(year: str) -> list:
             "op": "mult",
             "nominal_idx": "central",
             "up_and_down_idx": [f"up_{syst}", f"down_{syst}"],
+            "reruns_with": btag_jes_reruns_with,
         })
 
     # hfstats/lfstats systematics - decorrelated by year, apply to b and light jets
@@ -278,6 +465,7 @@ def _get_corrections_for_year(year: str) -> list:
             "op": "mult",
             "nominal_idx": "central",
             "up_and_down_idx": [f"up_{syst}", f"down_{syst}"],
+            "reruns_with": btag_jes_reruns_with,
         })
 
     return corrections
