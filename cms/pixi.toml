@@ -60,4 +60,5 @@ dev = ["dev"]
 
 [pypi-dependencies]
 rucio = ">=37.7.1, <38"
+roastcoffea = ">=0.1.0"
 intccms = { path = ".", editable = true }
