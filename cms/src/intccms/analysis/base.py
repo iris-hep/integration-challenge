@@ -215,6 +215,46 @@ class Analysis:
 
         return self._systematics_config[year]
 
+    @staticmethod
+    def get_weight_overrides(
+        corrections: List[Any],
+        obj_corr_name: str,
+        direction: str,
+    ) -> Dict[str, str]:
+        """
+        Build sys_value overrides for corrections sensitive to an object correction.
+
+        Scans corrections for those declaring reruns_with templates matching
+        the given object correction name. Convention: each template has the form
+        "{direction}_<name>" where <name> is the object correction it applies to.
+
+        Parameters
+        ----------
+        corrections : List[CorrectionConfig]
+            All corrections to scan
+        obj_corr_name : str
+            Name of the object correction being varied (e.g. "jesAbsolute")
+        direction : str
+            Variation direction ("up" or "down")
+
+        Returns
+        -------
+        Dict[str, str]
+            Mapping of correction name to formatted sys_value override.
+            E.g. {"btag_hf": "up_jesAbsolute"} when obj_corr_name="jesAbsolute",
+            direction="up"
+        """
+        overrides = {}
+        for corr in corrections:
+            if not corr.reruns_with:
+                continue
+            for template in corr.reruns_with:
+                target_name = template.replace("{direction}_", "")
+                if target_name == obj_corr_name:
+                    overrides[corr.name] = template.format(direction=direction)
+                    break
+        return overrides
+
     def get_corrlib_evaluator(self, name: str, year: Optional[str]) -> CorrectionSet:
         """
         Get correctionlib evaluator for a correction, handling year-keyed lookups.
@@ -366,6 +406,7 @@ class Analysis:
         direction: Literal["up", "down", "nominal"],
         target: Optional[Union[ak.Array, List[ak.Array]]] = None,
         year: Optional[str] = None,
+        sys_value_override: Optional[str] = None,
     ) -> Union[ak.Array, List[ak.Array]]:
         """
         Apply correction using correctionlib.
@@ -382,6 +423,10 @@ class Analysis:
             Target array(s) to modify
         year : Optional[str], optional
             Correction year for year-keyed configs
+        sys_value_override : Optional[str], optional
+            When set, bypasses direction-based sys_value resolution and uses
+            this string directly for the Sys() marker. Used for JEC-context
+            overrides (e.g. "up_jes" for btag inside JEC variation).
 
         Returns
         -------
@@ -395,8 +440,10 @@ class Analysis:
         transform_out = correction.get("transform_out")
         reduce_op = correction.get("reduce")
 
-        # Resolve systematic string based on direction
-        if direction == "up":
+        # Resolve systematic string: override takes precedence over direction
+        if sys_value_override is not None:
+            sys_value = sys_value_override
+        elif direction == "up":
             sys_value = correction["up_and_down_idx"][0]
         elif direction == "down":
             sys_value = correction["up_and_down_idx"][1]
@@ -620,6 +667,7 @@ class Analysis:
         corrections: List[Dict[str, Any]],
         direction: Literal["up", "down", "nominal"] = "nominal",
         year: Optional[str] = None,
+        sys_value_override: Optional[str] = None,
     ) -> Dict[str, ak.Array]:
         """
         Apply object-level corrections.
@@ -634,6 +682,8 @@ class Analysis:
             Systematic direction (default: "nominal")
         year : Optional[str], optional
             Correction year for year-keyed configs
+        sys_value_override : Optional[str], optional
+            Override for Sys() marker, bypassing direction-based resolution.
 
         Returns
         -------
@@ -659,6 +709,7 @@ class Analysis:
                     direction=direction,
                     target=targets,
                     year=year,
+                    sys_value_override=sys_value_override,
                 )
             else:
                 # Non-correctionlib path (custom function)
@@ -695,6 +746,7 @@ class Analysis:
         direction: Literal["up", "down", "nominal"],
         events: Dict[str, ak.Array],
         year: Optional[str] = None,
+        sys_value_override: Optional[str] = None,
     ) -> ak.Array:
         """
         Apply event-level weight correction.
@@ -711,6 +763,8 @@ class Analysis:
             Event data (object collections)
         year : Optional[str], optional
             Correction year for year-keyed configs
+        sys_value_override : Optional[str], optional
+            Override for Sys() marker, bypassing direction-based resolution.
 
         Returns
         -------
@@ -728,6 +782,7 @@ class Analysis:
                 direction=direction,
                 target=weights,
                 year=year,
+                sys_value_override=sys_value_override,
             )
         else:
             # Non-correctionlib path (custom function)

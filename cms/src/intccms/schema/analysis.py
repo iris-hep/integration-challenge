@@ -474,6 +474,26 @@ class CorrectionConfig(SubscriptableModel):
         Field(default=None, description="Target (object, variable) to modify"),
     ]
 
+    reruns_with: Annotated[
+        Optional[List[str]],
+        Field(
+            default=None,
+            description="List of sys-string templates this correction is sensitive to "
+            "when object corrections vary. Each template has the form "
+            "'{direction}_<object_correction_name>' where {direction} is replaced "
+            "with 'up'/'down'. The part after '{direction}_' identifies which "
+            "object correction triggers this override.",
+        ),
+    ]
+
+    applies_to: Annotated[
+        Literal["mc", "data", "both"],
+        Field(
+            default="mc",
+            description="Whether this correction applies to MC, data, or both.",
+        ),
+    ]
+
     @model_validator(mode="after")
     def validate_corrections_fields(self) -> "CorrectionConfig":
         """Validate correction configuration fields."""
