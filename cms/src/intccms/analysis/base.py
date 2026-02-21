@@ -23,6 +23,7 @@ from intccms.schema import GoodObjectMasksConfig, ObjVar, Sys
 from intccms.utils.functors import (
     GhostObservableExecutor,
     MaskExecutor,
+    SelectionExecutor,
     get_function_arguments,
 )
 from intccms.utils.output import OutputDirectoryManager
@@ -838,3 +839,78 @@ class Analysis:
             )
 
         return object_copies
+
+    def prepare_objects(
+        self,
+        events: ak.Array,
+        object_corrs: List[Any],
+        varied_corr: Optional[Any] = None,
+        direction: Literal["up", "down", "nominal"] = "nominal",
+        is_data: bool = False,
+        lumi_mask_config: Optional[Any] = None,
+        year: Optional[str] = None,
+    ) -> Tuple[Dict[str, ak.Array], ak.Array]:
+        """Prepare event objects for downstream analysis.
+
+        Pipeline: copy → object corrections → masks → baseline → lumi → ghost.
+
+        When varying an object correction (varied_corr is not None), that
+        correction is applied with the given direction while all others are
+        applied nominally. Corrections without a nominal_function (like JEC
+        uncertainty sources) produce no change when direction="nominal".
+
+        Parameters
+        ----------
+        events : ak.Array
+            Original NanoAOD events
+        object_corrs : List
+            Object-level corrections to apply
+        varied_corr : optional
+            Specific object correction to vary
+        direction : str
+            Direction for the varied correction
+        is_data : bool
+            Whether processing data
+        lumi_mask_config : optional
+            Luminosity mask configuration for data
+        year : str, optional
+            Correction year
+
+        Returns
+        -------
+        Tuple[Dict[str, ak.Array], ak.Array]
+            (filtered object copies, filtered events)
+        """
+        obj_copies = self.get_object_copies(events)
+
+        # Apply object corrections: vary one, all others nominal
+        if varied_corr is not None:
+            for corr in object_corrs:
+                d = direction if corr.name == varied_corr.name else "nominal"
+                self.apply_object_corrections(obj_copies, [corr], d, year)
+        else:
+            self.apply_object_corrections(
+                obj_copies, object_corrs, "nominal", year=year
+            )
+
+        # Apply object masks (per-object: jet pT > 30, etc.)
+        obj_copies = self.apply_object_masks(obj_copies)
+
+        # Apply baseline selection (event-level)
+        if self.config.baseline_selection is not None:
+            executor = SelectionExecutor(self.config.baseline_selection)
+            mask = executor.execute(obj_copies)
+            obj_copies = {c: v[mask] for c, v in obj_copies.items()}
+            events = events[mask]
+
+        # Apply lumi mask for data (event-level)
+        if is_data and lumi_mask_config is not None:
+            executor = SelectionExecutor(lumi_mask_config)
+            lumi_mask = executor.execute(obj_copies)
+            obj_copies = {c: v[lumi_mask] for c, v in obj_copies.items()}
+            events = events[lumi_mask]
+
+        # Compute ghost observables
+        obj_copies = self.compute_ghost_observables(obj_copies)
+
+        return obj_copies, events

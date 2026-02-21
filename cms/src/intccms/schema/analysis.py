@@ -494,6 +494,29 @@ class CorrectionConfig(SubscriptableModel):
         ),
     ]
 
+    # Custom function fields (used when use_correctionlib=False)
+    nominal_function: Annotated[
+        Optional[Callable],
+        Field(
+            default=None,
+            description="Custom function for nominal correction (non-correctionlib path).",
+        ),
+    ]
+    up_function: Annotated[
+        Optional[Callable],
+        Field(
+            default=None,
+            description="Custom function for up variation (non-correctionlib path).",
+        ),
+    ]
+    down_function: Annotated[
+        Optional[Callable],
+        Field(
+            default=None,
+            description="Custom function for down variation (non-correctionlib path).",
+        ),
+    ]
+
     @model_validator(mode="after")
     def validate_corrections_fields(self) -> "CorrectionConfig":
         """Validate correction configuration fields."""

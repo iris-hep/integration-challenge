@@ -67,10 +67,11 @@ preprocess_config = {
         "branches": {
             "Muon": ["pt", "eta", "phi", "mass", "miniIsoId", "tightId", "charge"],
             "FatJet": ["particleNet_TvsQCD", "pt", "eta", "phi", "mass"],
-            "Jet": ["btagDeepB", "jetId", "pt", "eta", "phi", "mass", "hadronFlavour"],
+            "Jet": ["btagDeepB", "jetId", "pt", "eta", "phi", "mass", "hadronFlavour", "area"],
             "PuppiMET": ["pt", "phi"],
             "HLT": ["Mu50"],
             "Pileup": ["nTrueInt"],
+            "Rho": ["fixedGridRhoFastjetAll"],
             "event": ["genWeight", "run", "luminosityBlock", "event"],
         },
         "ignore_missing": False,  # is this implemented?
