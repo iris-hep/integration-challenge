@@ -203,10 +203,10 @@ class NonDiffAnalysis(Analysis):
                             weights, corr, "nominal",
                             object_copies_channel, year)
 
-            logger.debug(
+            logger.info(
                 f"Number of weighted events in {channel_name}: {ak.sum(weights):.2f}"
             )
-            logger.debug(
+            logger.info(
                 f"Number of raw events in {channel_name}: {ak.sum(mask)}"
             )
             for observable in channel.observables:

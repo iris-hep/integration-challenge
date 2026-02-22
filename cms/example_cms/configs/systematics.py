@@ -168,33 +168,56 @@ _JEC_UNC_DECORRELATED = [
 _jec_correction_sets = {}
 
 
-def _get_jec_evaluator(file_path, evaluator_key):
-    """Lazily load and cache correctionlib CorrectionSets."""
+def _get_correctionset(file_path):
     if file_path not in _jec_correction_sets:
         _jec_correction_sets[file_path] = correctionlib.CorrectionSet.from_file(
             file_path
         )
-    return _jec_correction_sets[file_path][evaluator_key]
+    return _jec_correction_sets[file_path]
+    
+    
+def _get_jec_evaluator(ject_corrset, evaluator_key):
+    """Lazily load and cache correctionlib CorrectionSets."""
+    return ject_corrset[evaluator_key]
 
 
-def _make_jec_nominal_func(file_path, evaluator_key):
-    """L1L2L3Res compound correction: (area, eta, pt, rho) -> multiplicative factor."""
+
+def _make_jec_nominal_func(ject_corrset, l1_key, l2_key):
+    """Sequential L1FastJet + L2Relative JEC: (area, eta, pt, rho) -> total factor.
+
+    Applies L1FastJet(area, eta, pt, rho) then L2Relative(eta, corrected_pt)
+    and returns the combined multiplicative factor C_L1 * C_L2.
+
+    rho is event-level (one value per event) while area/eta/pt are per-jet
+    (jagged). Broadcasting expands rho to match the per-jet structure before
+    flattening for correctionlib evaluation.
+    """
     def func(area, eta, pt, rho):
-        evaluator = _get_jec_evaluator(file_path, evaluator_key)
+        l1_eval = _get_jec_evaluator(ject_corrset, l1_key)
+        l2_eval = _get_jec_evaluator(ject_corrset, l2_key)
         counts = ak.num(eta)
-        flat = [
-            np.asarray(ak.flatten(x), dtype=np.float64)
-            for x in (area, eta, pt, rho)
-        ]
-        result = evaluator.evaluate(*flat)
-        return ak.unflatten(result, counts)
+        rho_broadcast, _ = ak.broadcast_arrays(rho, eta)
+
+        flat_area = np.asarray(ak.flatten(area), dtype=np.float64)
+        flat_eta = np.asarray(ak.flatten(eta), dtype=np.float64)
+        flat_pt = np.asarray(ak.flatten(pt), dtype=np.float64)
+        flat_rho = np.asarray(ak.flatten(rho_broadcast), dtype=np.float64)
+
+        # L1FastJet: remove pileup contribution
+        c_l1 = l1_eval.evaluate(flat_area, flat_eta, flat_pt, flat_rho)
+        pt_l1 = flat_pt * c_l1
+
+        # L2Relative: flatten eta response (uses L1-corrected pt)
+        c_l2 = l2_eval.evaluate(flat_eta, pt_l1)
+
+        return ak.unflatten(c_l1 * c_l2, counts)
     return func
 
 
-def _make_jec_unc_func(file_path, evaluator_key, sign):
+def _make_jec_unc_func(ject_corrset, evaluator_key, sign):
     """JEC uncertainty: (eta, pt) -> (1 +/- delta). sign: +1 for up, -1 for down."""
     def func(eta, pt):
-        evaluator = _get_jec_evaluator(file_path, evaluator_key)
+        evaluator = _get_jec_evaluator(ject_corrset, evaluator_key)
         counts = ak.num(eta)
         flat_eta = np.asarray(ak.flatten(eta), dtype=np.float64)
         flat_pt = np.asarray(ak.flatten(pt), dtype=np.float64)
@@ -269,7 +292,9 @@ def _get_corrections_for_year(year: str) -> list:
         List of correction configuration dictionaries
     """
     # JEC file and campaign for this year
-    jec_file = get_correction_file(year, "jet_jerc")
+    jec_file = get_correction_file(year, "JEC")
+    ject_corrset = _get_correctionset(jec_file)
+    
     campaign = JEC_CAMPAIGNS[year]
     year_suffix = "2016" if year.startswith("2016") else year
 
@@ -286,12 +311,14 @@ def _get_corrections_for_year(year: str) -> list:
             "target": ObjVar("Jet", "pt"),
             "args": [
                 ObjVar("Jet", "area"), ObjVar("Jet", "eta"),
-                ObjVar("Jet", "pt"), ObjVar("Rho", "fixedGridRhoFastjetAll"),
+                ObjVar("Jet", "pt"), ObjVar("event", "fixedGridRhoFastjetAll"),
             ],
             "op": "mult",
             "nominal_function": _make_jec_nominal_func(
-                jec_file, f"{campaign}_L1L2L3Res_AK4PFchs"
-            ),
+                            ject_corrset,
+                            f"{campaign}_L1FastJet_AK4PFchs",
+                            f"{campaign}_L2Relative_AK4PFchs",
+                        ),
         },
     ]
 
@@ -309,8 +336,8 @@ def _get_corrections_for_year(year: str) -> list:
             "target": ObjVar("Jet", "pt"),
             "args": [ObjVar("Jet", "eta"), ObjVar("Jet", "pt")],
             "op": "mult",
-            "up_function": _make_jec_unc_func(jec_file, evaluator_key, +1),
-            "down_function": _make_jec_unc_func(jec_file, evaluator_key, -1),
+            "up_function": _make_jec_unc_func(ject_corrset, evaluator_key, +1),
+            "down_function": _make_jec_unc_func(ject_corrset, evaluator_key, -1),
         })
 
     # ------------------------------------------------------------------
@@ -327,8 +354,8 @@ def _get_corrections_for_year(year: str) -> list:
             "target": ObjVar("Jet", "pt"),
             "args": [ObjVar("Jet", "eta"), ObjVar("Jet", "pt")],
             "op": "mult",
-            "up_function": _make_jec_unc_func(jec_file, evaluator_key, +1),
-            "down_function": _make_jec_unc_func(jec_file, evaluator_key, -1),
+            "up_function": _make_jec_unc_func(ject_corrset, evaluator_key, +1),
+            "down_function": _make_jec_unc_func(ject_corrset, evaluator_key, -1),
         })
 
     corrections += [
@@ -347,7 +374,7 @@ def _get_corrections_for_year(year: str) -> list:
             "nominal_idx": "nominal",
             "up_and_down_idx": ["up", "down"],
         },
-        # ------------------------------------------------------------------
+       # ------------------------------------------------------------------
         # Muon ID scale factor (Medium ID) - correlated across years
         # Signature: (abseta, pt, systematic)
         # ------------------------------------------------------------------
@@ -360,7 +387,7 @@ def _get_corrections_for_year(year: str) -> list:
             "key": "NUM_MediumID_DEN_TrackerMuons",
             "use_correctionlib": True,
             "op": "mult",
-            "nominal_idx": "sf",
+            "nominal_idx": "nominal",
             "up_and_down_idx": ["systup", "systdown"],
         },
         # ------------------------------------------------------------------
@@ -376,7 +403,7 @@ def _get_corrections_for_year(year: str) -> list:
             "key": "NUM_TightRelIso_DEN_MediumID",
             "use_correctionlib": True,
             "op": "mult",
-            "nominal_idx": "sf",
+            "nominal_idx": "nominal",
             "up_and_down_idx": ["systup", "systdown"],
         },
         # ------------------------------------------------------------------
@@ -429,7 +456,7 @@ def _get_corrections_for_year(year: str) -> list:
             "op": "mult",
             "nominal_idx": "central",
             "up_and_down_idx": [f"up_{syst}", f"down_{syst}"],
-            "reruns_with": btag_jes_reruns_with,
+            #"reruns_with": btag_jes_reruns_with,
         })
 
     # cferr systematics - apply to c jets only (b/light jets get SF=1)
@@ -447,7 +474,7 @@ def _get_corrections_for_year(year: str) -> list:
             "op": "mult",
             "nominal_idx": "central",
             "up_and_down_idx": [f"up_{syst}", f"down_{syst}"],
-            "reruns_with": btag_jes_reruns_with,
+            #"reruns_with": btag_jes_reruns_with,
         })
 
     # hfstats/lfstats systematics - decorrelated by year, apply to b and light jets
@@ -465,7 +492,7 @@ def _get_corrections_for_year(year: str) -> list:
             "op": "mult",
             "nominal_idx": "central",
             "up_and_down_idx": [f"up_{syst}", f"down_{syst}"],
-            "reruns_with": btag_jes_reruns_with,
+            #"reruns_with": btag_jes_reruns_with,
         })
 
     return corrections

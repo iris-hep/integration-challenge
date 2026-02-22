@@ -71,8 +71,7 @@ preprocess_config = {
             "PuppiMET": ["pt", "phi"],
             "HLT": ["Mu50"],
             "Pileup": ["nTrueInt"],
-            "Rho": ["fixedGridRhoFastjetAll"],
-            "event": ["genWeight", "run", "luminosityBlock", "event"],
+            "event": ["genWeight", "run", "luminosityBlock", "event", "fixedGridRhoFastjetAll"],
         },
         "ignore_missing": False,  # is this implemented?
         "mc_branches": {

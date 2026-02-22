@@ -395,7 +395,10 @@ class Analysis:
             if isinstance(arg, Sys):
                 resolved.append(sys_value)
             elif isinstance(arg, ObjVar):
-                resolved.append(events[arg.obj][arg.field])
+                if arg.obj == "event" and arg.field:
+                    resolved.append(events[arg.field])
+                else:
+                    resolved.append(events[arg.obj][arg.field])
             else:
                 resolved.append(arg)  # fixed value (str, int, float)
         return resolved
@@ -718,7 +721,9 @@ class Analysis:
                 if syst_func:
                     # Extract ObjVar arrays for function args
                     func_args = [
-                        object_copies[arg.obj][arg.field]
+                        object_copies[arg.field]                                                                                                                                                                                     
+                        if arg.obj == "event" and arg.field                                                                                                                                                                          
+                        else object_copies[arg.obj][arg.field]
                         for arg in correction.get("args", [])
                         if isinstance(arg, ObjVar)
                     ]
