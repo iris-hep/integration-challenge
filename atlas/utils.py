@@ -7,6 +7,7 @@ import functools
 import gzip
 import json
 import math
+import os
 import re
 import time
 from typing import Optional
@@ -21,6 +22,34 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tqdm.notebook
 import uproot
+
+
+##################################################
+### output folder
+##################################################
+
+def _create_output_path():
+    if not os.path.exists("output"):
+        os.makedirs("output")
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    name = f"output/results-{timestamp}"
+    if not os.path.exists(name):
+        os.makedirs(name)
+    print(f"output stored in {name}")
+    return name
+
+
+_OUTPUT_PATH = _create_output_path()
+
+
+def new_output_path():
+    global _OUTPUT_PATH
+    _OUTPUT_PATH = _create_output_path()
+    return _OUTPUT_PATH
+
+
+def get_output_path():
+    return _OUTPUT_PATH
 
 
 ##################################################
@@ -78,7 +107,7 @@ def calculate_instantaneous_rates(t0: float, t1: float, report: dict, num_sample
 
 def plot_worker_count(worker_count_dict: dict, timestamps: Optional[list[float]], datarates: Optional[list[float]]):
     """plot worker count over time and data rate samples in Gbps"""
-    fig, ax1 = plt.subplots()
+    fig, ax1 = plt.subplots(constrained_layout=True)
     ax1.plot(worker_count_dict.keys(), worker_count_dict.values(), linewidth=2, color="C0")
     ax1.set_title("worker count and data rate over time")
     ax1.set_xlabel("time")
@@ -95,12 +124,13 @@ def plot_worker_count(worker_count_dict: dict, timestamps: Optional[list[float]]
         ax2.set_ylim([0, ax2.get_ylim()[1] * 1.1])
         ax2.tick_params(axis="y", labelcolor="C2")
 
+    fig.savefig(f"{get_output_path()}/datarate.pdf")
     return fig, ax1
 
 
 def plot_taskstream(ts: dict):
     """simplified version of Dask html report task stream"""
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(constrained_layout=True)
     t0 = min(min(t["start"] for t in ts_["startstops"]) for ts_ in ts)
     tmax = max(max(t["start"] for t in ts_["startstops"]) for ts_ in ts) - t0
     y_next = 0
@@ -126,6 +156,7 @@ def plot_taskstream(ts: dict):
     ax.set_ylim(-0.5, y_next - 0.5)
     ax.set_xlabel("time [sec]")
     ax.set_ylabel("unique workers")
+    fig.savefig(f"{get_output_path()}/taskstream.pdf")
     return fig, ax
 
 
@@ -164,8 +195,6 @@ def hplus_signal_mass(name: str) -> str:
     """get the mass from these signal samples"""
     m = re.search(r'(?i)mhc(\d+)(?=\.)', name)  # case-insensitive, stop at the dot
     return str(m.group(1)+"GeV") if m else None
-
-    
 
 
 def integrated_luminosity(campaign: str, total=False) -> float:
@@ -239,10 +268,10 @@ def sample_xs(campaign: str, dsid: str) -> float:
 ### fileset handling
 ##################################################
 
-def get_fileset(campaign_filter: list | None = None, dsid_filter: list | None = None, max_files_per_sample: int | None = None):
+def get_fileset(campaign_filter: list | None = None, dsid_filter: list | None = None, max_files_per_sample: int | None = None, version: str = "v2"):
     """prepare fileset, with possibility to only include subset of input files"""
     # load metadata from file
-    fname = "ntuple_production/file_metadata.json.gz"
+    fname = f"ntuple_production/file_metadata_{version}.json.gz"
     with gzip.open(fname) as f:
         dataset_info = json.loads(f.read().decode())
 
@@ -422,9 +451,9 @@ def custom_process(workitems, processor_class, schema, client, preload: Optional
 
     workitems_bag = dask.bag.from_sequence(workitems, partition_size=1)
     tasks = workitems_bag.map(run_analysis).to_delayed()
-    futures = client.compute(tasks)
+    futures = client.compute(tasks, rerun_exceptions_locally=True)
     workitems_bag = dask.bag.from_delayed(futures)
-    res = client.compute(workitems_bag.fold(sum_output))
+    res = client.compute(workitems_bag.fold(sum_output), rerun_exceptions_locally=True)
 
     with tqdm.notebook.tqdm(total=len(futures)) as pbar:
         for _ in dask.distributed.as_completed(futures):
