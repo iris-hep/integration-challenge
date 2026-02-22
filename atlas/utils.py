@@ -407,38 +407,59 @@ def custom_process(workitems, processor_class, schema, client, preload: Optional
 
     def run_analysis(wi: coffea.processor.executor.WorkItem):
         """workload to be distributed"""
-        t0 = time.time()
-        analysis_instance = processor_class()
-        array_cache = {}
-        f = uproot.open(wi.filename, array_cache=array_cache)
-        events = coffea.nanoevents.NanoEventsFactory.from_root(
-            f,
-            treepath=wi.treename,
-            mode="virtual",
-            access_log=(access_log := []),
-            preload=lambda b: b.name in preload,
-            schemaclass=schema,
-            entry_start=wi.entrystart,
-            entry_stop=wi.entrystop,
-        ).events()
-        events.metadata.update(wi.usermeta)
-        out = analysis_instance.process(events)
-        bytesread = f.file.source.num_requested_bytes
-        t1 = time.time()
-        report = {
-            "bytesread": bytesread,
-            "entries": wi.entrystop - wi.entrystart,
-            "processtime": t1 - t0,
-            "chunks": 1,
-            "columns": access_log,
-            "chunk_info": {(wi.filename, wi.entrystart, wi.entrystop): (t0, t1, bytesread)},
-        }
+        try:
+            t0 = time.time()
+            analysis_instance = processor_class()
+            array_cache = {} if preload is None else None  # only use when not preloading
+            f = uproot.open(wi.filename, array_cache=array_cache)
+            events = coffea.nanoevents.NanoEventsFactory.from_root(
+                f,
+                treepath=wi.treename,
+                mode="virtual",
+                access_log=(access_log := []),
+                preload=lambda b: b.name in preload,
+                schemaclass=schema,
+                entry_start=wi.entrystart,
+                entry_stop=wi.entrystop,
+            ).events()
+            events.metadata.update(wi.usermeta)
+            out = analysis_instance.process(events)
+            bytesread = f.file.source.num_requested_bytes
+            t1 = time.time()
+            report = {
+                "bytesread": bytesread,
+                "entries": wi.entrystop - wi.entrystart,
+                "processtime": t1 - t0,
+                "chunks": 1,
+                "columns": access_log,
+                "chunk_info": {(wi.filename, wi.entrystart, wi.entrystop): (t0, t1, bytesread)},
+            }
+        except Exception as e:
+            out = None
+            report = {
+                "bytesread": 0,
+                "entries": 0,
+                "processtime": 0,
+                "chunks": 1,
+                "columns": access_log,
+                "chunk_info": {(wi.filename, wi.entrystart, wi.entrystop): (0, 0, 0)},
+            }
         return out, report
 
     def sum_output(a, b):
         """accumulation function"""
+        # handle empty case in case of exceptions
+        if a[0] is None and b[0] is not None:
+            out = {"hist": b[0]["hist"]}
+        elif a[0] is not None and b[0] is None:
+            out = {"hist": a[0]["hist"]}
+        elif a[0] is not None and b[0] is not None:
+            out = {"hist": a[0]["hist"] + b[0]["hist"]}  # normal case
+        else:
+            out = None
+
         return (
-            {"hist": a[0]["hist"] + b[0]["hist"]},
+            out,
             {
                 "bytesread": a[1]["bytesread"] + b[1]["bytesread"],
                 "entries": a[1]["entries"] + b[1]["entries"],
