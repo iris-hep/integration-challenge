@@ -407,10 +407,9 @@ class Analysis:
         self,
         correction: Dict[str, Any],
         events: Dict[str, ak.Array],
-        direction: Literal["up", "down", "nominal"],
+        sys_value: str,
         target: Optional[Union[ak.Array, List[ak.Array]]] = None,
         year: Optional[str] = None,
-        sys_value_override: Optional[str] = None,
     ) -> Union[ak.Array, List[ak.Array]]:
         """
         Apply correction using correctionlib.
@@ -421,16 +420,13 @@ class Analysis:
             Full correction configuration dict with 'args', 'key', 'transform', etc.
         events : Dict[str, ak.Array]
             Event data (object collections)
-        direction : Literal["up", "down", "nominal"]
-            Systematic direction
+        sys_value : str
+            Correctionlib systematic string substituted for the SYS marker in
+            the correction args (e.g. "central", "up_hf", "nominal").
         target : Optional[Union[ak.Array, List[ak.Array]]], optional
             Target array(s) to modify
         year : Optional[str], optional
             Correction year for year-keyed configs
-        sys_value_override : Optional[str], optional
-            When set, bypasses direction-based sys_value resolution and uses
-            this string directly for the Sys() marker. Used for JEC-context
-            overrides (e.g. "up_jes" for btag inside JEC variation).
 
         Returns
         -------
@@ -443,16 +439,6 @@ class Analysis:
         transform_in = correction.get("transform_in")
         transform_out = correction.get("transform_out")
         reduce_op = correction.get("reduce")
-
-        # Resolve systematic string: override takes precedence over direction
-        if sys_value_override is not None:
-            sys_value = sys_value_override
-        elif direction == "up":
-            sys_value = correction["up_and_down_idx"][0]
-        elif direction == "down":
-            sys_value = correction["up_and_down_idx"][1]
-        else:  # nominal
-            sys_value = correction.get("nominal_idx", "nominal")
 
         logger.info(
             "Applying correction: %s/%s (sys=%s) [year=%s]",
@@ -665,29 +651,127 @@ class Analysis:
         for spec, value in zip(specs, values):
             objects[spec.obj][spec.field] = value
 
-    def apply_object_corrections(
+    def _resolve_objvar_args(
+        self,
+        args_spec: List[Any],
+        object_copies: Dict[str, ak.Array],
+    ) -> List[ak.Array]:
+        """
+        Resolve ObjVar entries in an args list to actual arrays.
+
+        Parameters
+        ----------
+        args_spec : List
+            Argument specification (may contain ObjVar, Sys, literals)
+        object_copies : Dict[str, ak.Array]
+            Object dictionary to resolve from
+
+        Returns
+        -------
+        List[ak.Array]
+            Resolved arrays for ObjVar entries only
+        """
+        return [
+            object_copies[arg.field]
+            if arg.obj == "event" and arg.field
+            else object_copies[arg.obj][arg.field]
+            for arg in args_spec
+            if isinstance(arg, ObjVar)
+        ]
+
+    def _apply_correction_step(
         self,
         object_copies: Dict[str, ak.Array],
-        corrections: List[Dict[str, Any]],
-        direction: Literal["up", "down", "nominal"] = "nominal",
+        correction: Any,
+        sys_value: Optional[str] = None,
+        func: Optional[Callable] = None,
+        args_spec: Optional[List[Any]] = None,
         year: Optional[str] = None,
-        sys_value_override: Optional[str] = None,
-    ) -> Dict[str, ak.Array]:
+    ) -> None:
         """
-        Apply object-level corrections.
+        Apply a single correction step to object arrays in-place.
+
+        Handles both correctionlib (via sys_value) and custom function (via func)
+        paths. Gets targets, evaluates, and sets targets.
 
         Parameters
         ----------
         object_copies : Dict[str, ak.Array]
-            Objects to correct
+            Object dictionary (modified in-place)
+        correction : CorrectionConfig
+            Parent correction (provides target, args, key, etc.)
+        sys_value : str, optional
+            Correctionlib systematic string (for correctionlib path)
+        func : Callable, optional
+            Custom function to apply (for non-correctionlib path)
+        args_spec : List, optional
+            Args for the function. Falls back to correction.args if None.
+        year : str, optional
+            Correction year for year-keyed configs
+        """
+        targets = self._get_target_arrays(
+            correction.target,
+            object_copies,
+            function_name=f"correction::{correction.name}",
+        )
+
+        if correction.get("use_correctionlib", False):
+            corrected_values = self.apply_correctionlib(
+                correction=correction,
+                events=object_copies,
+                sys_value=sys_value,
+                target=targets,
+                year=year,
+            )
+        else:
+            if func is None:
+                return
+            func_args = self._resolve_objvar_args(
+                args_spec or correction.args, object_copies)
+            corrected_values = self.apply_syst_function(
+                syst_name=correction.name,
+                syst_function=func,
+                function_args=func_args,
+                affected_arrays=targets,
+                operation=correction.get("op", "mult"),
+                static_kwargs=correction.get("static_kwargs"),
+            )
+
+        self._set_target_arrays(
+            correction.target, object_copies, corrected_values
+        )
+
+    def apply_object_corrections(
+        self,
+        object_copies: Dict[str, ak.Array],
+        corrections: List[Dict[str, Any]],
+        year: Optional[str] = None,
+        varied_corr: Optional[Any] = None,
+        varied_source: Optional[Any] = None,
+        direction: Literal["up", "down", "nominal"] = "nominal",
+    ) -> Dict[str, ak.Array]:
+        """
+        Apply object-level corrections: nominal first, then source variation.
+
+        For each correction, applies the nominal correction (correctionlib at
+        nominal_idx or custom nominal_function). If this correction is being
+        varied (matched by varied_corr), applies the source's up/down function
+        on top.
+
+        Parameters
+        ----------
+        object_copies : Dict[str, ak.Array]
+            Objects to correct (modified in-place)
         corrections : List[Dict[str, Any]]
             Correction configurations
-        direction : Literal["up", "down", "nominal"], optional
-            Systematic direction (default: "nominal")
         year : Optional[str], optional
             Correction year for year-keyed configs
-        sys_value_override : Optional[str], optional
-            Override for Sys() marker, bypassing direction-based resolution.
+        varied_corr : optional
+            The correction being varied (matched by name)
+        varied_source : optional
+            UncertaintySourceConfig with up/down function and optional args
+        direction : str, optional
+            Direction for the varied source ("up" or "down")
 
         Returns
         -------
@@ -698,50 +782,44 @@ class Analysis:
             if correction.type != "object":
                 continue
 
-            # Get target arrays
-            targets = self._get_target_arrays(
-                correction.target,
-                object_copies,
-                function_name=f"correction::{correction.name}",
-            )
+            is_varied = (varied_corr is not None
+                         and correction.name == varied_corr.name
+                         and varied_source is not None
+                         and direction in ("up", "down"))
 
-            # Apply corrections
             if correction.get("use_correctionlib", False):
-                corrected_values = self.apply_correctionlib(
-                    correction=correction,
-                    events=object_copies,
-                    direction=direction,
-                    target=targets,
-                    year=year,
-                    sys_value_override=sys_value_override,
-                )
-            else:
-                # Non-correctionlib path (custom function)
-                syst_func = correction.get(f"{direction}_function")
-                if syst_func:
-                    # Extract ObjVar arrays for function args
-                    func_args = [
-                        object_copies[arg.field]                                                                                                                                                                                     
-                        if arg.obj == "event" and arg.field                                                                                                                                                                          
-                        else object_copies[arg.obj][arg.field]
-                        for arg in correction.get("args", [])
-                        if isinstance(arg, ObjVar)
-                    ]
-                    corrected_values = self.apply_syst_function(
-                        syst_name=correction.name,
-                        syst_function=syst_func,
-                        function_args=func_args,
-                        affected_arrays=targets,
-                        operation=correction.get("op", "mult"),
-                        static_kwargs=correction.get("static_kwargs"),
-                    )
+                # Correctionlib: evaluate once with the right sys string
+                if is_varied:
+                    direction_idx = 0 if direction == "up" else 1
+                    sys_value = varied_source.up_and_down_idx[direction_idx]
                 else:
-                    corrected_values = targets
+                    sys_value = correction.nominal_idx
+                self._apply_correction_step(
+                    object_copies, correction,
+                    sys_value=sys_value, year=year)
+            else:
+                # Custom function path
+                syst_func = None
+                if is_varied:
+                    syst_func = (varied_source.up_function if direction == "up"
+                                 else varied_source.down_function)
 
-            # Update objects
-            self._set_target_arrays(
-                correction.target, object_copies, corrected_values
-            )
+                if is_varied and not varied_source.is_delta:
+                    # Replacement: variation function replaces nominal
+                    self._apply_correction_step(
+                        object_copies, correction,
+                        func=syst_func, args_spec=varied_source.args,
+                        year=year)
+                else:
+                    # Apply nominal, then stack delta on top if varied
+                    self._apply_correction_step(
+                        object_copies, correction,
+                        func=correction.nominal_function, year=year)
+                    if is_varied:
+                        self._apply_correction_step(
+                            object_copies, correction,
+                            func=syst_func, args_spec=varied_source.args,
+                            year=year)
 
         return object_copies
 
@@ -749,10 +827,9 @@ class Analysis:
         self,
         weights: ak.Array,
         correction: Dict[str, Any],
-        direction: Literal["up", "down", "nominal"],
+        sys_value: str,
         events: Dict[str, ak.Array],
         year: Optional[str] = None,
-        sys_value_override: Optional[str] = None,
     ) -> ak.Array:
         """
         Apply event-level weight correction.
@@ -763,14 +840,15 @@ class Analysis:
             Original event weights
         correction : Dict[str, Any]
             Correction configuration with 'args', 'key', etc.
-        direction : Literal["up", "down", "nominal"]
-            Systematic direction
+        sys_value : str
+            For correctionlib corrections: systematic string substituted for
+            the SYS marker (e.g. "central", "up_hf").
+            For non-correctionlib corrections: direction string used to select
+            the variation function (e.g. "up", "down").
         events : Dict[str, ak.Array]
             Event data (object collections)
         year : Optional[str], optional
             Correction year for year-keyed configs
-        sys_value_override : Optional[str], optional
-            Override for Sys() marker, bypassing direction-based resolution.
 
         Returns
         -------
@@ -780,21 +858,18 @@ class Analysis:
         if correction.type != "event":
             return weights
 
-        # Apply correction using correctionlib
         if correction.get("use_correctionlib", False):
             return self.apply_correctionlib(
                 correction=correction,
                 events=events,
-                direction=direction,
+                sys_value=sys_value,
                 target=weights,
                 year=year,
-                sys_value_override=sys_value_override,
             )
         else:
-            # Non-correctionlib path (custom function)
-            syst_func = correction.get(f"{direction}_function")
+            # Non-correctionlib path: sys_value is "up"/"down" for function selection
+            syst_func = correction.get(f"{sys_value}_function")
             if syst_func:
-                # Extract ObjVar arrays for function args
                 func_args = [
                     events[arg.obj][arg.field]
                     for arg in correction.get("args", [])

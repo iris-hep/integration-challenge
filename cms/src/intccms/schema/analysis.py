@@ -401,11 +401,30 @@ class UncertaintySourceConfig(SubscriptableModel):
 
     name: Annotated[str, Field(description="Name of the systematic variation")]
     up_and_down_idx: Annotated[
-        Optional[List[str]],
+        List[str],
+        Field(
+            default=["up", "down"],
+            description="Sys strings for [up, down] directions. For correctionlib "
+            "sources, overrides the parent correction's sys string during evaluation. "
+            "For custom-function sources, defaults to ['up', 'down'].",
+        ),
+    ]
+    args: Annotated[
+        Optional[List[Union[ObjVar, Sys, str, int, float]]],
         Field(
             default=None,
-            description="Correctionlib sys strings for [up, down] directions. "
-            "Overrides the parent correction's sys string during evaluation.",
+            description="Source-specific args. Falls back to parent correction's args "
+            "when None. Needed when source functions take different inputs than the "
+            "correction's nominal function (e.g. JEC uncertainty vs JEC nominal).",
+        ),
+    ]
+    is_delta: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="If True, the variation function is applied on top of the "
+            "already-applied nominal (e.g. JEC uncertainty as multiplicative delta). "
+            "If False (default), the variation replaces the nominal entirely.",
         ),
     ]
     up_function: Annotated[
@@ -526,20 +545,6 @@ class CorrectionConfig(SubscriptableModel):
         Field(
             default=None,
             description="Custom function for nominal correction (non-correctionlib path).",
-        ),
-    ]
-    up_function: Annotated[
-        Optional[Callable],
-        Field(
-            default=None,
-            description="Custom function for up variation (non-correctionlib path).",
-        ),
-    ]
-    down_function: Annotated[
-        Optional[Callable],
-        Field(
-            default=None,
-            description="Custom function for down variation (non-correctionlib path).",
         ),
     ]
     uncertainty_sources: Annotated[
