@@ -300,8 +300,8 @@ def _get_corrections_for_year(year: str) -> list:
 
     corrections = [
         # ------------------------------------------------------------------
-        # JEC nominal (L1L2L3Res compound) — baseline, always applied
-        # Custom function: (area, eta, pt, rho) -> multiplicative factor
+        # JEC nominal (L1FastJet + L2Relative) — baseline, always applied
+        # Custom function: (area, eta, pt, rho) -> total multiplicative factor
         # ------------------------------------------------------------------
         {
             "name": "jec_nominal",

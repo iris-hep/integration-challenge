@@ -10,3 +10,6 @@ requires-python = ">=3.12"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/intccms"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

@@ -4304,7 +4304,7 @@ packages:
 - pypi: ./
   name: intccms
   version: 2.0.0
-  sha256: fdf81137ad2370164e648422e20161bb583bfab0a41fb53d028ab58ed4dbaa22
+  sha256: 063c9c603a5fad68ceec8ba280670821bd21faafb7360903115e53c628a38229
   requires_python: '>=3.12'
 - pypi: https://files.pythonhosted.org/packages/32/4b/b99e37f88336009971405cbb7630610322ed6fbfa31e1d7ab3fbf3049a2d/invoke-2.2.1-py3-none-any.whl
   name: invoke
