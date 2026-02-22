@@ -4,7 +4,7 @@ version = "0.0.1"
 description = "IRIS-HEP ATLAS integration challenge"
 authors = ["Alexander Held <alexander.held@cern.ch>"]
 channels = ["conda-forge"]
-platforms = ["osx-arm64", "linux-64", "osx-64"]
+platforms = ["osx-arm64", "linux-64"]
 
 [tasks.lab]
 description = "Start a JupyterLab instance"
@@ -16,6 +16,7 @@ depends-on = ["lab"]
 
 [dependencies]
 python = "3.11.*" #no torch wheels on cp313
+ipykernel = "*"
 notebook = ">=7.5.0,<8"
 jupyterlab = ">=4.5.0,<5"
 mplhep = ">=0.4.1,<0.5"
