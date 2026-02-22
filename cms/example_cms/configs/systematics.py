@@ -243,34 +243,23 @@ def _btag_valid_mask(eta, pt, disc):
     return (pt > 30) & (np.abs(eta) < 2.5) & (disc > 0)
 
 
-def btag_hf_transform_in(hadronFlavour, eta, pt, disc):
-    """Fake c-jets and invalid jets as light for correctionlib eval."""
+def btag_transform_in(hadronFlavour, eta, pt, disc):
+    """Prepare btag inputs: abs(eta), safe flavor for invalid jets.
+
+    Real hadronFlavour is passed for all jets (no flavor remapping).
+    The evaluator returns SF(central) for flavors irrelevant to a given
+    systematic source. Invalid jets get a safe flavor to avoid correctionlib
+    errors; transform_out masks them to SF=1.0.
+    """
     valid = _btag_valid_mask(eta, pt, disc)
-    skip = (hadronFlavour == 4) | ~valid
-    fake_flavor = ak.where(skip, 0, hadronFlavour)
-    return (fake_flavor, np.abs(eta), pt, disc)
+    safe_flavor = ak.where(valid, hadronFlavour, 0)
+    return (safe_flavor, np.abs(eta), pt, disc)
 
 
-def btag_hf_transform_out(sf, hadronFlavour, eta, pt, disc):
-    """C-jets and invalid jets get SF=1.0."""
+def btag_transform_out(sf, hadronFlavour, eta, pt, disc):
+    """Invalid jets get SF=1.0."""
     valid = _btag_valid_mask(eta, pt, disc)
-    skip = (hadronFlavour == 4) | ~valid
-    return ak.where(skip, 1.0, sf)
-
-
-def btag_cferr_transform_in(hadronFlavour, eta, pt, disc):
-    """Fake non-c jets and invalid jets as c for correctionlib eval."""
-    valid = _btag_valid_mask(eta, pt, disc)
-    skip = (hadronFlavour != 4) | ~valid
-    fake_flavor = ak.where(skip, 4, hadronFlavour)
-    return (fake_flavor, np.abs(eta), pt, disc)
-
-
-def btag_cferr_transform_out(sf, hadronFlavour, eta, pt, disc):
-    """Non-c jets and invalid jets get SF=1.0."""
-    valid = _btag_valid_mask(eta, pt, disc)
-    skip = (hadronFlavour != 4) | ~valid
-    return ak.where(skip, 1.0, sf)
+    return ak.where(valid, sf, 1.0)
 
 
 # ==============================================================================
@@ -372,7 +361,9 @@ def _get_corrections_for_year(year: str) -> list:
             "key": PILEUP_KEYS[year],
             "use_correctionlib": True,
             "nominal_idx": "nominal",
-            "up_and_down_idx": ["up", "down"],
+            "uncertainty_sources": [
+                {"name": f"pileup_{year}", "up_and_down_idx": ["up", "down"]},
+            ],
         },
        # ------------------------------------------------------------------
         # Muon ID scale factor (Medium ID) - correlated across years
@@ -388,7 +379,9 @@ def _get_corrections_for_year(year: str) -> list:
             "use_correctionlib": True,
             "op": "mult",
             "nominal_idx": "nominal",
-            "up_and_down_idx": ["systup", "systdown"],
+            "uncertainty_sources": [
+                {"name": "muon_id_sf", "up_and_down_idx": ["systup", "systdown"]},
+            ],
         },
         # ------------------------------------------------------------------
         # Muon ISO scale factor (Tight relative ISO) - correlated across years
@@ -404,7 +397,9 @@ def _get_corrections_for_year(year: str) -> list:
             "use_correctionlib": True,
             "op": "mult",
             "nominal_idx": "nominal",
-            "up_and_down_idx": ["systup", "systdown"],
+            "uncertainty_sources": [
+                {"name": "muon_iso_sf", "up_and_down_idx": ["systup", "systdown"]},
+            ],
         },
         # ------------------------------------------------------------------
         # Muon trigger scale factor (Mu50) - correlated across years
@@ -417,18 +412,23 @@ def _get_corrections_for_year(year: str) -> list:
             "args": [ObjVar("Muon", "eta"), ObjVar("Muon", "pt"), SYS],
             "transform_in": muon_sf_transform,
             "key": (
-                "NUM_Mu50_or_OldMu100_or_TkMu100_DEN_CutBasedIdGlobalHighPt_and_TkIsoLoose" if "2016" not in year 
+                "NUM_Mu50_or_OldMu100_or_TkMu100_DEN_CutBasedIdGlobalHighPt_and_TkIsoLoose" if "2016" not in year
                 else "NUM_Mu50_or_TkMu50_DEN_CutBasedIdGlobalHighPt_and_TkIsoLoose"
             ),
             "use_correctionlib": True,
             "op": "mult",
             "nominal_idx": "nominal",
-            "up_and_down_idx": ["systup", "systdown"],
+            "uncertainty_sources": [
+                {"name": "muon_trigger_sf", "up_and_down_idx": ["systup", "systdown"]},
+            ],
         },
     ]
 
     # ------------------------------------------------------------------
-    # B-tagging scale factors (DeepCSV shape)
+    # B-tagging scale factors (deepJet_shape)
+    # One correction with multiple uncertainty sources.
+    # Real hadronFlavour passed to evaluator for all sources — no flavor
+    # remapping. The evaluator returns SF(central) for irrelevant flavors.
     # Signature: (systematic, flavor, abseta, pt, discriminant)
     # ------------------------------------------------------------------
     btag_args = [
@@ -439,61 +439,29 @@ def _get_corrections_for_year(year: str) -> list:
         ObjVar("Jet", "btagDeepB"),
     ]
 
-    btag_jes_reruns_with = _get_btag_jes_reruns_with(year)
-
-    # hf/lf systematics - apply to b and light jets (c-jets get SF=1)
-    for syst in ["hf", "lf"]:
-        corrections.append({
-            "name": f"btag_{syst}",
-            "file": get_correction_file(year, "btagging"),
-            "type": "event",
-            "args": btag_args,
-            "transform_in": btag_hf_transform_in,
-            "transform_out": btag_hf_transform_out,
-            "reduce": "prod",
-            "key": "deepJet_shape",
-            "use_correctionlib": True,
-            "op": "mult",
-            "nominal_idx": "central",
-            "up_and_down_idx": [f"up_{syst}", f"down_{syst}"],
-            #"reruns_with": btag_jes_reruns_with,
-        })
-
-    # cferr systematics - apply to c jets only (b/light jets get SF=1)
-    for syst in ["cferr1", "cferr2"]:
-        corrections.append({
-            "name": f"btag_{syst}",
-            "file": get_correction_file(year, "btagging"),
-            "type": "event",
-            "args": btag_args,
-            "transform_in": btag_cferr_transform_in,
-            "transform_out": btag_cferr_transform_out,
-            "reduce": "prod",
-            "key": "deepJet_shape",
-            "use_correctionlib": True,
-            "op": "mult",
-            "nominal_idx": "central",
-            "up_and_down_idx": [f"up_{syst}", f"down_{syst}"],
-            #"reruns_with": btag_jes_reruns_with,
-        })
-
-    # hfstats/lfstats systematics - decorrelated by year, apply to b and light jets
-    for syst in ["hfstats1", "hfstats2", "lfstats1", "lfstats2"]:
-        corrections.append({
-            "name": f"btag_{syst}_{year}",
-            "file": get_correction_file(year, "btagging"),
-            "type": "event",
-            "args": btag_args,
-            "transform_in": btag_hf_transform_in,
-            "transform_out": btag_hf_transform_out,
-            "reduce": "prod",
-            "key": "deepJet_shape",
-            "use_correctionlib": True,
-            "op": "mult",
-            "nominal_idx": "central",
-            "up_and_down_idx": [f"up_{syst}", f"down_{syst}"],
-            #"reruns_with": btag_jes_reruns_with,
-        })
+    corrections.append({
+        "name": "btag",
+        "file": get_correction_file(year, "btagging"),
+        "type": "event",
+        "args": btag_args,
+        "transform_in": btag_transform_in,
+        "transform_out": btag_transform_out,
+        "reduce": "prod",
+        "key": "deepJet_shape",
+        "use_correctionlib": True,
+        "op": "mult",
+        "nominal_idx": "central",
+        "uncertainty_sources": [
+            {"name": "btag_hf", "up_and_down_idx": ["up_hf", "down_hf"]},
+            {"name": "btag_lf", "up_and_down_idx": ["up_lf", "down_lf"]},
+            {"name": "btag_cferr1", "up_and_down_idx": ["up_cferr1", "down_cferr1"]},
+            {"name": "btag_cferr2", "up_and_down_idx": ["up_cferr2", "down_cferr2"]},
+            {"name": f"btag_hfstats1_{year}", "up_and_down_idx": ["up_hfstats1", "down_hfstats1"]},
+            {"name": f"btag_hfstats2_{year}", "up_and_down_idx": ["up_hfstats2", "down_hfstats2"]},
+            {"name": f"btag_lfstats1_{year}", "up_and_down_idx": ["up_lfstats1", "down_lfstats1"]},
+            {"name": f"btag_lfstats2_{year}", "up_and_down_idx": ["up_lfstats2", "down_lfstats2"]},
+        ],
+    })
 
     return corrections
 

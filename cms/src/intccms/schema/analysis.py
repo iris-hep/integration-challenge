@@ -391,6 +391,39 @@ class ChannelConfig(SubscriptableModel):
         return self
 
 
+class UncertaintySourceConfig(SubscriptableModel):
+    """Uncertainty source on a correction.
+
+    Supports both correctionlib (sys strings) and custom functions (up/down callables).
+    Correctionlib sources override the parent correction's sys string.
+    Custom-function sources provide up/down callables for object-level variations (e.g. JEC).
+    """
+
+    name: Annotated[str, Field(description="Name of the systematic variation")]
+    up_and_down_idx: Annotated[
+        Optional[List[str]],
+        Field(
+            default=None,
+            description="Correctionlib sys strings for [up, down] directions. "
+            "Overrides the parent correction's sys string during evaluation.",
+        ),
+    ]
+    up_function: Annotated[
+        Optional[Callable],
+        Field(
+            default=None,
+            description="Custom function for up variation (non-correctionlib path).",
+        ),
+    ]
+    down_function: Annotated[
+        Optional[Callable],
+        Field(
+            default=None,
+            description="Custom function for down variation (non-correctionlib path).",
+        ),
+    ]
+
+
 class CorrectionConfig(SubscriptableModel):
     """Configuration for a single correction (e.g., scale factor, pileup weight).
 
@@ -455,13 +488,6 @@ class CorrectionConfig(SubscriptableModel):
             "Reduces jagged array to event-level before applying to target.",
         ),
     ]
-    up_and_down_idx: Annotated[
-        List[str],
-        Field(
-            default=["up", "down"],
-            description="Systematic variation keys for [up, down] directions",
-        ),
-    ]
     nominal_idx: Annotated[
         str,
         Field(
@@ -514,6 +540,15 @@ class CorrectionConfig(SubscriptableModel):
         Field(
             default=None,
             description="Custom function for down variation (non-correctionlib path).",
+        ),
+    ]
+    uncertainty_sources: Annotated[
+        Optional[List[UncertaintySourceConfig]],
+        Field(
+            default=None,
+            description="Uncertainty sources for this correction. Each source produces "
+            "alternative histograms. Correctionlib sources use up_and_down_idx to override "
+            "the parent's sys string. Custom-function sources use up/down_function.",
         ),
     ]
 
