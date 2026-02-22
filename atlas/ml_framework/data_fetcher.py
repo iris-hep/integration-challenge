@@ -20,7 +20,7 @@ class RunConfig:
     request_name: str | list[str]
     output_folder: str = "./data/"
     files_per_sample: int = None
-    join_result_parquet: bool = True
+    join_result_parquet: bool = False
 
     def __post_init__(self):
         if isinstance(self.dataset, str):
@@ -101,7 +101,7 @@ class ServiceXQuery:
                 }
             )
 
-        spec = {"General": {"Delivery": "LocalCache"}, "Sample": queries}
+        spec = {"General": {"Delivery": "LocalCache", "OutputFormat": "parquet", "OutputDirectory": self.config.output_folder}, "Sample": queries}
         return spec
 
     def write_to_parquet(self, files: dict, **kwargs):
@@ -125,6 +125,6 @@ class ServiceXQuery:
         if self.config.join_result_parquet:
             self.write_to_parquet(files, **kwargs)
             # Logging
-            logging.warning("Fetched data written to %s", self.config.output_folder)
+            logging.warning("Fetched data - summary written to %s", self.config.output_folder)
         else:
             return files

@@ -360,7 +360,7 @@ def get_fileset(
             input_size_GB += sum(metadata["sizes_output_GB"][:num_files])
 
     print(
-        f"[INFO] fileset has {len(fileset)} categories with {sum([len(f["files"]) for f in fileset.values()])} files total, size is {input_size_GB:.2f} GB"
+        f"[INFO] fileset has {len(fileset)} categories with {sum([len(f['files']) for f in fileset.values()])} files total, size is {input_size_GB:.2f} GB"
     )
     return fileset, input_size_GB
 
