@@ -1,0 +1,4 @@
+event:
+  label:
+    - 1.0   # class 0 weight
+    - 1.0   # class 1 weight

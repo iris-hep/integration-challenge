@@ -1,0 +1,284 @@
+# lightning.pytorch==2.5.3
+seed_everything: 42
+trainer:
+  accelerator: cpu
+  strategy: auto
+  devices: 1
+  num_nodes: 1
+  precision: null
+  logger:
+    class_path: lightning.pytorch.loggers.comet.CometLogger
+    init_args:
+      api_key: null
+      workspace: null
+      project: salt
+      experiment_key: null
+      mode: null
+      online: null
+      prefix: null
+    dict_kwargs:
+      name: event_classifier
+  callbacks:
+  - class_path: salt.callbacks.Checkpoint
+    init_args:
+      monitor_loss: val/jets_classification_loss
+      fname_string: val_loss
+  - class_path: salt.callbacks.PredictionWriter
+    init_args:
+      write_tracks: false
+      write_objects: false
+      half_precision: false
+      object_classes: null
+      extra_vars: null
+  - class_path: lightning.pytorch.callbacks.LearningRateMonitor
+    init_args:
+      logging_interval: null
+      log_momentum: false
+      log_weight_decay: false
+  - class_path: lightning.pytorch.callbacks.TQDMProgressBar
+    init_args:
+      refresh_rate: 50
+      process_position: 0
+      leave: false
+  - class_path: lightning.pytorch.callbacks.ModelSummary
+    init_args:
+      max_depth: 2
+  fast_dev_run: false
+  max_epochs: 20
+  min_epochs: null
+  max_steps: -1
+  min_steps: null
+  max_time: null
+  limit_train_batches: null
+  limit_val_batches: null
+  limit_test_batches: null
+  limit_predict_batches: null
+  overfit_batches: 0.0
+  val_check_interval: null
+  check_val_every_n_epoch: 1
+  num_sanity_val_steps: null
+  log_every_n_steps: 50
+  enable_checkpointing: null
+  enable_progress_bar: null
+  enable_model_summary: null
+  accumulate_grad_batches: 1
+  gradient_clip_val: null
+  gradient_clip_algorithm: null
+  deterministic: null
+  benchmark: null
+  inference_mode: true
+  use_distributed_sampler: true
+  profiler: null
+  detect_anomaly: false
+  barebones: false
+  plugins: null
+  sync_batchnorm: false
+  reload_dataloaders_every_n_epochs: 0
+  default_root_dir: /home/acordeir/integ-challenge-2025/integration-challenge/atlas/ml_framework/salt-models/logs/event_classifier_20260222-T041838
+  model_registry: null
+model:
+  model:
+    class_path: salt.models.SaltModel
+    init_args:
+      init_nets:
+      - input_name: jet
+        attach_global: false
+        dense_config:
+          output_size: 64
+          hidden_layers:
+          - 256
+          - 128
+          - 64
+          activation: ReLU
+        variables:
+          event:
+          - met
+          - met_phi
+          - met_sig
+          - met_sumet
+          jet:
+          - pt
+          - eta
+          - phi
+          - btag
+          el:
+          - pt
+          - eta
+          - phi
+        global_object: event
+      - input_name: el
+        attach_global: false
+        dense_config:
+          output_size: 64
+          hidden_layers:
+          - 256
+          - 128
+          - 64
+          activation: ReLU
+        variables:
+          event:
+          - met
+          - met_phi
+          - met_sig
+          - met_sumet
+          jet:
+          - pt
+          - eta
+          - phi
+          - btag
+          el:
+          - pt
+          - eta
+          - phi
+        global_object: event
+      tasks:
+        class_path: torch.nn.ModuleList
+        init_args:
+          modules:
+          - class_path: salt.models.ClassificationTask
+            init_args:
+              label: label
+              class_names:
+              - mc
+              label_map: null
+              sample_weight: null
+              use_class_dict: false
+              name: events_classification
+              input_name: event
+              dense_config:
+                input_size: 128
+                output_size: 1
+                hidden_layers:
+                - 128
+                - 64
+                - 32
+                activation: ReLU
+                dropout: 0.1
+              loss:
+                class_path: torch.nn.BCEWithLogitsLoss
+                init_args:
+                  weight: null
+                  size_average: null
+                  reduce: null
+                  reduction: mean
+                  pos_weight: null
+              weight: 1.0
+      encoder:
+        class_path: salt.models.Transformer
+        init_args:
+          num_layers: 6
+          embed_dim: 64
+          out_dim: 128
+          norm: LayerNorm
+          attn_type: flash-varlen
+          do_final_norm: true
+          num_registers: 1
+          drop_registers: false
+          edge_embed_dim: 0
+          update_edges: false
+          mup: false
+          ls_init: null
+          drop_path: 0.0
+          dense_kwargs:
+            activation: ReLU
+            gated: false
+          attn_kwargs:
+            num_heads: 4
+          norm_type: pre
+      mask_decoder: null
+      pool_net:
+        class_path: salt.models.GlobalAttentionPooling
+        init_args:
+          input_size: 128
+      merge_dict: null
+      featurewise_nets: null
+  lrs_config:
+    initial: 1.0e-07
+    max: 0.0005
+    end: 1.0e-05
+    pct_start: 0.01
+    weight_decay: 1.0e-05
+  norm_config:
+    norm_dict: norm_dict.yaml
+    variables:
+      event:
+      - met
+      - met_phi
+      - met_sig
+      - met_sumet
+      jet:
+      - pt
+      - eta
+      - phi
+      - btag
+      el:
+      - pt
+      - eta
+      - phi
+    global_object: event
+    input_map:
+      event: event
+      jet: jet
+      el: el
+  mup_config: null
+  loss_mode: wsum
+  optimizer: AdamW
+data:
+  train_file: ../data/train_ttbar_mc20_mc23.h5
+  val_file: ../data/val_ttbar_mc20_mc23.h5
+  batch_size: 500
+  num_workers: 4
+  num_train: 14000
+  num_val: 2000
+  num_test: 3000
+  move_files_temp: null
+  class_dict: /home/acordeir/integ-challenge-2025/integration-challenge/atlas/ml_framework/salt-models/logs/event_classifier_20260222-T041838/class_dict.yaml
+  test_file: ../data/test_ttbar_mc20_mc23.h5
+  train_vds_path: null
+  val_vds_path: null
+  test_vds_path: null
+  test_suff: null
+  pin_memory: true
+  config_s3: null
+  norm_dict: /home/acordeir/integ-challenge-2025/integration-challenge/atlas/ml_framework/salt-models/logs/event_classifier_20260222-T041838/norm_dict.yaml
+  variables:
+    event:
+    - met
+    - met_phi
+    - met_sig
+    - met_sumet
+    jet:
+    - pt
+    - eta
+    - phi
+    - btag
+    el:
+    - pt
+    - eta
+    - phi
+  labeller_config: null
+  labels:
+    event:
+    - label
+  mf_config: null
+  input_map:
+    event: event
+    jet: jet
+    el: el
+  num_inputs: null
+  non_finite_to_num: false
+  global_object: event
+  parameters: null
+  selections: null
+  ignore_finite_checks: false
+  recover_malformed: false
+  transforms: null
+name: event_classifier
+force: true
+tag: false
+compile: false
+overwrite_config: false
+log_suffix: null
+optimizer: null
+lr_scheduler: null
+ckpt_path: null
