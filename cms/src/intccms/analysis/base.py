@@ -704,9 +704,14 @@ class Analysis:
         except Exception as exc:
             func_name = getattr(func, "__name__", None)
             raise type(exc)(
-                f"_apply_correction_step failed: correction={correction.name!r}, "
-                f"key={correction.get('key')!r}, sys_value={sys_value!r}, "
-                f"year={year!r}, func={func_name!r}, args={correction.args!r}"
+                f"{exc}\n\n"
+                f"_apply_correction_step context:\n"
+                f"  correction = {correction.name!r}\n"
+                f"  key        = {correction.get('key')!r}\n"
+                f"  sys_value  = {sys_value!r}\n"
+                f"  year       = {year!r}\n"
+                f"  func       = {func_name!r}\n"
+                f"  args       = {correction.args!r}"
             ) from exc
 
     def apply_object_corrections(
@@ -855,9 +860,13 @@ class Analysis:
                 return weights
         except Exception as exc:
             raise type(exc)(
-                f"apply_event_weight_correction failed: "
-                f"correction={correction.name!r}, key={correction.get('key')!r}, "
-                f"sys_value={sys_value!r}, year={year!r}, args={correction.args!r}"
+                f"{exc}\n\n"
+                f"apply_event_weight_correction context:\n"
+                f"  correction = {correction.name!r}\n"
+                f"  key        = {correction.get('key')!r}\n"
+                f"  sys_value  = {sys_value!r}\n"
+                f"  year       = {year!r}\n"
+                f"  args       = {correction.args!r}"
             ) from exc
 
     def compute_ghost_observables(
