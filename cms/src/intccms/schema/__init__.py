@@ -4,7 +4,7 @@ This package provides Pydantic models for validating analysis configurations.
 All public classes are re-exported from this module for convenient imports.
 """
 
-from intccms.schema.base import FunctorConfig, ObjVar, SubscriptableModel, WorkerEval
+from intccms.schema.base import FunctorConfig, ObjVar, SubscriptableModel, Sys, WorkerEval
 from intccms.schema.datasets import DatasetConfig, DatasetManagerConfig
 from intccms.schema.skimming import PreprocessConfig, SkimOutputConfig, SkimmingConfig
 from intccms.schema.analysis import (
@@ -28,6 +28,7 @@ __all__ = [
     "FunctorConfig",
     "ObjVar",
     "SubscriptableModel",
+    "Sys",
     "WorkerEval",
     # Datasets
     "DatasetConfig",

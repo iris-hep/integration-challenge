@@ -106,35 +106,40 @@ class NonDiffAnalysis(Analysis):
         xsec_weight: float,
         analysis: str,
         is_data: bool = False,
-        event_syst: Optional[dict[str, Any]] = None,
-        direction: Literal["up", "down", "nominal"] = "nominal",
-    ) -> Optional[ak.Array]:
-        """
-        Apply physics selections and fill histograms.
+        corrections: Optional[list] = None,
+        sys_values: Optional[Dict[str, str]] = None,
+        year: Optional[str] = None,
+    ) -> None:
+        """Apply channel selections and fill histograms with combined event weights.
+
+        All event-level corrections are applied multiplicatively to weights.
+        sys_values maps each correction name to its systematic string —
+        nominal for unvaried corrections, varied string for the one being varied.
 
         Parameters
         ----------
         object_copies : dict
-            Corrected event-level objects.
+            Filtered event objects (after prepare_objects).
         events : ak.Array
-            Original NanoAOD event collection.
+            Filtered NanoAOD events (same event count as object_copies).
         process : str
             Sample name.
         variation : str
-            Systematic variation label.
+            Systematic variation label for histogram axis.
         xsec_weight : float
-            Normalization weight.
+            Cross section x luminosity / n_gen normalization.
         analysis : str
-            Analysis name string.
-        event_syst : dict, optional
-            Event-level systematic to apply.
-        direction : str, optional
-            Systematic direction: 'up', 'down', or 'nominal'.
-
-        Returns
-        -------
-        dict
-            Updated histogram dictionary.
+            Analysis identifier.
+        is_data : bool
+            Whether processing data (skips systematic weights).
+        corrections : list, optional
+            All corrections and systematics; event-level ones are applied as
+            weights.
+        sys_values : dict, optional
+            Maps correction name to systematic string for the Sys() marker.
+            If None or missing entry, falls back to correction's nominal_idx.
+        year : str, optional
+            Correction year for year-keyed configs.
         """
         if is_data and variation != "nominal":
             return
@@ -172,15 +177,33 @@ class NonDiffAnalysis(Analysis):
             else:
                 weights = np.ones(ak.sum(mask))
 
-            if event_syst and not is_data:
-                weights = self.apply_event_weight_correction(
-                    weights, event_syst, direction, object_copies_channel
-                )
+            # Apply all event-level corrections to weights
+            if corrections and not is_data:
+                for corr in corrections:
+                    if corr.type != "event":
+                        continue
+                    sys_value = (sys_values[corr.name] if sys_values
+                                 else corr.nominal_idx)
+                    # Resolve variation function from uncertainty source
+                    syst_function = None
+                    if (not corr.use_correctionlib
+                            and corr.uncertainty_sources
+                            and sys_value != corr.nominal_idx):
+                        for source in corr.uncertainty_sources:
+                            if sys_value in source.up_and_down_idx:
+                                idx = source.up_and_down_idx.index(sys_value)
+                                syst_function = (source.up_function if idx == 0
+                                                 else source.down_function)
+                                break
+                    weights = self.apply_event_weight_correction(
+                        weights, corr, sys_value,
+                        object_copies_channel, year,
+                        syst_function=syst_function)
 
-            logger.debug(
+            logger.info(
                 f"Number of weighted events in {channel_name}: {ak.sum(weights):.2f}"
             )
-            logger.debug(
+            logger.info(
                 f"Number of raw events in {channel_name}: {ak.sum(mask)}"
             )
             for observable in channel.observables:
@@ -203,100 +226,140 @@ class NonDiffAnalysis(Analysis):
         """
         Run the full analysis logic on a batch of events.
 
+        Three-block structure:
+        1. Nominal: prepare objects, fill histograms with all event weights nominal
+        2. Object systematics (JEC): re-prepare objects with varied jet pT,
+           fill histograms with combined weight overrides via varies_with
+        3. Weight systematics: use nominal objects, vary one event weight at a time
+
         Parameters
         ----------
         events : ak.Array
             Input NanoAOD events.
         metadata : dict
-            Metadata with keys 'process', 'xsec', 'nevts', and 'dataset'.
-
-        Returns
-        -------
-        dict
-            Histogram dictionary after processing.
+            Metadata with keys 'process', 'xsec', 'nevts', 'dataset', and optionally 'year'.
         """
         analysis = self.__class__.__name__
 
         process = metadata["process"]
         variation = metadata.get("variation", "nominal")
         is_data = metadata.get("is_data", False)
-        logger.debug(f"Processing {process} with variation {variation}")
+        year = metadata.get("year")
+        logger.debug(f"Processing {process} with variation {variation}, year={year}")
         xsec = metadata["xsec"]
         n_gen = metadata["nevts"]
 
         lumi = self.config.general.lumi
         xsec_weight = 1.0 if is_data else (xsec * lumi / n_gen)
 
-        # Nominal processing
-        obj_copies = self.get_object_copies(events)
-        # Filter objects
-        obj_copies = self.apply_object_masks(obj_copies)
+        # Get year-specific corrections
+        corrections = self.get_corrections_for_year(year)
 
-        # Apply baseline selection if configured
-        if self.config.baseline_selection is not None:
-            executor = SelectionExecutor(self.config.baseline_selection)
-            mask = executor.execute(obj_copies)
-            obj_copies = {
-                collection: variable[mask]
-                for collection, variable in obj_copies.items()
-            }
-
-        # Apply lumi_mask for data if configured
-        if is_data and (lumi_mask_config := metadata.get("lumi_mask_config")):
-            executor = SelectionExecutor(lumi_mask_config)
-            lumi_mask_result = executor.execute(obj_copies)
-            obj_copies = {
-                collection: variable[lumi_mask_result]
-                for collection, variable in obj_copies.items()
-            }
-
-        # apply ghost observables
-        obj_copies = self.compute_ghost_observables(
-            obj_copies,
-        )
-
-        # apply event-level corrections
-        # apply nominal corrections
-        obj_copies_corrected = self.apply_object_corrections(
-            obj_copies, self.corrections, direction="nominal"
-        )
-
-        # apply selection and fill histograms
-        if self.config.general.run_histogramming:
-            self.histogramming(
-                obj_copies_corrected,
-                events,
-                process,
-                "nominal",
-                xsec_weight,
-                analysis,
-                is_data=is_data,
+        # SystematicConfig is not supported; use uncertainty_sources on
+        # CorrectionConfig instead.
+        systematics = self.get_systematics_for_year(year)
+        if systematics:
+            raise NotImplementedError(
+                f"SystematicConfig is not supported. Migrate to "
+                f"uncertainty_sources on CorrectionConfig: "
+                f"{[s.name for s in systematics]}"
             )
 
-        if self.config.general.run_systematics and self.config.general.run_histogramming:
-            # Systematic variations
-            for syst in self.systematics + self.corrections:
-                if syst.name == "nominal":
-                    continue
-                for direction in ["up", "down"]:
-                    # Filter objects
-                    obj_copies = self.apply_object_masks(obj_copies)
+        # Filter corrections by data/MC applicability
+        corrections = [
+            c for c in corrections
+            if c.applies_to in ("both", "data" if is_data else "mc")
+        ]
 
-                    # apply corrections
-                    obj_copies_corrected = self.apply_object_corrections(
-                        obj_copies, [syst], direction=direction
-                    )
-                    varname = f"{syst.name}_{direction}"
+        # Split corrections by type
+        object_corrs = [c for c in corrections if c.type == "object"]
+
+        # Nominal sys_values: every event correction at its nominal string
+        nominal_sys_values = {
+            c.name: c.nominal_idx
+            for c in corrections if c.type == "event"
+        }
+
+        lumi_mask_config = metadata.get("lumi_mask_config") if is_data else None
+
+        # Block 1: Nominal
+        nom_objects, nom_events = self.prepare_objects(
+            events, object_corrs, is_data=is_data,
+            lumi_mask_config=lumi_mask_config, year=year,
+        )
+
+        if self.config.general.run_histogramming:
+            self.histogramming(
+                nom_objects, nom_events, process, "nominal",
+                xsec_weight, analysis,
+                is_data=is_data, corrections=corrections,
+                sys_values=nominal_sys_values, year=year,
+            )
+
+        if self.config.general.run_systematics and not is_data:
+
+            # Block 2: Object systematics
+            for obj_corr in object_corrs:
+                if not obj_corr.uncertainty_sources:
+                    continue
+                for source in obj_corr.uncertainty_sources:
+                    for direction in ["up", "down"]:
+                        objects, filtered_events = self.prepare_objects(
+                            events, object_corrs, varied_corr=obj_corr,
+                            varied_source=source, direction=direction,
+                            year=year,
+                        )
+                        # Override event corrections linked via varies_with
+                        sys_values = nominal_sys_values.copy()
+                        for evt_corr in corrections:
+                            if evt_corr.type != "event" or not evt_corr.uncertainty_sources:
+                                continue
+                            for evt_source in evt_corr.uncertainty_sources:
+                                if evt_source.varies_with and source.name in evt_source.varies_with:
+                                    direction_idx = 0 if direction == "up" else 1
+                                    sys_values[evt_corr.name] = evt_source.up_and_down_idx[direction_idx]
+                        if self.config.general.run_histogramming:
+                            self.histogramming(
+                                objects, filtered_events, process,
+                                f"{source.name}_{direction}",
+                                xsec_weight, analysis,
+                                is_data=is_data, corrections=corrections,
+                                sys_values=sys_values, year=year,
+                            )
+
+            # Block 3: Weight-only systematics
+            for corr in corrections:
+                if corr.type != "event" or not corr.uncertainty_sources:
+                    continue
+                for source in corr.uncertainty_sources:
+                    if source.varies_with:
+                        continue
+                    for direction_idx, direction in enumerate(["up", "down"]):
+                        sys_values = nominal_sys_values.copy()
+                        sys_values[corr.name] = source.up_and_down_idx[direction_idx]
+                        if self.config.general.run_histogramming:
+                            self.histogramming(
+                                nom_objects, nom_events, process,
+                                f"{source.name}_{direction}",
+                                xsec_weight, analysis,
+                                is_data=is_data, corrections=corrections,
+                                sys_values=sys_values, year=year,
+                            )
+
+            # Block 4: Foreign-year nominal fills
+            # Year-decorrelated variations from other years need this year's
+            # nominal contribution to produce complete histograms.
+            if self._year_keyed_corrections and self.config.general.run_histogramming:
+                current_variations = self._collect_produced_variation_names(corrections)
+                all_variations = self._collect_all_variation_names()
+                foreign_year_variations = all_variations - current_variations
+
+                for var_name in sorted(foreign_year_variations):
                     self.histogramming(
-                        obj_copies_corrected,
-                        events,
-                        process,
-                        varname,
-                        xsec_weight,
-                        analysis,
-                        is_data=is_data,
-                        event_syst=syst,
-                        direction=direction,
+                        nom_objects, nom_events, process, var_name,
+                        xsec_weight, analysis,
+                        is_data=is_data, corrections=corrections,
+                        sys_values=nominal_sys_values, year=year,
                     )
 
     def run_fit(

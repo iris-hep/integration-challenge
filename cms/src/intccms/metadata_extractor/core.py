@@ -5,7 +5,7 @@ and event aggregation. All functions are stateless and have no side effects,
 making them easily testable.
 """
 
-from typing import Any, Dict, List, Tuple, TypedDict
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
 from collections import defaultdict
 import dataclasses
 import logging
@@ -128,6 +128,7 @@ def build_fileset_entry(
     variation: str,
     xsec: float,
     is_data: bool,
+    year: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Build a single fileset entry for coffea.
@@ -149,6 +150,8 @@ def build_fileset_entry(
         Cross-section in picobarns
     is_data : bool
         Whether this is real data
+    year : str, optional
+        Correction year (e.g., "2016preVFP", "2017", "2018")
 
     Returns
     -------
@@ -156,7 +159,7 @@ def build_fileset_entry(
         Fileset entry with structure:
         {
             "files": {path: tree_name, ...},
-            "metadata": {process, variation, xsec, is_data}
+            "metadata": {process, variation, xsec, is_data, year}
         }
 
     Examples
@@ -179,6 +182,7 @@ def build_fileset_entry(
             "variation": variation,
             "xsec": xsec,
             "is_data": is_data,
+            "year": year,
         }
     }
 

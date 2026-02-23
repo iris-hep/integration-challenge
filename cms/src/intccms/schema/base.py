@@ -3,13 +3,54 @@
 This module provides the foundational classes used throughout the schema package.
 """
 
-from typing import Annotated, Any, Callable, Dict, List, Optional, Tuple
+from typing import Annotated, Any, Callable, Dict, List, NamedTuple, Optional
 
 from pydantic import BaseModel, Field
 
 
-# Type alias for (object, variable) pairs
-ObjVar = Tuple[str, Optional[str]]
+class ObjVar(NamedTuple):
+    """Reference to event object field for correctionlib/functor args.
+
+    A NamedTuple that specifies (object, field) for accessing event data.
+    Supports tuple unpacking: `obj, field = ObjVar("Muon", "pt")`
+
+    Parameters
+    ----------
+    obj : str
+        Object collection name (e.g., "Muon", "Jet", "Pileup")
+    field : Optional[str]
+        Field name within the object (e.g., "pt", "eta"). If None, the entire
+        object is passed.
+
+    Examples
+    --------
+    >>> ObjVar("Muon", "pt")      # events["Muon"]["pt"]
+    >>> ObjVar("Jet", "eta")      # events["Jet"]["eta"]
+    >>> ObjVar("Pileup", "nTrueInt")  # events["Pileup"]["nTrueInt"]
+    >>> obj, field = ObjVar("Muon", "pt")  # unpacking works
+    """
+    obj: str
+    field: Optional[str] = None
+
+
+class Sys:
+    """Marker for systematic string insertion point in correctionlib args.
+
+    Create an instance in your config to indicate where the systematic
+    variation string should be inserted.
+
+    Examples
+    --------
+    >>> from intccms.schema.base import ObjVar, Sys
+    >>> SYS = Sys()  # create marker instance
+    >>> # B-tag: systematic first
+    >>> args = [SYS, ObjVar("Jet", "hadronFlavour"), ObjVar("Jet", "eta"), ...]
+    >>> # Muon SF: systematic last
+    >>> args = [ObjVar("Muon", "eta"), ObjVar("Muon", "pt"), SYS]
+    """
+
+    def __repr__(self):
+        return "SYS"
 
 
 class WorkerEval:
@@ -58,6 +99,8 @@ _UNSET = object()
 
 class SubscriptableModel(BaseModel):
     """A Pydantic BaseModel that supports dictionary-style item access."""
+
+    model_config = {"arbitrary_types_allowed": True}
 
     def __getitem__(self, key):
         """Allows dictionary-style `model[key]` access."""

@@ -184,9 +184,6 @@ def filter_invalid_systematics(
             # Keep the histogram (filtering happens during ROOT export)
             filtered[channel][observable] = hist
 
-    if skipped_count > 0:
-        logger.info(f"Filtered {skipped_count} invalid systematic variations from data samples")
-
     return filtered
 
 

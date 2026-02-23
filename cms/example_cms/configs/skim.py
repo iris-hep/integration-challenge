@@ -14,6 +14,7 @@ from typing import List, Tuple
 from coffea.analysis_tools import PackedSelection
 from coffea.lumi_tools import LumiMask
 from intccms.schema import WorkerEval
+from intccms.schema.base import ObjVar
 #from .cuts import lumi_mask
 
 import awkward as ak
@@ -84,7 +85,7 @@ for year, runs, lm_func in year_run_config:
   for _ in runs:
       lumi_mask_configs.append({
           "function": lm_func,
-          "use": [("event", "run"), ("event", "luminosityBlock")],
+          "use": [ObjVar("event", "run"), ObjVar("event", "luminosityBlock")],
       })
 
 
@@ -94,6 +95,15 @@ for year, runs, lm_func in year_run_config:
 
 REDIRECTOR = "root://xcache/"
 YEARS = ["2016", "2017", "2018"]
+
+# Mapping from dataset year to correction year (for systematics)
+# 2016 uses preVFP corrections (postVFP to be added later)
+YEAR_TO_CORRECTION_YEAR = {
+    "2016": "2016preVFP",
+    "2017": "2017",
+    "2018": "2018",
+}
+CORRECTION_YEARS = tuple(YEAR_TO_CORRECTION_YEAR[y] for y in YEARS)
 
 # WJets HT-binned samples
 WJETS_DATASETS = [
@@ -149,6 +159,7 @@ datasets_config = [
     {
         "name": "signal",
         "directories": tuple(f"example_cms/datasets/{year}/ZPrimeToTT_M2000_W200/" for year in YEARS),
+        "years": CORRECTION_YEARS,
         "cross_sections": get_cross_sections_for_datasets(YEARS, ["ZPrimeToTT_M2000_W200"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -159,6 +170,7 @@ datasets_config = [
     {
         "name": "ttbar_semilep",
         "directories": tuple(f"example_cms/datasets/{year}/TTToSemiLeptonic/" for year in YEARS),
+        "years": CORRECTION_YEARS,
         "cross_sections": get_cross_sections_for_datasets(YEARS, ["TTToSemiLeptonic"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -169,6 +181,7 @@ datasets_config = [
     {
         "name": "ttbar_had",
         "directories": tuple(f"example_cms/datasets/{year}/TTToHadronic/" for year in YEARS),
+        "years": CORRECTION_YEARS,
         "cross_sections": get_cross_sections_for_datasets(YEARS, ["TTToHadronic"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -179,6 +192,7 @@ datasets_config = [
     {
         "name": "ttbar_lep",
         "directories": tuple(f"example_cms/datasets/{year}/TTTo2L2Nu/" for year in YEARS),
+        "years": CORRECTION_YEARS,
         "cross_sections": get_cross_sections_for_datasets(YEARS, ["TTTo2L2Nu"]),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -189,6 +203,7 @@ datasets_config = [
     {
         "name": "wjets",
         "directories": tuple(f"example_cms/datasets/{year}/{ds}/" for year in YEARS for ds in WJETS_DATASETS),
+        "years": tuple(YEAR_TO_CORRECTION_YEAR[year] for year in YEARS for _ in WJETS_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, WJETS_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -199,6 +214,7 @@ datasets_config = [
     {
         "name": "dyjets",
         "directories": tuple(f"example_cms/datasets/{year}/{ds}/" for year in YEARS for ds in DYJETS_DATASETS),
+        "years": tuple(YEAR_TO_CORRECTION_YEAR[year] for year in YEARS for _ in DYJETS_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, DYJETS_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -209,6 +225,7 @@ datasets_config = [
     {
         "name": "single_top",
         "directories": tuple(f"example_cms/datasets/{year}/{ds}/" for year in YEARS for ds in SINGLETOP_DATASETS),
+        "years": tuple(YEAR_TO_CORRECTION_YEAR[year] for year in YEARS for _ in SINGLETOP_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, SINGLETOP_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -219,6 +236,7 @@ datasets_config = [
     {
         "name": "qcd",
         "directories": tuple(f"example_cms/datasets/{year}/{ds}/" for year in YEARS for ds in QCD_DATASETS),
+        "years": tuple(YEAR_TO_CORRECTION_YEAR[year] for year in YEARS for _ in QCD_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, QCD_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -229,6 +247,7 @@ datasets_config = [
     {
         "name": "diboson",
         "directories": tuple(f"example_cms/datasets/{year}/{ds}/" for year in YEARS for ds in DIBOSON_DATASETS),
+        "years": tuple(YEAR_TO_CORRECTION_YEAR[year] for year in YEARS for _ in DIBOSON_DATASETS),
         "cross_sections": get_cross_sections_for_datasets(YEARS, DIBOSON_DATASETS),
         "file_pattern": "*.txt",
         "tree_name": "Events",
@@ -242,6 +261,11 @@ datasets_config = [
               f"example_cms/datasets/{year}/SingleMuonRun{run}/"
               for year, runs, _ in year_run_config
               for run in runs
+          ),
+          "years": tuple(
+              YEAR_TO_CORRECTION_YEAR[year]
+              for year, runs, _ in year_run_config
+              for _ in runs
           ),
           "cross_sections": 1.0,
           "file_pattern": "*.txt",
@@ -289,7 +313,7 @@ def default_skim_selection(puppimet, hlt):
 
 skimming_config = {
     "function": default_skim_selection,
-    "use": [("PuppiMET", None), ("HLT", None)],
+    "use": [ObjVar("PuppiMET", None), ObjVar("HLT", None)],
     "chunk_size": 200_000,
     "tree_name": "Events",
     # "output": {
