@@ -83,8 +83,8 @@ DEEPCSV_WP_THRESHOLDS = {
 }
 
 # JES sys-string templates accepted by the deepJet_shape btag evaluator.
-# Used in reruns_with to declare btag sensitivity to JEC object corrections.
-# Convention: {direction}_<name> where <name> matches the object correction name.
+# Used to build btag JES uncertainty sources with varies_with linkage.
+# Convention: {direction}_<name> where <name> matches the JEC source name.
 # Only individual sources (not regrouped or total) — matches JecConfigAK4.json Full set.
 # Year-correlated sources (17 individual, same across all years):
 _BTAG_JES_CORRELATED = [
@@ -120,17 +120,6 @@ _BTAG_JES_DECORRELATED_BASES = [
     "jesRelativeStatHF",
     "jesTimePtEta",
 ]
-
-
-def _get_btag_jes_reruns_with(year: str) -> list:
-    """Build the full btag JES reruns_with list including year-decorrelated sources."""
-    # 2016preVFP/postVFP both use "2016" as the year suffix in btag sys strings
-    year_suffix = "2016" if year.startswith("2016") else year
-    year_specific = [
-        f"{{direction}}_{base}_{year_suffix}"
-        for base in _BTAG_JES_DECORRELATED_BASES
-    ]
-    return _BTAG_JES_CORRELATED + year_specific
 
 
 # ==============================================================================
@@ -429,6 +418,33 @@ def _get_corrections_for_year(year: str) -> list:
         ObjVar("Jet", "btagDeepB"),
     ]
 
+    btag_sources = [
+        {"name": "btag_hf", "up_and_down_idx": ["up_hf", "down_hf"]},
+        {"name": "btag_lf", "up_and_down_idx": ["up_lf", "down_lf"]},
+        {"name": "btag_cferr1", "up_and_down_idx": ["up_cferr1", "down_cferr1"]},
+        {"name": "btag_cferr2", "up_and_down_idx": ["up_cferr2", "down_cferr2"]},
+        {"name": f"btag_hfstats1_{year}", "up_and_down_idx": ["up_hfstats1", "down_hfstats1"]},
+        {"name": f"btag_hfstats2_{year}", "up_and_down_idx": ["up_hfstats2", "down_hfstats2"]},
+        {"name": f"btag_lfstats1_{year}", "up_and_down_idx": ["up_lfstats1", "down_lfstats1"]},
+        {"name": f"btag_lfstats2_{year}", "up_and_down_idx": ["up_lfstats2", "down_lfstats2"]},
+    ]
+
+    # JES-linked btag sources: varied together with JEC object sources
+    for template in _BTAG_JES_CORRELATED:
+        jec_name = template.replace("{direction}_", "")
+        btag_sources.append({
+            "name": f"btag_{jec_name}",
+            "up_and_down_idx": [template.format(direction="up"), template.format(direction="down")],
+            "varies_with": [jec_name],
+        })
+    for base in _BTAG_JES_DECORRELATED_BASES:
+        jec_name = f"{base}_{year_suffix}"
+        btag_sources.append({
+            "name": f"btag_{jec_name}",
+            "up_and_down_idx": [f"up_{jec_name}", f"down_{jec_name}"],
+            "varies_with": [jec_name],
+        })
+
     corrections.append({
         "name": "btag",
         "file": get_correction_file(year, "btagging"),
@@ -441,16 +457,7 @@ def _get_corrections_for_year(year: str) -> list:
         "use_correctionlib": True,
         "op": "mult",
         "nominal_idx": "central",
-        "uncertainty_sources": [
-            {"name": "btag_hf", "up_and_down_idx": ["up_hf", "down_hf"]},
-            {"name": "btag_lf", "up_and_down_idx": ["up_lf", "down_lf"]},
-            {"name": "btag_cferr1", "up_and_down_idx": ["up_cferr1", "down_cferr1"]},
-            {"name": "btag_cferr2", "up_and_down_idx": ["up_cferr2", "down_cferr2"]},
-            {"name": f"btag_hfstats1_{year}", "up_and_down_idx": ["up_hfstats1", "down_hfstats1"]},
-            {"name": f"btag_hfstats2_{year}", "up_and_down_idx": ["up_hfstats2", "down_hfstats2"]},
-            {"name": f"btag_lfstats1_{year}", "up_and_down_idx": ["up_lfstats1", "down_lfstats1"]},
-            {"name": f"btag_lfstats2_{year}", "up_and_down_idx": ["up_lfstats2", "down_lfstats2"]},
-        ],
+        "uncertainty_sources": btag_sources,
     })
 
     return corrections

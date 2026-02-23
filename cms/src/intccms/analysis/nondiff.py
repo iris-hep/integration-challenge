@@ -217,7 +217,7 @@ class NonDiffAnalysis(Analysis):
         Three-block structure:
         1. Nominal: prepare objects, fill histograms with all event weights nominal
         2. Object systematics (JEC): re-prepare objects with varied jet pT,
-           fill histograms with btag weight overrides via reruns_with
+           fill histograms with combined weight overrides via varies_with
         3. Weight systematics: use nominal objects, vary one event weight at a time
 
         Parameters
@@ -297,13 +297,22 @@ class NonDiffAnalysis(Analysis):
                             varied_source=source, direction=direction,
                             year=year,
                         )
+                        # Override event corrections linked via varies_with
+                        sys_values = nominal_sys_values.copy()
+                        for evt_corr in corrections:
+                            if evt_corr.type != "event" or not evt_corr.uncertainty_sources:
+                                continue
+                            for evt_source in evt_corr.uncertainty_sources:
+                                if evt_source.varies_with and source.name in evt_source.varies_with:
+                                    direction_idx = 0 if direction == "up" else 1
+                                    sys_values[evt_corr.name] = evt_source.up_and_down_idx[direction_idx]
                         if self.config.general.run_histogramming:
                             self.histogramming(
                                 objects, filtered_events, process,
                                 f"{source.name}_{direction}",
                                 xsec_weight, analysis,
                                 is_data=is_data, corrections=corrections,
-                                sys_values=nominal_sys_values, year=year,
+                                sys_values=sys_values, year=year,
                             )
 
             # Block 3: Weight-only systematics
@@ -311,6 +320,8 @@ class NonDiffAnalysis(Analysis):
                 if corr.type != "event" or not corr.uncertainty_sources:
                     continue
                 for source in corr.uncertainty_sources:
+                    if source.varies_with:
+                        continue
                     for direction_idx, direction in enumerate(["up", "down"]):
                         sys_values = nominal_sys_values.copy()
                         sys_values[corr.name] = source.up_and_down_idx[direction_idx]

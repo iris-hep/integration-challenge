@@ -441,6 +441,16 @@ class UncertaintySourceConfig(SubscriptableModel):
             description="Custom function for down variation (non-correctionlib path).",
         ),
     ]
+    varies_with: Annotated[
+        Optional[List[str]],
+        Field(
+            default=None,
+            description="Names of object correction uncertainty sources that trigger "
+            "this source's evaluation. Sources with varies_with are combined with "
+            "the object variation (single nuisance parameter) and skipped in the "
+            "standalone weight systematics loop.",
+        ),
+    ]
 
 
 class CorrectionConfig(SubscriptableModel):
@@ -519,18 +529,6 @@ class CorrectionConfig(SubscriptableModel):
         Field(default=None, description="Target (object, variable) to modify"),
     ]
 
-    reruns_with: Annotated[
-        Optional[List[str]],
-        Field(
-            default=None,
-            description="List of sys-string templates this correction is sensitive to "
-            "when object corrections vary. Each template has the form "
-            "'{direction}_<object_correction_name>' where {direction} is replaced "
-            "with 'up'/'down'. The part after '{direction}_' identifies which "
-            "object correction triggers this override.",
-        ),
-    ]
-
     applies_to: Annotated[
         Literal["mc", "data", "both"],
         Field(
@@ -585,6 +583,14 @@ class CorrectionConfig(SubscriptableModel):
                     "If correction 'type' is 'object', "
                     "target field must not be None."
                 )
+            if self.uncertainty_sources:
+                for source in self.uncertainty_sources:
+                    if source.varies_with:
+                        raise ValueError(
+                            f"varies_with on object correction source "
+                            f"'{source.name}' is not supported "
+                            f"(object variations are applied one at a time)"
+                        )
         return self
 
 
