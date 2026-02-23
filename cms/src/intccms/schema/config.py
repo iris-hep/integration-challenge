@@ -122,6 +122,33 @@ class Config(SubscriptableModel):
                     "Duplicate correction names found in configuration."
                 )
 
+        # Check for duplicate uncertainty source names across all corrections.
+        # Source names become histogram variation labels, so they must be unique.
+        def _collect_source_names(corr_list):
+            source_names = []
+            for corr in corr_list:
+                if corr.uncertainty_sources:
+                    for source in corr.uncertainty_sources:
+                        source_names.append(source.name)
+            return source_names
+
+        if isinstance(self.corrections, dict):
+            for year, corr_list in self.corrections.items():
+                source_names = _collect_source_names(corr_list)
+                if len(source_names) != len(set(source_names)):
+                    dupes = [n for n in source_names if source_names.count(n) > 1]
+                    raise ValueError(
+                        f"Duplicate uncertainty source names in year '{year}': "
+                        f"{sorted(set(dupes))}"
+                    )
+        else:
+            source_names = _collect_source_names(self.corrections)
+            if len(source_names) != len(set(source_names)):
+                dupes = [n for n in source_names if source_names.count(n) > 1]
+                raise ValueError(
+                    f"Duplicate uncertainty source names: {sorted(set(dupes))}"
+                )
+
         # Check for duplicate systematic names (handle both list and dict formats)
         if isinstance(self.systematics, dict):
             for year, syst_list in self.systematics.items():

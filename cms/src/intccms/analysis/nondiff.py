@@ -107,22 +107,19 @@ class NonDiffAnalysis(Analysis):
         analysis: str,
         is_data: bool = False,
         corrections: Optional[list] = None,
-        varied_name: Optional[str] = None,
-        direction: Literal["up", "down", "nominal"] = "nominal",
-        weight_overrides: Optional[Dict[str, str]] = None,
+        sys_values: Optional[Dict[str, str]] = None,
         year: Optional[str] = None,
     ) -> None:
         """Apply channel selections and fill histograms with combined event weights.
 
         All event-level corrections are applied multiplicatively to weights.
-        One correction is varied at a time (via varied_name/direction for
-        Block 3), or JEC-context overrides are applied (via weight_overrides
-        for Block 2). Unvaried corrections use nominal direction.
+        sys_values maps each correction name to its systematic string —
+        nominal for unvaried corrections, varied string for the one being varied.
 
         Parameters
         ----------
         object_copies : dict
-            Filtered event objects (after _prepare_objects).
+            Filtered event objects (after prepare_objects).
         events : ak.Array
             Filtered NanoAOD events (same event count as object_copies).
         process : str
@@ -138,13 +135,9 @@ class NonDiffAnalysis(Analysis):
         corrections : list, optional
             All corrections and systematics; event-level ones are applied as
             weights.
-        varied_name : str, optional
-            Name of the event correction being varied (Block 3).
-        direction : str
-            Variation direction for varied_name.
-        weight_overrides : dict, optional
-            JEC-context sys_value overrides for event corrections (Block 2).
-            Maps correction name to formatted sys_value string.
+        sys_values : dict, optional
+            Maps correction name to systematic string for the Sys() marker.
+            If None or missing entry, falls back to correction's nominal_idx.
         year : str, optional
             Correction year for year-keyed configs.
         """
@@ -189,19 +182,11 @@ class NonDiffAnalysis(Analysis):
                 for corr in corrections:
                     if corr.type != "event":
                         continue
-                    if varied_name and corr.name == varied_name:
-                        weights = self.apply_event_weight_correction(
-                            weights, corr, direction,
-                            object_copies_channel, year)
-                    elif weight_overrides and corr.name in weight_overrides:
-                        weights = self.apply_event_weight_correction(
-                            weights, corr, "nominal",
-                            object_copies_channel, year,
-                            sys_value_override=weight_overrides[corr.name])
-                    else:
-                        weights = self.apply_event_weight_correction(
-                            weights, corr, "nominal",
-                            object_copies_channel, year)
+                    sys_value = (sys_values[corr.name] if sys_values
+                                 else corr.nominal_idx)
+                    weights = self.apply_event_weight_correction(
+                        weights, corr, sys_value,
+                        object_copies_channel, year)
 
             logger.info(
                 f"Number of weighted events in {channel_name}: {ak.sum(weights):.2f}"
@@ -255,13 +240,20 @@ class NonDiffAnalysis(Analysis):
         lumi = self.config.general.lumi
         xsec_weight = 1.0 if is_data else (xsec * lumi / n_gen)
 
-        # Get year-specific corrections and systematics
+        # Get year-specific corrections
         corrections = self.get_corrections_for_year(year)
-        systematics = self.get_systematics_for_year(year)
 
-        # Filter corrections by data/MC applicability.
-        # Caveat: only CorrectionConfig has applies_to; SystematicConfig items
-        # are always MC-only and are guarded by the run_systematics check below.
+        # SystematicConfig is not supported; use uncertainty_sources on
+        # CorrectionConfig instead.
+        systematics = self.get_systematics_for_year(year)
+        if systematics:
+            raise NotImplementedError(
+                f"SystematicConfig is not supported. Migrate to "
+                f"uncertainty_sources on CorrectionConfig: "
+                f"{[s.name for s in systematics]}"
+            )
+
+        # Filter corrections by data/MC applicability
         corrections = [
             c for c in corrections
             if c.applies_to in ("both", "data" if is_data else "mc")
@@ -269,15 +261,12 @@ class NonDiffAnalysis(Analysis):
 
         # Split corrections by type
         object_corrs = [c for c in corrections if c.type == "object"]
-        event_corrs = [c for c in corrections if c.type == "event"]
 
-        # Object corrections with up/down functions (JEC uncertainty sources)
-        systematic_object_corrs = [
-            c for c in object_corrs if c.up_function is not None
-        ]
-
-        # Combined list for weight application in histogramming
-        all_corrections = list(corrections) + list(systematics)
+        # Nominal sys_values: every event correction at its nominal string
+        nominal_sys_values = {
+            c.name: c.nominal_idx
+            for c in corrections if c.type == "event"
+        }
 
         lumi_mask_config = metadata.get("lumi_mask_config") if is_data else None
 
@@ -291,45 +280,48 @@ class NonDiffAnalysis(Analysis):
             self.histogramming(
                 nom_objects, nom_events, process, "nominal",
                 xsec_weight, analysis,
-                is_data=is_data, corrections=all_corrections, year=year,
+                is_data=is_data, corrections=corrections,
+                sys_values=nominal_sys_values, year=year,
             )
 
         if self.config.general.run_systematics and not is_data:
 
-            # Block 2: Object systematics (JEC)
-            for obj_corr in systematic_object_corrs:
-                for direction in ["up", "down"]:
-                    objects, filtered_events = self.prepare_objects(
-                        events, object_corrs, varied_corr=obj_corr,
-                        direction=direction, year=year,
-                    )
-                    overrides = self.get_weight_overrides(
-                        corrections, obj_corr.name, direction,
-                    )
-                    if self.config.general.run_histogramming:
-                        self.histogramming(
-                            objects, filtered_events, process,
-                            f"{obj_corr.name}_{direction}",
-                            xsec_weight, analysis,
-                            is_data=is_data, corrections=all_corrections,
-                            weight_overrides=overrides, year=year,
-                        )
-
-            # Block 3: Weight-only systematics
-            weight_systs = event_corrs + [
-                s for s in systematics if s.type == "event"
-            ]
-            for syst in weight_systs:
-                for direction in ["up", "down"]:
-                    if self.config.general.run_histogramming:
-                        self.histogramming(
-                            nom_objects, nom_events, process,
-                            f"{syst.name}_{direction}",
-                            xsec_weight, analysis,
-                            is_data=is_data, corrections=all_corrections,
-                            varied_name=syst.name, direction=direction,
+            # Block 2: Object systematics
+            for obj_corr in object_corrs:
+                if not obj_corr.uncertainty_sources:
+                    continue
+                for source in obj_corr.uncertainty_sources:
+                    for direction in ["up", "down"]:
+                        objects, filtered_events = self.prepare_objects(
+                            events, object_corrs, varied_corr=obj_corr,
+                            varied_source=source, direction=direction,
                             year=year,
                         )
+                        if self.config.general.run_histogramming:
+                            self.histogramming(
+                                objects, filtered_events, process,
+                                f"{source.name}_{direction}",
+                                xsec_weight, analysis,
+                                is_data=is_data, corrections=corrections,
+                                sys_values=nominal_sys_values, year=year,
+                            )
+
+            # Block 3: Weight-only systematics
+            for corr in corrections:
+                if corr.type != "event" or not corr.uncertainty_sources:
+                    continue
+                for source in corr.uncertainty_sources:
+                    for direction_idx, direction in enumerate(["up", "down"]):
+                        sys_values = nominal_sys_values.copy()
+                        sys_values[corr.name] = source.up_and_down_idx[direction_idx]
+                        if self.config.general.run_histogramming:
+                            self.histogramming(
+                                nom_objects, nom_events, process,
+                                f"{source.name}_{direction}",
+                                xsec_weight, analysis,
+                                is_data=is_data, corrections=corrections,
+                                sys_values=sys_values, year=year,
+                            )
 
     def run_fit(
         self, cabinetry_config: dict[str, Any]

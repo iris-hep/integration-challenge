@@ -216,46 +216,6 @@ class Analysis:
 
         return self._systematics_config[year]
 
-    @staticmethod
-    def get_weight_overrides(
-        corrections: List[Any],
-        obj_corr_name: str,
-        direction: str,
-    ) -> Dict[str, str]:
-        """
-        Build sys_value overrides for corrections sensitive to an object correction.
-
-        Scans corrections for those declaring reruns_with templates matching
-        the given object correction name. Convention: each template has the form
-        "{direction}_<name>" where <name> is the object correction it applies to.
-
-        Parameters
-        ----------
-        corrections : List[CorrectionConfig]
-            All corrections to scan
-        obj_corr_name : str
-            Name of the object correction being varied (e.g. "jesAbsolute")
-        direction : str
-            Variation direction ("up" or "down")
-
-        Returns
-        -------
-        Dict[str, str]
-            Mapping of correction name to formatted sys_value override.
-            E.g. {"btag_hf": "up_jesAbsolute"} when obj_corr_name="jesAbsolute",
-            direction="up"
-        """
-        overrides = {}
-        for corr in corrections:
-            if not corr.reruns_with:
-                continue
-            for template in corr.reruns_with:
-                target_name = template.replace("{direction}_", "")
-                if target_name == obj_corr_name:
-                    overrides[corr.name] = template.format(direction=direction)
-                    break
-        return overrides
-
     def get_corrlib_evaluator(self, name: str, year: Optional[str]) -> CorrectionSet:
         """
         Get correctionlib evaluator for a correction, handling year-keyed lookups.
@@ -925,6 +885,7 @@ class Analysis:
         events: ak.Array,
         object_corrs: List[Any],
         varied_corr: Optional[Any] = None,
+        varied_source: Optional[Any] = None,
         direction: Literal["up", "down", "nominal"] = "nominal",
         is_data: bool = False,
         lumi_mask_config: Optional[Any] = None,
@@ -934,10 +895,9 @@ class Analysis:
 
         Pipeline: copy → object corrections → masks → baseline → lumi → ghost.
 
-        When varying an object correction (varied_corr is not None), that
-        correction is applied with the given direction while all others are
-        applied nominally. Corrections without a nominal_function (like JEC
-        uncertainty sources) produce no change when direction="nominal".
+        All object corrections are applied nominally. If varied_corr and
+        varied_source are provided, that correction's source variation is
+        applied on top (or instead of nominal, depending on is_delta).
 
         Parameters
         ----------
@@ -946,9 +906,11 @@ class Analysis:
         object_corrs : List
             Object-level corrections to apply
         varied_corr : optional
-            Specific object correction to vary
+            The correction being varied (matched by name)
+        varied_source : optional
+            UncertaintySourceConfig for the variation
         direction : str
-            Direction for the varied correction
+            Direction for the varied source ("up", "down", or "nominal")
         is_data : bool
             Whether processing data
         lumi_mask_config : optional
@@ -963,15 +925,11 @@ class Analysis:
         """
         obj_copies = self.get_object_copies(events)
 
-        # Apply object corrections: vary one, all others nominal
-        if varied_corr is not None:
-            for corr in object_corrs:
-                d = direction if corr.name == varied_corr.name else "nominal"
-                self.apply_object_corrections(obj_copies, [corr], d, year)
-        else:
-            self.apply_object_corrections(
-                obj_copies, object_corrs, "nominal", year=year
-            )
+        self.apply_object_corrections(
+            obj_copies, object_corrs, year=year,
+            varied_corr=varied_corr, varied_source=varied_source,
+            direction=direction,
+        )
 
         # Apply object masks (per-object: jet pT > 30, etc.)
         obj_copies = self.apply_object_masks(obj_copies)
