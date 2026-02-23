@@ -55,12 +55,105 @@ The file suffix is fixed to `{dataset}/file_{index}/part_{chunk}.{ext}`, so swit
 - Downstream steps load the same path, so no separate cache copy is needed; cached Awkward objects are still produced automatically for faster reruns.
 - Dataset-level options such as lumi masks live next to each dataset definition (for example `lumi_mask`: `{ "function": cuts.lumi_mask, "use": [...], "static_kwargs": {"lumifile": "...json"} }`).
 
-## Running the workflows
-Three notebooks cover the common workflows:
+### Quick start: workflow modes
 
-1. **Full processing** – runs the production chain (metadata → skimming → histogramming) over Run‑2.
-2. **Processing + metrics** – identical pipeline plus worker/throughput dashboards (uses `metrics.worker_tracker`).
-3. **Input inspector** – characterises inputs (event counts, branch/compression sizes, optional Rucio-backed file sizes) without running the full analysis.
+The processor supports four workflow modes, controlled by two config flags (`save_skimmed_output` and `run_analysis`):
+
+| Mode | `save_skimmed_output` | `run_analysis` | Description |
+|------|-----------------------|----------------|-------------|
+| Skim + Analysis | `True` | `True` | Skim events to disk **and** run histogramming in one pass |
+| Analysis only | `False` | `True` | Apply skim filter on-the-fly, no files saved |
+| Skim only | `True` | `False` | Save skimmed files to disk, skip histogramming |
+| Analysis on skimmed | `False` | `True` | Read previously skimmed files as input (set `use_skimmed_input=True`) |
+
+See `full_run_with_skimming.ipynb` for a notebook that runs all four modes with performance metrics.
+
+### Output format and destination
+
+The `output` stanza controls serialization and storage:
+
+| `format` | `output_dir` example | Notes |
+|-----------|----------------------|-------|
+| `parquet` | `./skimmed/` or `s3://bucket/path` | Default; uses `ak.to_parquet` / `ak.from_parquet` |
+| `ttree` | `root://xrootd.server/path` | ROOT TTree via `uproot.WritableDirectory` |
+| `rntuple` | `root://xrootd.server/path` | ROOT RNTuple (experimental) |
+
+### Secrets and credentials
+
+Storage credentials (e.g. AWS keys for S3) belong in an **untracked `.env` file** at the repo root — never hardcode them in notebooks or config modules. See `.env.example` for the expected variable names. Load them early with:
+
+```python
+from intccms.utils.tools import load_dotenv
+load_dotenv()  # reads .env into os.environ
+```
+
+Dask workers run in separate processes and don't inherit the client's environment. Pass `propagate_aws_env=True` to `acquire_client` so credentials are forwarded to every worker via a built-in plugin:
+
+```python
+from intccms.utils.dask_client import acquire_client
+with acquire_client(AF, propagate_aws_env=True) as (client, cluster):
+    ...
+```
+
+For skimming output to remote storage, use `WorkerEval` to defer credential resolution until the code actually runs on the worker (avoiding serialization of raw secrets):
+
+```python
+from intccms.schema.base import WorkerEval
+"storage_options": {
+    "key": WorkerEval(lambda: os.environ["AWS_ACCESS_KEY_ID"]),
+    "secret": WorkerEval(lambda: os.environ["AWS_SECRET_ACCESS_KEY"]),
+}
+```
+
+## Systematics
+
+Systematic uncertainties are configured per year in `example_cms/configs/systematics.py`. Each correction can carry nominal scale factors and one or more uncertainty sources (up/down variations).
+
+### Correction types
+
+- **Object-level** (`type: "object"`): modify a physics quantity (e.g. jet pT) and propagate through selection and histogramming.
+- **Event-weight** (`type: "event"`): multiply the event weight (e.g. pileup reweighting, b-tag SFs).
+
+### Year-keyed (decorrelated) systematics
+
+When the corrections config is a `dict` keyed by year (e.g. `{"2016preVFP": [...], "2017": [...], "2018": [...]}`), sources whose names include a year suffix (e.g. `pileup_2017`, `jesAbsoluteStat_2018`) are decorrelated: each year's variation is independent. Sources without a year suffix (e.g. `muon_id_sf`, `jesFlavorQCD`) are correlated across all years.
+
+When processing year Y, the processor automatically fills other years' decorrelated variation names with nominal content so that merged histograms are complete.
+
+### Currently implemented corrections
+
+| Category | Sources | Correlation | Notes |
+|----------|---------|-------------|-------|
+| **Muon** | ID SF, ISO SF, trigger SF | 3 correlated | correctionlib, leading muon only |
+| **Pileup** | pileup reweighting | 3 decorrelated (1/year) | correctionlib, `nTrueInt` |
+| **JEC** | L1FastJet + L2Relative nominal, 27 uncertainty sources | 17 correlated + 10 decorrelated | custom functions wrapping correctionlib |
+| **B-tagging** | deepJet_shape nominal, 35 uncertainty sources | 4 shape + 4 stats (decorrelated) + 27 JES-linked | JES btag sources co-vary with JEC via `varies_with` |
+
+### Adding a correction with uncertainties
+
+```python
+{
+    "name": "pileup_2017",
+    "file": "path/to/pileup.json.gz",
+    "type": "event",
+    "args": [ObjVar("Pileup", "nTrueInt"), SYS],
+    "op": "mult",
+    "key": "Collisions17_UltraLegacy_goldenJSON",
+    "use_correctionlib": True,
+    "nominal_idx": "nominal",
+    "uncertainty_sources": [
+        {"name": "pileup_2017", "up_and_down_idx": ["up", "down"]},
+    ],
+}
+```
+
+## Running the workflows
+Four notebooks cover the common workflows:
+
+1. **Full processing** (`full_run.ipynb`) – runs the production chain (metadata → skimming → histogramming) over Run‑2.
+2. **Processing + metrics** (`full_run_with_metrics.ipynb`) – identical pipeline plus worker/throughput dashboards (uses [roastcoffea](https://github.com/MoAly98/roastcoffea)).
+3. **Skimming workflows** (`full_run_with_skimming.ipynb`) – demonstrates all four skimming workflow modes with per-mode performance metrics.
+4. **Input inspector** – characterises inputs (event counts, branch/compression sizes, optional Rucio-backed file sizes) without running the full analysis.
 
 
 ```sh

@@ -496,11 +496,16 @@ def _get_corrections_for_year(year: str) -> list:
             "varies_with": [jec_name],
             **_hf_transforms,
         })
+    # 2016preVFP btag file uses bare evaluator strings for individual
+    # decorrelated JES sources; 2016postVFP/2017/2018 include the year suffix.
+    btag_jes_eval_suffix = "" if year == "2016preVFP" else f"_{year_suffix}"
+
     for base in _BTAG_JES_DECORRELATED_BASES:
         jec_name = f"{base}_{year_suffix}"
+        eval_name = f"{base}{btag_jes_eval_suffix}"
         btag_sources.append({
             "name": f"btag_{jec_name}",
-            "up_and_down_idx": [f"up_{jec_name}", f"down_{jec_name}"],
+            "up_and_down_idx": [f"up_{eval_name}", f"down_{eval_name}"],
             "varies_with": [jec_name],
             **_hf_transforms,
         })
