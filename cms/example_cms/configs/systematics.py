@@ -287,13 +287,38 @@ def _get_corrections_for_year(year: str) -> list:
     campaign = JEC_CAMPAIGNS[year]
     year_suffix = "2016" if year.startswith("2016") else year
 
+    # ------------------------------------------------------------------
+    # JEC: one correction with nominal + 27 uncertainty sources
+    # Nominal: L1FastJet + L2Relative, (area, eta, pt, rho) -> factor
+    # Sources: (eta, pt) -> (1 +/- delta), applied as delta on nominal
+    # ------------------------------------------------------------------
+    jec_sources = []
+
+    # Correlated across years (17 sources)
+    for source in _JEC_UNC_CORRELATED:
+        evaluator_key = f"{campaign}_{source}_AK4PFchs"
+        jec_sources.append({
+            "name": f"jes{source}",
+            "args": [ObjVar("Jet", "eta"), ObjVar("Jet", "pt")],
+            "up_function": _make_jec_unc_func(ject_corrset, evaluator_key, +1),
+            "down_function": _make_jec_unc_func(ject_corrset, evaluator_key, -1),
+            "is_delta": True,
+        })
+
+    # Decorrelated by year (10 sources)
+    for source in _JEC_UNC_DECORRELATED:
+        evaluator_key = f"{campaign}_{source}_AK4PFchs"
+        jec_sources.append({
+            "name": f"jes{source}_{year_suffix}",
+            "args": [ObjVar("Jet", "eta"), ObjVar("Jet", "pt")],
+            "up_function": _make_jec_unc_func(ject_corrset, evaluator_key, +1),
+            "down_function": _make_jec_unc_func(ject_corrset, evaluator_key, -1),
+            "is_delta": True,
+        })
+
     corrections = [
-        # ------------------------------------------------------------------
-        # JEC nominal (L1FastJet + L2Relative) — baseline, always applied
-        # Custom function: (area, eta, pt, rho) -> total multiplicative factor
-        # ------------------------------------------------------------------
         {
-            "name": "jec_nominal",
+            "name": "jec",
             "type": "object",
             "use_correctionlib": False,
             "file": jec_file,
@@ -304,48 +329,13 @@ def _get_corrections_for_year(year: str) -> list:
             ],
             "op": "mult",
             "nominal_function": _make_jec_nominal_func(
-                            ject_corrset,
-                            f"{campaign}_L1FastJet_AK4PFchs",
-                            f"{campaign}_L2Relative_AK4PFchs",
-                        ),
+                ject_corrset,
+                f"{campaign}_L1FastJet_AK4PFchs",
+                f"{campaign}_L2Relative_AK4PFchs",
+            ),
+            "uncertainty_sources": jec_sources,
         },
     ]
-
-    # ------------------------------------------------------------------
-    # JEC uncertainty sources (correlated across years)
-    # Custom function: (eta, pt) -> (1 +/- delta)
-    # ------------------------------------------------------------------
-    for source in _JEC_UNC_CORRELATED:
-        evaluator_key = f"{campaign}_{source}_AK4PFchs"
-        corrections.append({
-            "name": f"jes{source}",
-            "type": "object",
-            "use_correctionlib": False,
-            "file": jec_file,
-            "target": ObjVar("Jet", "pt"),
-            "args": [ObjVar("Jet", "eta"), ObjVar("Jet", "pt")],
-            "op": "mult",
-            "up_function": _make_jec_unc_func(ject_corrset, evaluator_key, +1),
-            "down_function": _make_jec_unc_func(ject_corrset, evaluator_key, -1),
-        })
-
-    # ------------------------------------------------------------------
-    # JEC uncertainty sources (decorrelated by year)
-    # Custom function: (eta, pt) -> (1 +/- delta)
-    # ------------------------------------------------------------------
-    for source in _JEC_UNC_DECORRELATED:
-        evaluator_key = f"{campaign}_{source}_AK4PFchs"
-        corrections.append({
-            "name": f"jes{source}_{year_suffix}",
-            "type": "object",
-            "use_correctionlib": False,
-            "file": jec_file,
-            "target": ObjVar("Jet", "pt"),
-            "args": [ObjVar("Jet", "eta"), ObjVar("Jet", "pt")],
-            "op": "mult",
-            "up_function": _make_jec_unc_func(ject_corrset, evaluator_key, +1),
-            "down_function": _make_jec_unc_func(ject_corrset, evaluator_key, -1),
-        })
 
     corrections += [
         # ------------------------------------------------------------------
