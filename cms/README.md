@@ -40,9 +40,8 @@ preprocess = {
         "function": default_skim_selection,
         "use": [("PuppiMET", None), ("HLT", None)],
         "output": {
-            "format": "parquet",          # other options: root_ttree, rntuple, safetensors (stubs)
-            "local": True,
-            "base_uri": "s3://bucket",    # optional override for remote storage
+            "format": "parquet",          # other options: ttree, rntuple
+            "output_dir": "s3://bucket/path",  # optional; defaults to local skimmed_dir
             "to_kwargs": {"compression": "zstd"},   # forwarded to ak.to_parquet
             "from_kwargs": {"storage_options": {...}}  # forwarded to NanoEventsFactory.from_parquet
         },
@@ -50,7 +49,7 @@ preprocess = {
 }
 ```
 
-The file suffix is fixed to `{dataset}/file_{index}/part_{chunk}.{ext}`, so switching between local and remote storage only requires changing the `local` flag and optional `base_uri`.
+The file suffix is fixed to `{dataset}/file_{index}/part_{chunk}.{ext}`, so switching between local and remote storage only requires changing `output_dir`.
 
 - Set `general.run_skimming=True` to regenerate skims. Use `datasets.max_files` to limit input size when experimenting.
 - Downstream steps load the same path, so no separate cache copy is needed; cached Awkward objects are still produced automatically for faster reruns.
@@ -78,7 +77,7 @@ Some practical knobs you’re likely to tweak:
 
 - **Skimming mode**  
   - Toggle `general.run_skimming` / `general.use_skimmed_input` to control whether new skims are produced or existing ones are consumed.
-  - Adjust `preprocess.skimming.output` (`format`, `local`, `base_uri`) to change serialization (parquet, ROOT, etc.) and storage destination. Use the `inspector.rucio` helper if you want accurate file sizes when skims live remotely.
+  - Adjust `preprocess.skimming.output` (`format`, `output_dir`) to change serialization (parquet, ROOT, etc.) and storage destination. Use the `inspector.rucio` helper if you want accurate file sizes when skims live remotely.
   - To swap in custom logic, provide your own `preprocess.skimming.function` and `use` arguments (mirrors coffea processors) or set `general.analysis="skip"` and plug in a bespoke skimmer.
 
 - **Redirectors**  

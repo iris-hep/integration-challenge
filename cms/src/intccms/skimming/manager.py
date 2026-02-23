@@ -272,7 +272,7 @@ class SkimmingManager:
         for file_path in output_files:
             try:
                 # Determine tree_name for ROOT files
-                if self.config.output.format in ("root", "root_ttree"):
+                if self.config.output.format in ("ttree", "rntuple"):
                     tree_name = reader_kwargs.get("tree_name", self.config.tree_name)
                 else:
                     tree_name = None

@@ -124,7 +124,8 @@ def get_reader(format: str) -> Any:
 
     Args:
         format: File format identifier. Supported values:
-            - "root" or "root_ttree": ROOT TTree format
+            - "ttree": ROOT TTree format
+            - "rntuple": ROOT RNTuple format
             - "parquet": Parquet format
 
     Returns:
@@ -138,8 +139,8 @@ def get_reader(format: str) -> Any:
         >>> events = reader.read("/path/to/file.parquet", None)
     """
     format_map = {
-        "root": RootReader(),
-        "root_ttree": RootReader(),
+        "ttree": RootReader(),
+        "rntuple": RootReader(),
         "parquet": ParquetReader(),
     }
 
