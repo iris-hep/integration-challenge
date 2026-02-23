@@ -400,6 +400,17 @@ class Analysis:
         transform_out = correction.get("transform_out")
         reduce_op = correction.get("reduce")
 
+        # Source-level transform override: if a specific uncertainty source is
+        # being evaluated (sys_value != nominal), use that source's transforms.
+        if correction.get("uncertainty_sources") and sys_value != correction.get("nominal_idx"):
+            for source in correction.uncertainty_sources:
+                if sys_value in (source.up_and_down_idx or []):
+                    if source.transform_in is not None:
+                        transform_in = source.transform_in
+                    if source.transform_out is not None:
+                        transform_out = source.transform_out
+                    break
+
         logger.info(
             "Applying correction: %s/%s (sys=%s) [year=%s]",
             correction_name,

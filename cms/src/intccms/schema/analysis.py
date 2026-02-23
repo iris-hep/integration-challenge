@@ -441,6 +441,24 @@ class UncertaintySourceConfig(SubscriptableModel):
             description="Custom function for down variation (non-correctionlib path).",
         ),
     ]
+    transform_in: Annotated[
+        Optional[Callable],
+        Field(
+            default=None,
+            description="Source-specific input transform. Overrides the parent "
+            "correction's transform_in when this source is being evaluated. "
+            "Receives ObjVar arrays in order, returns transformed arrays.",
+        ),
+    ]
+    transform_out: Annotated[
+        Optional[Callable],
+        Field(
+            default=None,
+            description="Source-specific output transform. Overrides the parent "
+            "correction's transform_out when this source is being evaluated. "
+            "Receives (result, *original_arrays), returns processed result.",
+        ),
+    ]
     varies_with: Annotated[
         Optional[List[str]],
         Field(

@@ -233,12 +233,11 @@ def _btag_valid_mask(eta, pt, disc):
 
 
 def btag_transform_in(hadronFlavour, eta, pt, disc):
-    """Prepare btag inputs: abs(eta), safe flavor for invalid jets.
+    """Nominal btag transform: abs(eta), safe flavor for invalid jets.
 
-    Real hadronFlavour is passed for all jets (no flavor remapping).
-    The evaluator returns SF(central) for flavors irrelevant to a given
-    systematic source. Invalid jets get a safe flavor to avoid correctionlib
-    errors; transform_out masks them to SF=1.0.
+    Used for the "central" evaluation where all flavors (0, 4, 5) are valid.
+    Invalid jets get flavor 0 to avoid correctionlib errors; transform_out
+    masks them to SF=1.0.
     """
     valid = _btag_valid_mask(eta, pt, disc)
     safe_flavor = ak.where(valid, hadronFlavour, 0)
@@ -246,9 +245,49 @@ def btag_transform_in(hadronFlavour, eta, pt, disc):
 
 
 def btag_transform_out(sf, hadronFlavour, eta, pt, disc):
-    """Invalid jets get SF=1.0."""
+    """Nominal btag output: invalid jets get SF=1.0."""
     valid = _btag_valid_mask(eta, pt, disc)
     return ak.where(valid, sf, 1.0)
+
+
+def btag_hf_transform_in(hadronFlavour, eta, pt, disc):
+    """hf/lf/jes btag transform: fake c-jets as light for correctionlib eval.
+
+    The evaluator only accepts flavors 0 and 5 for hf/lf/jes systematics.
+    C-jets (flavor 4) and invalid jets are faked as light (flavor 0);
+    transform_out masks them back to SF=1.0.
+    """
+    valid = _btag_valid_mask(eta, pt, disc)
+    skip = (hadronFlavour == 4) | ~valid
+    fake_flavor = ak.where(skip, 0, hadronFlavour)
+    return (fake_flavor, np.abs(eta), pt, disc)
+
+
+def btag_hf_transform_out(sf, hadronFlavour, eta, pt, disc):
+    """hf/lf/jes btag output: c-jets and invalid jets get SF=1.0."""
+    valid = _btag_valid_mask(eta, pt, disc)
+    skip = (hadronFlavour == 4) | ~valid
+    return ak.where(skip, 1.0, sf)
+
+
+def btag_cferr_transform_in(hadronFlavour, eta, pt, disc):
+    """cferr btag transform: fake non-c jets as c for correctionlib eval.
+
+    The evaluator only accepts flavor 4 for cferr systematics.
+    Non-c jets (flavors 0, 5) and invalid jets are faked as c (flavor 4);
+    transform_out masks them back to SF=1.0.
+    """
+    valid = _btag_valid_mask(eta, pt, disc)
+    skip = (hadronFlavour != 4) | ~valid
+    fake_flavor = ak.where(skip, 4, hadronFlavour)
+    return (fake_flavor, np.abs(eta), pt, disc)
+
+
+def btag_cferr_transform_out(sf, hadronFlavour, eta, pt, disc):
+    """cferr btag output: non-c jets and invalid jets get SF=1.0."""
+    valid = _btag_valid_mask(eta, pt, disc)
+    skip = (hadronFlavour != 4) | ~valid
+    return ak.where(skip, 1.0, sf)
 
 
 # ==============================================================================
@@ -418,24 +457,45 @@ def _get_corrections_for_year(year: str) -> list:
         ObjVar("Jet", "btagDeepB"),
     ]
 
+    # hf/lf sources: evaluator accepts flavors 0 (light) and 5 (bottom) only
+    _hf_transforms = {
+        "transform_in": btag_hf_transform_in,
+        "transform_out": btag_hf_transform_out,
+    }
+    # cferr sources: evaluator accepts flavor 4 (charm) only
+    _cferr_transforms = {
+        "transform_in": btag_cferr_transform_in,
+        "transform_out": btag_cferr_transform_out,
+    }
+
     btag_sources = [
-        {"name": "btag_hf", "up_and_down_idx": ["up_hf", "down_hf"]},
-        {"name": "btag_lf", "up_and_down_idx": ["up_lf", "down_lf"]},
-        {"name": "btag_cferr1", "up_and_down_idx": ["up_cferr1", "down_cferr1"]},
-        {"name": "btag_cferr2", "up_and_down_idx": ["up_cferr2", "down_cferr2"]},
-        {"name": f"btag_hfstats1_{year}", "up_and_down_idx": ["up_hfstats1", "down_hfstats1"]},
-        {"name": f"btag_hfstats2_{year}", "up_and_down_idx": ["up_hfstats2", "down_hfstats2"]},
-        {"name": f"btag_lfstats1_{year}", "up_and_down_idx": ["up_lfstats1", "down_lfstats1"]},
-        {"name": f"btag_lfstats2_{year}", "up_and_down_idx": ["up_lfstats2", "down_lfstats2"]},
+        {"name": "btag_hf", "up_and_down_idx": ["up_hf", "down_hf"],
+         **_hf_transforms},
+        {"name": "btag_lf", "up_and_down_idx": ["up_lf", "down_lf"],
+         **_hf_transforms},
+        {"name": "btag_cferr1", "up_and_down_idx": ["up_cferr1", "down_cferr1"],
+         **_cferr_transforms},
+        {"name": "btag_cferr2", "up_and_down_idx": ["up_cferr2", "down_cferr2"],
+         **_cferr_transforms},
+        {"name": f"btag_hfstats1_{year}", "up_and_down_idx": ["up_hfstats1", "down_hfstats1"],
+         **_hf_transforms},
+        {"name": f"btag_hfstats2_{year}", "up_and_down_idx": ["up_hfstats2", "down_hfstats2"],
+         **_hf_transforms},
+        {"name": f"btag_lfstats1_{year}", "up_and_down_idx": ["up_lfstats1", "down_lfstats1"],
+         **_hf_transforms},
+        {"name": f"btag_lfstats2_{year}", "up_and_down_idx": ["up_lfstats2", "down_lfstats2"],
+         **_hf_transforms},
     ]
 
     # JES-linked btag sources: varied together with JEC object sources
+    # JES sources also only accept flavors 0 and 5
     for template in _BTAG_JES_CORRELATED:
         jec_name = template.replace("{direction}_", "")
         btag_sources.append({
             "name": f"btag_{jec_name}",
             "up_and_down_idx": [template.format(direction="up"), template.format(direction="down")],
             "varies_with": [jec_name],
+            **_hf_transforms,
         })
     for base in _BTAG_JES_DECORRELATED_BASES:
         jec_name = f"{base}_{year_suffix}"
@@ -443,6 +503,7 @@ def _get_corrections_for_year(year: str) -> list:
             "name": f"btag_{jec_name}",
             "up_and_down_idx": [f"up_{jec_name}", f"down_{jec_name}"],
             "varies_with": [jec_name],
+            **_hf_transforms,
         })
 
     corrections.append({
