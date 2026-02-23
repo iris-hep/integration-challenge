@@ -334,6 +334,22 @@ class NonDiffAnalysis(Analysis):
                                 sys_values=sys_values, year=year,
                             )
 
+            # Block 4: Foreign-year nominal fills
+            # Year-decorrelated variations from other years need this year's
+            # nominal contribution to produce complete histograms.
+            if self._year_keyed_corrections and self.config.general.run_histogramming:
+                current_variations = self._collect_produced_variation_names(corrections)
+                all_variations = self._collect_all_variation_names()
+                foreign_year_variations = all_variations - current_variations
+
+                for var_name in sorted(foreign_year_variations):
+                    self.histogramming(
+                        nom_objects, nom_events, process, var_name,
+                        xsec_weight, analysis,
+                        is_data=is_data, corrections=corrections,
+                        sys_values=nominal_sys_values, year=year,
+                    )
+
     def run_fit(
         self, cabinetry_config: dict[str, Any]
     ) -> tuple[Any, Any, Any, Any]:

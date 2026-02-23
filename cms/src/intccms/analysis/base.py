@@ -216,6 +216,29 @@ class Analysis:
 
         return self._systematics_config[year]
 
+    @staticmethod
+    def _collect_produced_variation_names(corrections):
+        """Collect all variation names that Blocks 2+3 would produce."""
+        names = set()
+        for corr in corrections:
+            if not corr.uncertainty_sources:
+                continue
+            for source in corr.uncertainty_sources:
+                if corr.type == "event" and source.varies_with:
+                    continue  # Folded into object variations in Block 2
+                names.add(f"{source.name}_up")
+                names.add(f"{source.name}_down")
+        return names
+
+    def _collect_all_variation_names(self):
+        """Union of produced variation names across all years."""
+        if not self._year_keyed_corrections:
+            return set()
+        all_names = set()
+        for year_corrs in self._corrections_config.values():
+            all_names |= self._collect_produced_variation_names(year_corrs)
+        return all_names
+
     def get_corrlib_evaluator(self, name: str, year: Optional[str]) -> CorrectionSet:
         """
         Get correctionlib evaluator for a correction, handling year-keyed lookups.
