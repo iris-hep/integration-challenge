@@ -1,0 +1,32 @@
+name: Check Notebook Outputs
+
+on:
+  pull_request:
+    paths:
+      - '**/*.ipynb'
+
+jobs:
+  check-stripped:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - run: pip install nbstripout
+
+      - name: Check notebooks are stripped
+        run: |
+          failed=0
+          for nb in $(git diff --name-only --diff-filter=d origin/${{ github.base_ref }}...HEAD -- '*.ipynb'); do
+            if ! nbstripout --is-stripped "$nb"; then
+              echo "::error file=$nb::Notebook contains outputs. Run nbstripout before committing."
+              failed=1
+            fi
+          done
+          if [ "$failed" -eq 1 ]; then
+            echo "::error::Some notebooks contain outputs. Please install nbstripout or run: nbstripout <notebook>"
+            exit 1
+          fi
