@@ -184,9 +184,21 @@ class NonDiffAnalysis(Analysis):
                         continue
                     sys_value = (sys_values[corr.name] if sys_values
                                  else corr.nominal_idx)
+                    # Resolve variation function from uncertainty source
+                    syst_function = None
+                    if (not corr.use_correctionlib
+                            and corr.uncertainty_sources
+                            and sys_value != corr.nominal_idx):
+                        for source in corr.uncertainty_sources:
+                            if sys_value in source.up_and_down_idx:
+                                idx = source.up_and_down_idx.index(sys_value)
+                                syst_function = (source.up_function if idx == 0
+                                                 else source.down_function)
+                                break
                     weights = self.apply_event_weight_correction(
                         weights, corr, sys_value,
-                        object_copies_channel, year)
+                        object_copies_channel, year,
+                        syst_function=syst_function)
 
             logger.info(
                 f"Number of weighted events in {channel_name}: {ak.sum(weights):.2f}"

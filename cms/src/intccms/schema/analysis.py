@@ -510,7 +510,10 @@ class CorrectionConfig(SubscriptableModel):
             description="True if using correctionlib to apply correction",
         ),
     ]
-    file: Annotated[str, Field(description="Path to correction file")]
+    file: Annotated[
+        Optional[str],
+        Field(default=None, description="Path to correction file"),
+    ]
     transform_in: Annotated[
         Optional[Callable],
         Field(

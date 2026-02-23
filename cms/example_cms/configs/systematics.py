@@ -349,7 +349,6 @@ def _get_corrections_for_year(year: str) -> list:
             "name": "jec",
             "type": "object",
             "use_correctionlib": False,
-            "file": jec_file,
             "target": ObjVar("Jet", "pt"),
             "args": [
                 ObjVar("Jet", "area"), ObjVar("Jet", "eta"),

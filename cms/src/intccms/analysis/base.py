@@ -837,6 +837,7 @@ class Analysis:
         sys_value: str,
         events: Dict[str, ak.Array],
         year: Optional[str] = None,
+        syst_function: Optional[Callable] = None,
     ) -> ak.Array:
         """
         Apply event-level weight correction.
@@ -856,6 +857,9 @@ class Analysis:
             Event data (object collections)
         year : Optional[str], optional
             Correction year for year-keyed configs
+        syst_function : Optional[Callable], optional
+            Variation function resolved from UncertaintySourceConfig.
+            When provided, takes priority over correction.get(f"{sys_value}_function").
 
         Returns
         -------
@@ -875,8 +879,9 @@ class Analysis:
                     year=year,
                 )
             else:
-                # Non-correctionlib path: sys_value is "up"/"down" for function selection
-                syst_func = correction.get(f"{sys_value}_function")
+                # Non-correctionlib path: syst_function (from UncertaintySourceConfig)
+                # takes priority; fallback handles nominal via correction.nominal_function
+                syst_func = syst_function or correction.get(f"{sys_value}_function")
                 if syst_func:
                     func_args = [
                         events[arg.obj][arg.field]
