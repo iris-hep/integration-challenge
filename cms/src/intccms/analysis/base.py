@@ -669,37 +669,45 @@ class Analysis:
         year : str, optional
             Correction year for year-keyed configs
         """
-        targets = self._get_target_arrays(
-            correction.target,
-            object_copies,
-            function_name=f"correction::{correction.name}",
-        )
-
-        if correction.get("use_correctionlib", False):
-            corrected_values = self.apply_correctionlib(
-                correction=correction,
-                events=object_copies,
-                sys_value=sys_value,
-                target=targets,
-                year=year,
-            )
-        else:
-            if func is None:
-                return
-            func_args = self._resolve_objvar_args(
-                args_spec or correction.args, object_copies)
-            corrected_values = self.apply_syst_function(
-                syst_name=correction.name,
-                syst_function=func,
-                function_args=func_args,
-                affected_arrays=targets,
-                operation=correction.get("op", "mult"),
-                static_kwargs=correction.get("static_kwargs"),
+        try:
+            targets = self._get_target_arrays(
+                correction.target,
+                object_copies,
+                function_name=f"correction::{correction.name}",
             )
 
-        self._set_target_arrays(
-            correction.target, object_copies, corrected_values
-        )
+            if correction.get("use_correctionlib", False):
+                corrected_values = self.apply_correctionlib(
+                    correction=correction,
+                    events=object_copies,
+                    sys_value=sys_value,
+                    target=targets,
+                    year=year,
+                )
+            else:
+                if func is None:
+                    return
+                func_args = self._resolve_objvar_args(
+                    args_spec or correction.args, object_copies)
+                corrected_values = self.apply_syst_function(
+                    syst_name=correction.name,
+                    syst_function=func,
+                    function_args=func_args,
+                    affected_arrays=targets,
+                    operation=correction.get("op", "mult"),
+                    static_kwargs=correction.get("static_kwargs"),
+                )
+
+            self._set_target_arrays(
+                correction.target, object_copies, corrected_values
+            )
+        except Exception as exc:
+            func_name = getattr(func, "__name__", None)
+            raise type(exc)(
+                f"_apply_correction_step failed: correction={correction.name!r}, "
+                f"key={correction.get('key')!r}, sys_value={sys_value!r}, "
+                f"year={year!r}, func={func_name!r}, args={correction.args!r}"
+            ) from exc
 
     def apply_object_corrections(
         self,
@@ -818,32 +826,39 @@ class Analysis:
         if correction.type != "event":
             return weights
 
-        if correction.get("use_correctionlib", False):
-            return self.apply_correctionlib(
-                correction=correction,
-                events=events,
-                sys_value=sys_value,
-                target=weights,
-                year=year,
-            )
-        else:
-            # Non-correctionlib path: sys_value is "up"/"down" for function selection
-            syst_func = correction.get(f"{sys_value}_function")
-            if syst_func:
-                func_args = [
-                    events[arg.obj][arg.field]
-                    for arg in correction.get("args", [])
-                    if isinstance(arg, ObjVar)
-                ]
-                return self.apply_syst_function(
-                    syst_name=correction.name,
-                    syst_function=syst_func,
-                    function_args=func_args,
-                    affected_arrays=weights,
-                    operation=correction.get("op", "mult"),
-                    static_kwargs=correction.get("static_kwargs"),
+        try:
+            if correction.get("use_correctionlib", False):
+                return self.apply_correctionlib(
+                    correction=correction,
+                    events=events,
+                    sys_value=sys_value,
+                    target=weights,
+                    year=year,
                 )
-            return weights
+            else:
+                # Non-correctionlib path: sys_value is "up"/"down" for function selection
+                syst_func = correction.get(f"{sys_value}_function")
+                if syst_func:
+                    func_args = [
+                        events[arg.obj][arg.field]
+                        for arg in correction.get("args", [])
+                        if isinstance(arg, ObjVar)
+                    ]
+                    return self.apply_syst_function(
+                        syst_name=correction.name,
+                        syst_function=syst_func,
+                        function_args=func_args,
+                        affected_arrays=weights,
+                        operation=correction.get("op", "mult"),
+                        static_kwargs=correction.get("static_kwargs"),
+                    )
+                return weights
+        except Exception as exc:
+            raise type(exc)(
+                f"apply_event_weight_correction failed: "
+                f"correction={correction.name!r}, key={correction.get('key')!r}, "
+                f"sys_value={sys_value!r}, year={year!r}, args={correction.args!r}"
+            ) from exc
 
     def compute_ghost_observables(
         self,
