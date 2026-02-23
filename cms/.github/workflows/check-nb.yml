@@ -2,8 +2,8 @@ name: Check Notebook Outputs
 
 on:
   pull_request:
-    paths:
-      - '**/*.ipynb'
+  paths:
+    - 'cms/**/*.ipynb'
 
 jobs:
   check-stripped:
