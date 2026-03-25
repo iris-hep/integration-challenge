@@ -5,6 +5,10 @@ __pycache__/
 
 # SX tokens
 ml_framework/servicex.yaml
+servicex*.yaml
+
+#ml data
+ml_framework/data/*
 
 # C extensions
 *.so
