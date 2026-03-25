@@ -1,0 +1,41 @@
+train_file: ../data/train_ttbar_mc20_mc23.h5
+val_file: ../data/val_ttbar_mc20_mc23.h5
+num_train: 14000
+num_val: 2000
+available_train: 14000
+available_val: 3000
+batch_size: 500
+trainable_params: 327618
+num_gpus: 1
+gpu_ids:
+- 0
+num_workers: 4
+num_unique_jets_train: null
+num_unique_jets_val: null
+dsids: null
+salt_hash: b210cbb
+out_dir: /home/acordeir/integ-challenge-2025/integration-challenge/atlas/ml_framework/salt-models/logs/event_classifier_20260222-T041838
+log_url: https://www.comet.com/arturu043/salt/dce7adc27e82460cafbb9eb9fffccf0b
+timestamp: event_classifier_20260222-T041838
+torch_version: 2.5.1+cu124
+lightning_version: 2.5.3
+cuda_version: '12.4'
+hostname: jupyter-artur-2ecordeiro-2eoudot-2echoi-40cern-2ech
+object_classes:
+  0: n
+  1: o
+  2: t
+  3: ' '
+  4: a
+  5: v
+  6: a
+  7: i
+  8: l
+  9: a
+  10: b
+  11: l
+  12: e
+jet_counts_train: null
+jet_counts_val: null
+pp_config_train: null
+pp_config_val: null

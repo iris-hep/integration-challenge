@@ -1,0 +1,121 @@
+name: event_classifier
+
+model:
+  lrs_config:
+    initial: 1e-7
+    max: 5e-4
+    end: 1e-5
+    pct_start: 0.01
+    weight_decay: 1e-5
+
+  model:
+    class_path: salt.models.SaltModel
+    init_args:
+
+      init_nets:
+
+        - input_name: jet
+          attach_global: false
+          dense_config:
+            output_size: &embed_dim 64
+            hidden_layers: [256, 128, 64]
+            activation: &activation ReLU
+
+        - input_name: el
+          attach_global: false
+          dense_config:
+            output_size: *embed_dim
+            hidden_layers: [256, 128, 64]
+            activation: *activation
+
+      encoder:
+        class_path: salt.models.Transformer
+        init_args:
+          num_layers: 6
+          embed_dim: *embed_dim
+          out_dim: &out_dim 128
+          attn_type: flash-varlen
+          norm: LayerNorm
+          do_final_norm: True
+          dense_kwargs:
+            activation: *activation
+            gated: False
+          attn_kwargs:
+            num_heads: 4
+
+      pool_net:
+        class_path: salt.models.GlobalAttentionPooling
+        init_args:
+          input_size: *out_dim
+
+      tasks:
+        class_path: torch.nn.ModuleList
+        init_args:
+          modules:
+
+            - class_path: salt.models.ClassificationTask
+              init_args:
+                name: events_classification
+                input_name: event
+                label: label
+                class_names:
+                  [
+                    mc,
+                  ]
+                loss:
+                  class_path: torch.nn.BCEWithLogitsLoss
+                dense_config:
+                  input_size: *out_dim
+                  output_size: 1
+                  hidden_layers: [128, 64, 32]
+                  activation: *activation
+                  dropout: 0.1
+
+
+data:
+
+  global_object: event
+
+  input_map:
+    event: event
+    jet: jet
+    el: el
+
+  variables:
+
+    event:
+      - met
+      - met_phi
+      - met_sig
+      - met_sumet
+
+    jet:
+      - pt
+      - eta
+      - phi
+      - btag
+
+    el:
+      - pt
+      - eta
+      - phi
+
+  train_file: ../data/train_ttbar_mc20_mc23.h5
+  val_file: ../data/val_ttbar_mc20_mc23.h5
+  test_file: ../data/test_ttbar_mc20_mc23.h5
+
+  norm_dict: norm_dict.yaml
+  class_dict: class_dict.yaml
+
+  batch_size: 500
+  num_workers: 4
+
+  num_train: 14000 
+  num_val: 2000
+  num_test: 3000
+
+
+trainer:
+  max_epochs: 20
+  accelerator: cpu
+  devices: 1

@@ -3,6 +3,13 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+# SX tokens
+ml_framework/servicex.yaml
+servicex*.yaml
+
+#ml data
+ml_framework/data/*
+
 # C extensions
 *.so
 
