@@ -30,10 +30,10 @@ def parse_job_json(fname):
     production_map = {}
 
     for job in job_info:
-        if job["superstatus"] not in ["done", "finished"]:
+        if job["superstatus"] not in ["done", "finished", "exhausted"]:
             continue
 
-        containernames = set([dataset["containername"] for dataset in job["datasets"]])
+        containernames = set([dataset["containername"] for dataset in job["datasets"] if ".tgz" not in dataset["containername"]])
         if job["dsinfo"]["nfiles"] == 0:
             # handle jobs which timed out with zero files processed
             continue
@@ -73,7 +73,14 @@ def rucio_container_metadata(name):
         else:
             nevts = None  # unknown for output containers
     except:
-        print(f"parsing failed for {name}:\n{out_tail}")
+        try:
+            # nothing available at all in output
+            assert "Total files : 0" in out_tail
+            nfiles = 0
+            size, unit = 0, "kB"
+            nevts = None
+        except:
+            print(f"parsing failed for {name}:\n{out_tail}")
 
     return {"nfiles": nfiles, "size_GB": size, "nevts": nevts}
 
@@ -166,11 +173,11 @@ if __name__ == "__main__":
     os.environ["SITE_NAME"] = "AF_200"
 
     username = "alheld"
-    production_tag = "IC-v1"
+    production_tag = "IC-v2"
 
     fname_bigpanda = "production_status.json"
     get_job_json(username, production_tag, fname_bigpanda)
     production_map = parse_job_json(fname_bigpanda)
 
-    fname_full = "file_metadata.json.gz"
+    fname_full = "file_metadata_v2.json.gz"
     metadata = save_full_metadata(production_map, fname_full, max_workers=8)

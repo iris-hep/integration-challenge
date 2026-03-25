@@ -14,6 +14,8 @@ from coffea.nanoevents import NanoAODSchema
 from coffea.processor import Runner
 from coffea.processor.executor import WorkItem
 from coffea.processor.executor import UprootMissTreeError
+from uproot import DeserializationError
+
 
 from intccms.analysis.processor import UnifiedProcessor
 from intccms.skimming import FilesetManager
@@ -171,13 +173,19 @@ def run_processor_workflow(
             else:
                 chunksize = 100_000
 
+        runner_kwargs = {}
+        if config.general.use_skimmed_input:
+            skim_format = config.preprocess.skimming.output.format
+            runner_kwargs["format"] = "parquet" if skim_format == "parquet" else "root"
+            
         # Create coffea Runner
         runner = Runner(
             executor=executor,
             schema=schema,
             chunksize=chunksize,
             savemetrics=True,
-            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, Exception),
+            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, DeserializationError),
+            **runner_kwargs,
         )
 
         # Run processor over fileset or workitems
@@ -188,7 +196,7 @@ def run_processor_workflow(
             for dataset_name, dataset_info in fileset.items():
                 files = dataset_info["files"]
                 treename = dataset_info["metadata"].get("treename", "Events")
-                coffea_fileset[dataset_name] = {treename: files}
+                coffea_fileset[dataset_name] = {"files": files, "treename": treename} 
 
             output, report = runner(
                 coffea_fileset,

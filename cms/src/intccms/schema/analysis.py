@@ -7,7 +7,7 @@ from typing import Annotated, Any, Callable, Dict, List, Literal, Optional, Tupl
 import numpy as np
 from pydantic import Field, model_validator, field_validator
 
-from intccms.schema.base import FunctorConfig, ObjVar, SubscriptableModel
+from intccms.schema.base import FunctorConfig, ObjVar, SubscriptableModel, Sys
 from intccms.utils.binning import validate_binning_spec, binning_to_edges
 
 
@@ -391,26 +391,117 @@ class ChannelConfig(SubscriptableModel):
         return self
 
 
+class UncertaintySourceConfig(SubscriptableModel):
+    """Uncertainty source on a correction.
+
+    Supports both correctionlib (sys strings) and custom functions (up/down callables).
+    Correctionlib sources override the parent correction's sys string.
+    Custom-function sources provide up/down callables for object-level variations (e.g. JEC).
+    """
+
+    name: Annotated[str, Field(description="Name of the systematic variation")]
+    up_and_down_idx: Annotated[
+        List[str],
+        Field(
+            default=["up", "down"],
+            description="Sys strings for [up, down] directions. For correctionlib "
+            "sources, overrides the parent correction's sys string during evaluation. "
+            "For custom-function sources, defaults to ['up', 'down'].",
+        ),
+    ]
+    args: Annotated[
+        Optional[List[Union[ObjVar, Sys, str, int, float]]],
+        Field(
+            default=None,
+            description="Source-specific args. Falls back to parent correction's args "
+            "when None. Needed when source functions take different inputs than the "
+            "correction's nominal function (e.g. JEC uncertainty vs JEC nominal).",
+        ),
+    ]
+    is_delta: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="If True, the variation function is applied on top of the "
+            "already-applied nominal (e.g. JEC uncertainty as multiplicative delta). "
+            "If False (default), the variation replaces the nominal entirely.",
+        ),
+    ]
+    up_function: Annotated[
+        Optional[Callable],
+        Field(
+            default=None,
+            description="Custom function for up variation (non-correctionlib path).",
+        ),
+    ]
+    down_function: Annotated[
+        Optional[Callable],
+        Field(
+            default=None,
+            description="Custom function for down variation (non-correctionlib path).",
+        ),
+    ]
+    transform_in: Annotated[
+        Optional[Callable],
+        Field(
+            default=None,
+            description="Source-specific input transform. Overrides the parent "
+            "correction's transform_in when this source is being evaluated. "
+            "Receives ObjVar arrays in order, returns transformed arrays.",
+        ),
+    ]
+    transform_out: Annotated[
+        Optional[Callable],
+        Field(
+            default=None,
+            description="Source-specific output transform. Overrides the parent "
+            "correction's transform_out when this source is being evaluated. "
+            "Receives (result, *original_arrays), returns processed result.",
+        ),
+    ]
+    varies_with: Annotated[
+        Optional[List[str]],
+        Field(
+            default=None,
+            description="Names of object correction uncertainty sources that trigger "
+            "this source's evaluation. Sources with varies_with are combined with "
+            "the object variation (single nuisance parameter) and skipped in the "
+            "standalone weight systematics loop.",
+        ),
+    ]
+
+
 class CorrectionConfig(SubscriptableModel):
+    """Configuration for a single correction (e.g., scale factor, pileup weight).
+
+    The `args` field specifies the exact argument order for correctionlib calls:
+    - ObjVar(obj, field): resolved from event data
+    - Sys(): marker for systematic variation string insertion
+    - str/int/float: passed through as fixed values (year, working point, etc.)
+    """
+
     name: Annotated[str, Field(description="Name of the correction")]
     type: Annotated[
         Literal["event", "object"],
         Field(description="Whether correction is event/object-level"),
     ]
-    use: Annotated[
-        Optional[Union[ObjVar, List[ObjVar]]],
-        Field(default=[], description="(object, variable) inputs"),
+    args: Annotated[
+        List[Union[ObjVar, Sys, str, int, float]],
+        Field(
+            description="Ordered arguments for correctionlib. Use ObjVar for event data, "
+            "Sys() for systematic position, strings/numbers for fixed values."
+        ),
     ]
     op: Annotated[
         Optional[Literal["mult", "add", "subtract"]],
         Field(
             default="mult",
-            description="How (operationa) to apply correction to targets",
+            description="How to apply correction to targets",
         ),
     ]
     key: Annotated[
         Optional[str],
-        Field(default=None, description="Correctionlib key (optional)"),
+        Field(default=None, description="Correctionlib key"),
     ]
     use_correctionlib: Annotated[
         bool,
@@ -419,25 +510,70 @@ class CorrectionConfig(SubscriptableModel):
             description="True if using correctionlib to apply correction",
         ),
     ]
-    file: Annotated[str, Field(description="Path to correction file")]
-    transform: Annotated[
+    file: Annotated[
+        Optional[str],
+        Field(default=None, description="Path to correction file"),
+    ]
+    transform_in: Annotated[
         Optional[Callable],
         Field(
-            default=lambda *x: x,
-            description="Optional function to apply transformation to inputs "
-            + "before applying correction",
+            default=None,
+            description="Transform inputs before evaluation. "
+            "Receives ObjVar arrays in order, returns transformed arrays.",
         ),
     ]
-    up_and_down_idx: Annotated[
-        Optional[List[str]],
+    transform_out: Annotated[
+        Optional[Callable],
         Field(
-            default=["up", "down"],
-            description="Systematic variation keys (optional)",
+            default=None,
+            description="Transform output after evaluation. "
+            "Receives (result, *original_arrays), returns processed result.",
+        ),
+    ]
+    reduce: Annotated[
+        Optional[Literal["prod", "sum"]],
+        Field(
+            default=None,
+            description="Reduction operation for per-object corrections. "
+            "Reduces jagged array to event-level before applying to target.",
+        ),
+    ]
+    nominal_idx: Annotated[
+        str,
+        Field(
+            default="nominal",
+            description="Systematic variation key for nominal direction",
         ),
     ]
     target: Annotated[
         Optional[Union[ObjVar, List[ObjVar]]],
         Field(default=None, description="Target (object, variable) to modify"),
+    ]
+
+    applies_to: Annotated[
+        Literal["mc", "data", "both"],
+        Field(
+            default="mc",
+            description="Whether this correction applies to MC, data, or both.",
+        ),
+    ]
+
+    # Custom function fields (used when use_correctionlib=False)
+    nominal_function: Annotated[
+        Optional[Callable],
+        Field(
+            default=None,
+            description="Custom function for nominal correction (non-correctionlib path).",
+        ),
+    ]
+    uncertainty_sources: Annotated[
+        Optional[List[UncertaintySourceConfig]],
+        Field(
+            default=None,
+            description="Uncertainty sources for this correction. Each source produces "
+            "alternative histograms. Correctionlib sources use up_and_down_idx to override "
+            "the parent's sys string. Custom-function sources use up/down_function.",
+        ),
     ]
 
     @model_validator(mode="after")
@@ -452,16 +588,30 @@ class CorrectionConfig(SubscriptableModel):
                 raise ValueError(
                     "If 'use_correctionlib' is True, 'key' must also be specified."
                 )
+            # Validate exactly one Sys marker in args
+            sys_count = sum(1 for a in self.args if isinstance(a, Sys))
+            if sys_count != 1:
+                raise ValueError(
+                    f"'args' must contain exactly one Sys() marker, found {sys_count}."
+                )
         if self.type == "object":
             if not self.target:
                 raise ValueError(
                     "If correction 'type' is 'object', 'target' must be specified."
                 )
-            if self.target[2] is None:
+            if isinstance(self.target, ObjVar) and self.target.field is None:
                 raise ValueError(
                     "If correction 'type' is 'object', "
-                    "target variable must not be None."
+                    "target field must not be None."
                 )
+            if self.uncertainty_sources:
+                for source in self.uncertainty_sources:
+                    if source.varies_with:
+                        raise ValueError(
+                            f"varies_with on object correction source "
+                            f"'{source.name}' is not supported "
+                            f"(object variations are applied one at a time)"
+                        )
         return self
 
 

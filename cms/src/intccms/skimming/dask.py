@@ -435,7 +435,7 @@ class WorkitemSkimmingManager:
                 # IMPORTANT: Assumes path format: .../output_dir/{dataset}/file_{N}/part_{M}.ext
                 # path_parts[-3] gets dataset from this fixed structure
                 # If build_output_path() changes, this logic must be updated
-                path_parts = Path(output_file).parts
+                path_parts = output_file.split("/")
                 if len(path_parts) >= 3:
                     dataset = path_parts[-3]
                     dataset_stats[dataset]["files_written"] += 1

@@ -19,10 +19,11 @@ import vector
 from coffea.nanoevents import NanoAODSchema
 from correctionlib import Correction, CorrectionSet
 
-from intccms.schema import GoodObjectMasksConfig
+from intccms.schema import GoodObjectMasksConfig, ObjVar, Sys
 from intccms.utils.functors import (
     GhostObservableExecutor,
     MaskExecutor,
+    SelectionExecutor,
     get_function_arguments,
 )
 from intccms.utils.output import OutputDirectoryManager
@@ -39,6 +40,8 @@ logger = logging.getLogger("BaseAnalysis")
 
 NanoAODSchema.warn_missing_crossrefs = False
 warnings.filterwarnings("ignore", category=FutureWarning, module="coffea.*")
+
+import sys
 
 
 def is_jagged(array_like: ak.Array) -> bool:
@@ -77,8 +80,8 @@ class Analysis:
         ----------
         config : Dict[str, Any]
             Configuration dictionary with keys:
-            - 'systematics': Systematic variations configuration
-            - 'corrections': Correction configurations
+            - 'systematics': Systematic variations configuration (list or year-keyed dict)
+            - 'corrections': Correction configurations (list or year-keyed dict)
             - 'channels': Analysis channel definitions
             - 'general': General settings including output directory
         output_manager : OutputDirectoryManager
@@ -86,42 +89,189 @@ class Analysis:
         """
         self.config = config
         self.channels = config.channels
-        self.systematics = config.systematics
-        self.corrections = config.corrections
         self.output_manager = output_manager
+
+        # Store corrections and systematics in original format
+        # They can be either List[CorrectionConfig] or Dict[str, List[CorrectionConfig]]
+        self._corrections_config = config.corrections
+        self._systematics_config = config.systematics
+
+        # Determine if year-keyed
+        self._year_keyed_corrections = isinstance(self._corrections_config, dict)
+        self._year_keyed_systematics = isinstance(self._systematics_config, dict)
+
         self.corrlib_evaluators = self._load_correctionlib()
 
     def _load_correctionlib(self) -> Dict[str, CorrectionSet]:
         """
         Load correctionlib JSON files into evaluators.
 
+        For year-keyed corrections, loads each year's corrections with keys
+        formatted as "{year}_{name}" to allow year-specific lookups.
+        For flat list corrections, uses just the correction name as key.
+
         Returns
         -------
         Dict[str, CorrectionSet]
-            Mapping of correction name to CorrectionSet evaluator
+            Mapping of correction name (or year_name) to CorrectionSet evaluator
         """
         evaluators = {}
-        for correction in self.corrections:
+
+        def load_correction(correction, key_prefix: str = "") -> None:
+            """Load a single correction into evaluators."""
             if not correction.use_correctionlib:
-                continue
+                return
 
             corr_name = correction.name
             file_path = correction.file
+            eval_key = f"{key_prefix}{corr_name}" if key_prefix else corr_name
 
             if file_path.endswith(".json.gz"):
                 with gzip.open(file_path, "rt") as file_handle:
-                    evaluators[corr_name] = CorrectionSet.from_string(
+                    evaluators[eval_key] = CorrectionSet.from_string(
                         file_handle.read().strip()
                     )
             elif file_path.endswith(".json"):
-                evaluators[corr_name] = CorrectionSet.from_file(file_path)
+                evaluators[eval_key] = CorrectionSet.from_file(file_path)
             else:
                 raise ValueError(
                     f"Unsupported correctionlib format: {file_path}. "
                     "Expected .json or .json.gz"
                 )
 
+        if self._year_keyed_corrections:
+            # Year-keyed: load with year prefix
+            for year, corrections in self._corrections_config.items():
+                for correction in corrections:
+                    load_correction(correction, key_prefix=f"{year}_")
+        else:
+            # Flat list: load with just name
+            for correction in self._corrections_config:
+                load_correction(correction)
+
+        # Also load systematics that use correctionlib
+        if self._year_keyed_systematics:
+            for year, systematics in self._systematics_config.items():
+                for syst in systematics:
+                    load_correction(syst, key_prefix=f"{year}_")
+        else:
+            for syst in self._systematics_config:
+                load_correction(syst)
+
         return evaluators
+
+    def get_corrections_for_year(self, year: Optional[str]) -> List[Any]:
+        """
+        Get corrections for a specific year.
+
+        Parameters
+        ----------
+        year : str or None
+            Correction year (e.g., "2016preVFP", "2017", "2018").
+            If None and corrections are year-keyed, returns empty list.
+
+        Returns
+        -------
+        List[CorrectionConfig]
+            Corrections for the specified year
+        """
+        if not self._year_keyed_corrections:
+            return self._corrections_config
+
+        if year is None:
+            logger.warning("Year is None but corrections are year-keyed. Returning empty list.")
+            return []
+
+        if year not in self._corrections_config:
+            logger.warning(f"Year '{year}' not found in corrections config. Available: {list(self._corrections_config.keys())}")
+            return []
+
+        return self._corrections_config[year]
+
+    def get_systematics_for_year(self, year: Optional[str]) -> List[Any]:
+        """
+        Get systematics for a specific year.
+
+        Parameters
+        ----------
+        year : str or None
+            Correction year (e.g., "2016preVFP", "2017", "2018").
+            If None and systematics are year-keyed, returns empty list.
+
+        Returns
+        -------
+        List[SystematicConfig]
+            Systematics for the specified year
+        """
+        if not self._year_keyed_systematics:
+            return self._systematics_config
+
+        if year is None:
+            logger.warning("Year is None but systematics are year-keyed. Returning empty list.")
+            return []
+
+        if year not in self._systematics_config:
+            logger.warning(f"Year '{year}' not found in systematics config. Available: {list(self._systematics_config.keys())}")
+            return []
+
+        return self._systematics_config[year]
+
+    @staticmethod
+    def _collect_produced_variation_names(corrections):
+        """Collect all variation names that Blocks 2+3 would produce."""
+        names = set()
+        for corr in corrections:
+            if not corr.uncertainty_sources:
+                continue
+            for source in corr.uncertainty_sources:
+                if corr.type == "event" and source.varies_with:
+                    continue  # Folded into object variations in Block 2
+                names.add(f"{source.name}_up")
+                names.add(f"{source.name}_down")
+        return names
+
+    def _collect_all_variation_names(self):
+        """Union of produced variation names across all years."""
+        if not self._year_keyed_corrections:
+            return set()
+        all_names = set()
+        for year_corrs in self._corrections_config.values():
+            all_names |= self._collect_produced_variation_names(year_corrs)
+        return all_names
+
+    def get_corrlib_evaluator(self, name: str, year: Optional[str]) -> CorrectionSet:
+        """
+        Get correctionlib evaluator for a correction, handling year-keyed lookups.
+
+        Parameters
+        ----------
+        name : str
+            Correction name
+        year : str or None
+            Correction year for year-keyed configs
+
+        Returns
+        -------
+        CorrectionSet
+            The correction evaluator
+
+        Raises
+        ------
+        KeyError
+            If correction not found
+        """
+        if self._year_keyed_corrections or self._year_keyed_systematics:
+            # Try year-prefixed key first
+            if year:
+                year_key = f"{year}_{name}"
+                if year_key in self.corrlib_evaluators:
+                    return self.corrlib_evaluators[year_key]
+
+        # Fall back to name only (for flat configs or if year key not found)
+        if name in self.corrlib_evaluators:
+            return self.corrlib_evaluators[name]
+
+        raise KeyError(f"Correction '{name}' not found. Available: {list(self.corrlib_evaluators.keys())}")
 
     def get_object_copies(self, events: ak.Array) -> Dict[str, ak.Array]:
         """
@@ -200,88 +350,157 @@ class Analysis:
 
         return object_copies
 
+    def resolve_correction_args(
+        self,
+        args: List[Union[ObjVar, Sys, str, int, float]],
+        events: Dict[str, ak.Array],
+        sys_value: str,
+    ) -> List[Any]:
+        """
+        Resolve correction args list to actual values.
+
+        Parameters
+        ----------
+        args : List[Union[ObjVar, Sys, str, int, float]]
+            Argument specification from correction config
+        events : Dict[str, ak.Array]
+            Event data (object collections)
+        sys_value : str
+            Systematic variation string to substitute for Sys marker
+
+        Returns
+        -------
+        List[Any]
+            Resolved arguments ready for correctionlib
+        """
+        resolved = []
+        for arg in args:
+            if isinstance(arg, Sys):
+                resolved.append(sys_value)
+            elif isinstance(arg, ObjVar):
+                if arg.obj == "event" and arg.field:
+                    resolved.append(events[arg.field])
+                else:
+                    resolved.append(events[arg.obj][arg.field])
+            else:
+                resolved.append(arg)  # fixed value (str, int, float)
+        return resolved
+
     def apply_correctionlib(
         self,
-        correction_name: str,
-        correction_key: str,
-        direction: Literal["up", "down", "nominal"],
-        correction_args: List[ak.Array],
+        correction: Dict[str, Any],
+        events: Dict[str, ak.Array],
+        sys_value: str,
         target: Optional[Union[ak.Array, List[ak.Array]]] = None,
-        operation: Optional[str] = None,
-        transform: Optional[Callable[..., Any]] = None,
+        year: Optional[str] = None,
     ) -> Union[ak.Array, List[ak.Array]]:
         """
         Apply correction using correctionlib.
 
         Parameters
         ----------
-        correction_name : str
-            Name of the correction in evaluators
-        correction_key : str
-            Specific correction key
-        direction : Literal["up", "down", "nominal"]
-            Systematic direction
-        correction_args : List[ak.Array]
-            Input arguments for correction
+        correction : Dict[str, Any]
+            Full correction configuration dict with 'args', 'key', 'transform', etc.
+        events : Dict[str, ak.Array]
+            Event data (object collections)
+        sys_value : str
+            Correctionlib systematic string substituted for the SYS marker in
+            the correction args (e.g. "central", "up_hf", "nominal").
         target : Optional[Union[ak.Array, List[ak.Array]]], optional
             Target array(s) to modify
-        operation : Optional[str], optional
-            Operation to apply ('add' or 'mult')
-        transform : Optional[Callable[..., Any]], optional
-            Transformation function for arguments
+        year : Optional[str], optional
+            Correction year for year-keyed configs
 
         Returns
         -------
         Union[ak.Array, List[ak.Array]]
             Corrected value(s)
         """
+        correction_name = correction["name"]
+        correction_key = correction["key"]
+        operation = correction.get("op", "mult")
+        transform_in = correction.get("transform_in")
+        transform_out = correction.get("transform_out")
+        reduce_op = correction.get("reduce")
+
+        # Source-level transform override: if a specific uncertainty source is
+        # being evaluated (sys_value != nominal), use that source's transforms.
+        if correction.get("uncertainty_sources") and sys_value != correction.get("nominal_idx"):
+            for source in correction.uncertainty_sources:
+                if sys_value in (source.up_and_down_idx or []):
+                    if source.transform_in is not None:
+                        transform_in = source.transform_in
+                    if source.transform_out is not None:
+                        transform_out = source.transform_out
+                    break
+
         logger.info(
-            "Applying correction: %s/%s (%s)",
+            "Applying correction: %s/%s (sys=%s) [year=%s]",
             correction_name,
             correction_key,
-            direction,
+            sys_value,
+            year,
         )
 
-        # Apply argument transformation if provided
-        correction_args = transform(*correction_args)
+        # Resolve args: ObjVar -> event data, Sys -> sys_value, else pass through
+        resolved_args = self.resolve_correction_args(
+            correction["args"], events, sys_value
+        )
 
-        # Flatten jagged arrays
-        flat_args, counts = [], []
-        for arg in correction_args:
-            if is_jagged(arg):
+        # Find indices of ObjVar args and store original arrays
+        objvar_indices = [
+            i for i, arg in enumerate(correction["args"])
+            if isinstance(arg, ObjVar)
+        ]
+        original_data_arrays = [resolved_args[i] for i in objvar_indices]
+
+        # Apply transform_in to modify inputs before evaluation
+        if transform_in is not None:
+            transformed = transform_in(*original_data_arrays)
+            if not isinstance(transformed, tuple):
+                transformed = (transformed,)
+            for idx, val in zip(objvar_indices, transformed):
+                resolved_args[idx] = val
+
+        # Flatten jagged arrays (keep track of structure for unflattening)
+        flat_args = []
+        counts = None
+        for arg in resolved_args:
+            if isinstance(arg, ak.Array) and is_jagged(arg):
                 flat_args.append(ak.flatten(arg))
-                counts.append(ak.num(arg))
+                if counts is None:
+                    counts = ak.num(arg)
             else:
                 flat_args.append(arg)
 
-        # Evaluate correction
-        correction_evaluator: Correction = self.corrlib_evaluators[
-            correction_name
-        ][correction_key]
-        correction_values = correction_evaluator.evaluate(
-            *flat_args, direction
-        )
+        # Evaluate correction using year-aware lookup
+        correction_set = self.get_corrlib_evaluator(correction_name, year)
+        correction_evaluator = correction_set[correction_key]
+        correction_values = correction_evaluator.evaluate(*flat_args)
 
         # Restore jagged structure if needed
-        if counts:
-            correction_values = ak.unflatten(correction_values, counts[0])
+        if counts is not None:
+            correction_values = ak.unflatten(correction_values, counts)
 
-            # Apply to target
+        # Apply transform_out to process output (receives result + original arrays)
+        if transform_out is not None:
+            correction_values = transform_out(correction_values, *original_data_arrays)
+
+        # Apply reduce if specified (jagged -> event-level)
+        if reduce_op is not None and is_jagged(correction_values):
+            if reduce_op == "prod":
+                correction_values = ak.prod(correction_values, axis=1)
+            elif reduce_op == "sum":
+                correction_values = ak.sum(correction_values, axis=1)
+
+        # Apply to target if provided
+        if target is not None:
             if isinstance(target, list):
-                backend = ak.backend(target[0])
-                correction_values = ak.to_backend(correction_values, backend)
                 return [
-                    self._apply_operation(
-                        operation, target_array, correction_values
-                    )
-                    for target_array in target
+                    self._apply_operation(operation, t, correction_values)
+                    for t in target
                 ]
-            else:
-                backend = ak.backend(target)
-                correction_values = ak.to_backend(correction_values, backend)
-                return self._apply_operation(
-                    operation, target, correction_values
-                )
+            return self._apply_operation(operation, target, correction_values)
 
         return correction_values
 
@@ -365,7 +584,7 @@ class Analysis:
 
     def _get_target_arrays(
         self,
-        target_spec: Union[Tuple[str, str], List[Tuple[str, str]]],
+        target_spec: Union[ObjVar, List[ObjVar]],
         objects: Dict[str, ak.Array],
         function_name: Optional[str] = "generic_target_function",
     ) -> List[ak.Array]:
@@ -374,8 +593,8 @@ class Analysis:
 
         Parameters
         ----------
-        target_spec : Union[Tuple[str, str], List[Tuple[str, str]]]
-            Single or multiple (object, field) specifications
+        target_spec : Union[ObjVar, List[ObjVar]]
+            Single or multiple ObjVar specifications
         objects : Dict[str, ak.Array]
             Object dictionary
 
@@ -387,16 +606,16 @@ class Analysis:
         specs = target_spec if isinstance(target_spec, list) else [target_spec]
 
         targets = []
-        for object_name, field_name in specs:
+        for spec in specs:
             try:
-                targets.append(objects[object_name][field_name])
+                targets.append(objects[spec.obj][spec.field])
             except KeyError:
                 logger.error(
-                    f"Field {object_name}.{field_name} needed for {function_name} "
+                    f"Field {spec.obj}.{spec.field} needed for {function_name} "
                     "is not found in objects dictionary"
                 )
                 raise KeyError(
-                    f"Missing target field: {object_name}.{field_name}, "
+                    f"Missing target field: {spec.obj}.{spec.field}, "
                     f"function: {function_name}"
                 )
 
@@ -404,7 +623,7 @@ class Analysis:
 
     def _set_target_arrays(
         self,
-        target_spec: Union[Tuple[str, str], List[Tuple[str, str]]],
+        target_spec: Union[ObjVar, List[ObjVar]],
         objects: Dict[str, ak.Array],
         new_values: Union[ak.Array, List[ak.Array]],
     ) -> None:
@@ -413,8 +632,8 @@ class Analysis:
 
         Parameters
         ----------
-        target_spec : Union[Tuple[str, str], List[Tuple[str, str]]]
-            Single or multiple (object, field) specifications
+        target_spec : Union[ObjVar, List[ObjVar]]
+            Single or multiple ObjVar specifications
         objects : Dict[str, ak.Array]
             Object dictionary to update
         new_values : Union[ak.Array, List[ak.Array]]
@@ -423,26 +642,143 @@ class Analysis:
         specs = target_spec if isinstance(target_spec, list) else [target_spec]
         values = new_values if isinstance(new_values, list) else [new_values]
 
-        for (obj_name, field_name), value in zip(specs, values):
-            objects[obj_name][field_name] = value
+        for spec, value in zip(specs, values):
+            objects[spec.obj][spec.field] = value
+
+    def _resolve_objvar_args(
+        self,
+        args_spec: List[Any],
+        object_copies: Dict[str, ak.Array],
+    ) -> List[ak.Array]:
+        """
+        Resolve ObjVar entries in an args list to actual arrays.
+
+        Parameters
+        ----------
+        args_spec : List
+            Argument specification (may contain ObjVar, Sys, literals)
+        object_copies : Dict[str, ak.Array]
+            Object dictionary to resolve from
+
+        Returns
+        -------
+        List[ak.Array]
+            Resolved arrays for ObjVar entries only
+        """
+        return [
+            object_copies[arg.field]
+            if arg.obj == "event" and arg.field
+            else object_copies[arg.obj][arg.field]
+            for arg in args_spec
+            if isinstance(arg, ObjVar)
+        ]
+
+    def _apply_correction_step(
+        self,
+        object_copies: Dict[str, ak.Array],
+        correction: Any,
+        sys_value: Optional[str] = None,
+        func: Optional[Callable] = None,
+        args_spec: Optional[List[Any]] = None,
+        year: Optional[str] = None,
+    ) -> None:
+        """
+        Apply a single correction step to object arrays in-place.
+
+        Handles both correctionlib (via sys_value) and custom function (via func)
+        paths. Gets targets, evaluates, and sets targets.
+
+        Parameters
+        ----------
+        object_copies : Dict[str, ak.Array]
+            Object dictionary (modified in-place)
+        correction : CorrectionConfig
+            Parent correction (provides target, args, key, etc.)
+        sys_value : str, optional
+            Correctionlib systematic string (for correctionlib path)
+        func : Callable, optional
+            Custom function to apply (for non-correctionlib path)
+        args_spec : List, optional
+            Args for the function. Falls back to correction.args if None.
+        year : str, optional
+            Correction year for year-keyed configs
+        """
+        try:
+            targets = self._get_target_arrays(
+                correction.target,
+                object_copies,
+                function_name=f"correction::{correction.name}",
+            )
+
+            if correction.get("use_correctionlib", False):
+                corrected_values = self.apply_correctionlib(
+                    correction=correction,
+                    events=object_copies,
+                    sys_value=sys_value,
+                    target=targets,
+                    year=year,
+                )
+            else:
+                if func is None:
+                    return
+                func_args = self._resolve_objvar_args(
+                    args_spec or correction.args, object_copies)
+                corrected_values = self.apply_syst_function(
+                    syst_name=correction.name,
+                    syst_function=func,
+                    function_args=func_args,
+                    affected_arrays=targets,
+                    operation=correction.get("op", "mult"),
+                    static_kwargs=correction.get("static_kwargs"),
+                )
+
+            self._set_target_arrays(
+                correction.target, object_copies, corrected_values
+            )
+        except Exception as exc:
+            func_name = getattr(func, "__name__", None)
+            raise type(exc)(
+                f"{exc}\n\n"
+                f"_apply_correction_step context:\n"
+                f"  correction = {correction.name!r}\n"
+                f"  key        = {correction.get('key')!r}\n"
+                f"  sys_value  = {sys_value!r}\n"
+                f"  year       = {year!r}\n"
+                f"  func       = {func_name!r}\n"
+                f"  args       = {correction.args!r}"
+            ) from exc
 
     def apply_object_corrections(
         self,
         object_copies: Dict[str, ak.Array],
         corrections: List[Dict[str, Any]],
+        year: Optional[str] = None,
+        varied_corr: Optional[Any] = None,
+        varied_source: Optional[Any] = None,
         direction: Literal["up", "down", "nominal"] = "nominal",
     ) -> Dict[str, ak.Array]:
         """
-        Apply object-level corrections.
+        Apply object-level corrections: nominal first, then source variation.
+
+        For each correction, applies the nominal correction (correctionlib at
+        nominal_idx or custom nominal_function). If this correction is being
+        varied (matched by varied_corr), applies the source's up/down function
+        on top.
 
         Parameters
         ----------
         object_copies : Dict[str, ak.Array]
-            Objects to correct
+            Objects to correct (modified in-place)
         corrections : List[Dict[str, Any]]
             Correction configurations
-        direction : Literal["up", "down", "nominal"], optional
-            Systematic direction (default: "nominal")
+        year : Optional[str], optional
+            Correction year for year-keyed configs
+        varied_corr : optional
+            The correction being varied (matched by name)
+        varied_source : optional
+            UncertaintySourceConfig with up/down function and optional args
+        direction : str, optional
+            Direction for the varied source ("up" or "down")
 
         Returns
         -------
@@ -453,70 +789,55 @@ class Analysis:
             if correction.type != "object":
                 continue
 
-            # TODO: Migrate to CorrectionExecutor once branching logic is refactored
-            # This requires handling correctionlib vs custom functions with direction
-            # Prepare arguments and targets
-            corr_args, corr_static_kwargs = get_function_arguments(
-                correction.use,
-                object_copies,
-                function_name=f"correction::{correction.name}",
-                static_kwargs=correction.get("static_kwargs"),
-            )
-            targets = self._get_target_arrays(
-                correction.target,
-                object_copies,
-                function_name=f"correction::{correction.name}",
-            )
-            operation = correction.op
+            is_varied = (varied_corr is not None
+                         and correction.name == varied_corr.name
+                         and varied_source is not None
+                         and direction in ("up", "down"))
 
-            # Apply corrections
             if correction.get("use_correctionlib", False):
-                transform = correction.transform
-                key = correction.key
-                # Determine direction mapping
-                dir_map = correction.up_and_down_idx
-                corr_direction = (
-                    dir_map[0]
-                    if direction == "up"
-                    else dir_map[1] if direction in ["up", "down"] else "nominal"
-                )
-
-                corrected_values = self.apply_correctionlib(
-                    correction_name=correction.name,
-                    correction_key=key,
-                    direction=corr_direction,
-                    correction_args=corr_args,
-                    target=targets,
-                    operation=operation,
-                    transform=transform,
-                )
-            else:
-                syst_func = correction.get(f"{direction}_function")
-                if syst_func:
-                    corrected_values = self.apply_syst_function(
-                        syst_name=correction.name,
-                        syst_function=syst_func,
-                        function_args=corr_args,
-                        affected_arrays=targets,
-                        operation=operation,
-                        static_kwargs=corr_static_kwargs,
-                    )
+                # Correctionlib: evaluate once with the right sys string
+                if is_varied:
+                    direction_idx = 0 if direction == "up" else 1
+                    sys_value = varied_source.up_and_down_idx[direction_idx]
                 else:
-                    corrected_values = targets
+                    sys_value = correction.nominal_idx
+                self._apply_correction_step(
+                    object_copies, correction,
+                    sys_value=sys_value, year=year)
+            else:
+                # Custom function path
+                syst_func = None
+                if is_varied:
+                    syst_func = (varied_source.up_function if direction == "up"
+                                 else varied_source.down_function)
 
-            # Update objects
-            self._set_target_arrays(
-                correction.target, object_copies, corrected_values
-            )
+                if is_varied and not varied_source.is_delta:
+                    # Replacement: variation function replaces nominal
+                    self._apply_correction_step(
+                        object_copies, correction,
+                        func=syst_func, args_spec=varied_source.args,
+                        year=year)
+                else:
+                    # Apply nominal, then stack delta on top if varied
+                    self._apply_correction_step(
+                        object_copies, correction,
+                        func=correction.nominal_function, year=year)
+                    if is_varied:
+                        self._apply_correction_step(
+                            object_copies, correction,
+                            func=syst_func, args_spec=varied_source.args,
+                            year=year)
 
         return object_copies
 
     def apply_event_weight_correction(
         self,
         weights: ak.Array,
-        systematic: Dict[str, Any],
-        direction: Literal["up", "down"],
-        object_copies: Dict[str, ak.Array],
+        correction: Dict[str, Any],
+        sys_value: str,
+        events: Dict[str, ak.Array],
+        year: Optional[str] = None,
+        syst_function: Optional[Callable] = None,
     ) -> ak.Array:
         """
         Apply event-level weight correction.
@@ -525,59 +846,67 @@ class Analysis:
         ----------
         weights : ak.Array
             Original event weights
-        systematic : Dict[str, Any]
-            Systematic configuration
-        direction : Literal["up", "down"]
-            Systematic direction
-        object_copies : Dict[str, ak.Array]
-            Current object copies
+        correction : Dict[str, Any]
+            Correction configuration with 'args', 'key', etc.
+        sys_value : str
+            For correctionlib corrections: systematic string substituted for
+            the SYS marker (e.g. "central", "up_hf").
+            For non-correctionlib corrections: direction string used to select
+            the variation function (e.g. "up", "down").
+        events : Dict[str, ak.Array]
+            Event data (object collections)
+        year : Optional[str], optional
+            Correction year for year-keyed configs
+        syst_function : Optional[Callable], optional
+            Variation function resolved from UncertaintySourceConfig.
+            When provided, takes priority over correction.get(f"{sys_value}_function").
 
         Returns
         -------
         ak.Array
             Corrected weights
         """
-        if systematic.type != "event":
+        if correction.type != "event":
             return weights
 
-        # TODO: Migrate to CorrectionExecutor once branching logic is refactored
-        # This requires handling correctionlib vs custom functions with direction
-        # Prepare arguments
-        weight_args, weight_static_kwargs = get_function_arguments(
-            systematic.use,
-            object_copies,
-            function_name=f"systematic::{systematic.name}",
-            static_kwargs=systematic.get("static_kwargs"),
-        )
-        operation = systematic.op
-        key = systematic.key
-        transform = systematic.transform
-        dir_map = systematic.up_and_down_idx
-        corr_direction = dir_map[0] if direction == "up" else dir_map[1]
-
-        # Apply correction
-        if systematic.get("use_correctionlib", False):
-            return self.apply_correctionlib(
-                correction_name=systematic.name,
-                correction_key=key,
-                direction=corr_direction,
-                correction_args=weight_args,
-                target=weights,
-                operation=operation,
-                transform=transform,
-            )
-        else:
-            syst_func = systematic.get(f"{direction}_function")
-            if syst_func:
-                return self.apply_syst_function(
-                    syst_name=systematic.name,
-                    syst_function=syst_func,
-                    function_args=weight_args,
-                    affected_arrays=weights,
-                    operation=operation,
-                    static_kwargs=weight_static_kwargs,
+        try:
+            if correction.get("use_correctionlib", False):
+                return self.apply_correctionlib(
+                    correction=correction,
+                    events=events,
+                    sys_value=sys_value,
+                    target=weights,
+                    year=year,
                 )
-            return weights
+            else:
+                # Non-correctionlib path: syst_function (from UncertaintySourceConfig)
+                # takes priority; fallback handles nominal via correction.nominal_function
+                syst_func = syst_function or correction.get(f"{sys_value}_function")
+                if syst_func:
+                    func_args = [
+                        events[arg.obj][arg.field]
+                        for arg in correction.get("args", [])
+                        if isinstance(arg, ObjVar)
+                    ]
+                    return self.apply_syst_function(
+                        syst_name=correction.name,
+                        syst_function=syst_func,
+                        function_args=func_args,
+                        affected_arrays=weights,
+                        operation=correction.get("op", "mult"),
+                        static_kwargs=correction.get("static_kwargs"),
+                    )
+                return weights
+        except Exception as exc:
+            raise type(exc)(
+                f"{exc}\n\n"
+                f"apply_event_weight_correction context:\n"
+                f"  correction = {correction.name!r}\n"
+                f"  key        = {correction.get('key')!r}\n"
+                f"  sys_value  = {sys_value!r}\n"
+                f"  year       = {year!r}\n"
+                f"  args       = {correction.args!r}"
+            ) from exc
 
     def compute_ghost_observables(
         self,
@@ -613,3 +942,76 @@ class Analysis:
             )
 
         return object_copies
+
+    def prepare_objects(
+        self,
+        events: ak.Array,
+        object_corrs: List[Any],
+        varied_corr: Optional[Any] = None,
+        varied_source: Optional[Any] = None,
+        direction: Literal["up", "down", "nominal"] = "nominal",
+        is_data: bool = False,
+        lumi_mask_config: Optional[Any] = None,
+        year: Optional[str] = None,
+    ) -> Tuple[Dict[str, ak.Array], ak.Array]:
+        """Prepare event objects for downstream analysis.
+
+        Pipeline: copy → object corrections → masks → baseline → lumi → ghost.
+
+        All object corrections are applied nominally. If varied_corr and
+        varied_source are provided, that correction's source variation is
+        applied on top (or instead of nominal, depending on is_delta).
+
+        Parameters
+        ----------
+        events : ak.Array
+            Original NanoAOD events
+        object_corrs : List
+            Object-level corrections to apply
+        varied_corr : optional
+            The correction being varied (matched by name)
+        varied_source : optional
+            UncertaintySourceConfig for the variation
+        direction : str
+            Direction for the varied source ("up", "down", or "nominal")
+        is_data : bool
+            Whether processing data
+        lumi_mask_config : optional
+            Luminosity mask configuration for data
+        year : str, optional
+            Correction year
+
+        Returns
+        -------
+        Tuple[Dict[str, ak.Array], ak.Array]
+            (filtered object copies, filtered events)
+        """
+        obj_copies = self.get_object_copies(events)
+
+        self.apply_object_corrections(
+            obj_copies, object_corrs, year=year,
+            varied_corr=varied_corr, varied_source=varied_source,
+            direction=direction,
+        )
+
+        # Apply object masks (per-object: jet pT > 30, etc.)
+        obj_copies = self.apply_object_masks(obj_copies)
+
+        # Apply baseline selection (event-level)
+        if self.config.baseline_selection is not None:
+            executor = SelectionExecutor(self.config.baseline_selection)
+            mask = executor.execute(obj_copies)
+            obj_copies = {c: v[mask] for c, v in obj_copies.items()}
+            events = events[mask]
+
+        # Apply lumi mask for data (event-level)
+        if is_data and lumi_mask_config is not None:
+            executor = SelectionExecutor(lumi_mask_config)
+            lumi_mask = executor.execute(obj_copies)
+            obj_copies = {c: v[lumi_mask] for c, v in obj_copies.items()}
+            events = events[lumi_mask]
+
+        # Compute ghost observables
+        obj_copies = self.compute_ghost_observables(obj_copies)
+
+        return obj_copies, events

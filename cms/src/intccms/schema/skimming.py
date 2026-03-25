@@ -14,23 +14,17 @@ class SkimOutputConfig(SubscriptableModel):
     """Configuration for a single skimmed output artifact."""
 
     format: Annotated[
-        Literal["parquet", "root_ttree", "rntuple", "safetensors"],
+        Literal["parquet", "ttree", "rntuple"],
         Field(default="parquet", description="Output format for skimmed events"),
     ]
-    local: Annotated[
-        bool,
-        Field(
-            default=True,
-            description="When True, outputs are written to the local filesystem.",
-        ),
-    ]
-    base_uri: Annotated[
+    output_dir: Annotated[
         Optional[str],
         Field(
             default=None,
             description=(
-                "Optional base URI or directory when writing to remote storage. "
-                "If omitted, remote outputs fall back to the local skim directory."
+                "Base output directory for skimmed events. Can be a local path "
+                "or a remote URI (e.g., root://server/path). When None, falls "
+                "back to {root_output_dir}/skimmed/ via OutputDirectoryManager."
             ),
         ),
     ]

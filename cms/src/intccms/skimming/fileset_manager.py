@@ -25,7 +25,7 @@ class PostSkimMetadata(TypedDict):
     xsec: float  # Cross-section in picobarns
     is_data: bool  # True if real data
     dataset: str  # Dataset key
-    format: str  # Output format: "parquet" or "root_ttree"
+    format: str  # Output format: "parquet", "ttree", or "rntuple"
     total_processed_events: int  # Total events after skimming selection
     treename: Optional[str]  # Tree name for ROOT format, None for parquet
 
@@ -52,7 +52,7 @@ class FilesetManager:
     skimmed_dir : Path
         Base directory containing skimmed files and manifests
     format : str
-        Output format from skimming ("parquet" or "root_ttree")
+        Output format from skimming ("parquet", "ttree", or "rntuple")
 
     Examples
     --------
@@ -74,7 +74,7 @@ class FilesetManager:
         skimmed_dir : Path or str
             Base directory containing skimmed output files and manifests
         format : str
-            Format of skimmed files ("parquet" or "root_ttree")
+            Format of skimmed files ("parquet", "ttree", or "rntuple")
         """
         self.skimmed_dir = Path(skimmed_dir)
         self.format = format
@@ -165,7 +165,7 @@ class FilesetManager:
             }
 
             # Add treename for ROOT format
-            if self.format in ("root", "root_ttree"):
+            if self.format in ("ttree", "rntuple"):
                 # Get treename from first manifest entry
                 if manifest:
                     metadata["treename"] = manifest[0].get("treename", "Events")

@@ -6,10 +6,14 @@ details of persisting awkward arrays to disk.
 """
 
 import logging
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Dict, Any, Optional
+
 import awkward as ak
 import uproot
+from XRootD import client as xrd_client
 
 from .protocols import EventWriter
 
@@ -40,6 +44,51 @@ def _ensure_parent_dir(path: str) -> None:
     """
     if not _is_remote_path(path):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
+
+
+def _is_xrd_path(path: str) -> bool:
+    """Check if path uses the xrootd protocol (root://)."""
+    return path.startswith("root://")
+
+
+@contextmanager
+def _xrd_write_workaround(path: str):
+    """Write locally then copy to xrootd. Workaround for uproot remote write issues.
+
+    uproot opens sinks in r+b mode, but fsspec-xrootd's simplecache does not
+    upload on close for r+b, and fsspec-xrootd lacks _put_file. This writes to
+    a local temp file, then copies to xrootd via the XRootD Python client.
+
+    Remove when fixed upstream (fsspec-xrootd _put_file + uproot sink mode).
+    To remove: delete this function and unwrap the ``with`` blocks in ROOT writers.
+
+    Args:
+        path: Target output path, may be root:// or local.
+
+    Yields:
+        str: Local temp path (if xrootd) or original path (if local).
+    """
+    if not _is_xrd_path(path):
+        yield path
+        return
+
+    filename = path.rsplit("/", 1)[-1]
+    suffix = f".{filename.rsplit('.', 1)[-1]}" if "." in filename else ".root"
+    tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+    tmp_path = tmp.name
+    tmp.close()
+
+    try:
+        yield tmp_path
+
+        process = xrd_client.CopyProcess()
+        process.add_job(tmp_path, path, force=True)
+        process.prepare()
+        status, _ = process.run()
+        if not status.ok:
+            raise IOError(f"XRootD copy to {path} failed: {status.message}")
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
 
 
 class ParquetWriter(EventWriter):
@@ -159,9 +208,7 @@ class RootWriter(EventWriter):
                 Each key is a branch name, each value is the data for that branch.
             path: Path where the ROOT file will be written (extension added if missing)
             tree_name: Name of the TTree to create (default: "Events")
-            **kwargs: Additional keyword arguments. Special keys:
-                - 'tree_kwargs': Dict of kwargs passed to mktree() for tree creation
-                - All other kwargs passed to uproot.recreate() for file creation
+            **kwargs: Additional keyword arguments passed to uproot.recreate().
 
         Returns:
             str: The actual path written to (with extension)
@@ -181,17 +228,65 @@ class RootWriter(EventWriter):
         # Ensure parent directory exists
         _ensure_parent_dir(path)
 
-        # Separate file-level and tree-level kwargs
-        file_kwargs = dict(kwargs)
-        tree_kwargs = file_kwargs.pop("tree_kwargs", {})
-
-        # Determine branch types from awkward arrays
         branch_types = {k: v.type for k, v in events.items()}
 
-        # Write to ROOT file
-        with uproot.recreate(path, **file_kwargs) as root_file:
-            tree = root_file.mktree(tree_name, branch_types, **tree_kwargs)
-            tree.extend(events)
+        with _xrd_write_workaround(path) as write_path:
+            with uproot.recreate(write_path, **kwargs) as root_file:
+                tree = root_file.mktree(tree_name, branch_types)
+                tree.extend(events)
+
+        return path
+
+
+class RNTupleWriter(EventWriter):
+    """Writer for ROOT RNTuple files using uproot.
+
+    RNTuple is ROOT's columnar data format, succeeding TTree. Uses
+    uproot.recreate + mkrntuple which accepts data directly.
+
+    Examples:
+        >>> writer = RNTupleWriter()
+        >>> events = {
+        ...     "Muon_pt": ak.Array([25.0, 30.0, 40.0]),
+        ...     "Muon_eta": ak.Array([0.5, 1.0, -0.5])
+        ... }
+        >>> writer.write(events, "/path/to/output", ntuple_name="Events")
+    """
+
+    @property
+    def file_extension(self) -> str:
+        return ".root"
+
+    def write(
+        self,
+        events: Dict[str, ak.Array],
+        path: str,
+        tree_name: str = "Events",
+        **kwargs
+    ) -> str:
+        """Write events to a ROOT RNTuple file.
+
+        Args:
+            events: Dictionary mapping field names to awkward arrays.
+            path: Path where the ROOT file will be written (extension added if missing)
+            tree_name: Name of the RNTuple to create (default: "Events")
+            **kwargs: Additional keyword arguments passed to uproot.recreate().
+
+        Returns:
+            str: The actual path written to (with extension)
+        """
+        if not events:
+            logger.warning(f"No events to write to {path}; skipping RNTuple write.")
+            return path
+
+        if not path.endswith(self.file_extension):
+            path = f"{path}{self.file_extension}"
+
+        _ensure_parent_dir(path)
+
+        with _xrd_write_workaround(path) as write_path:
+            with uproot.recreate(write_path, **kwargs) as root_file:
+                root_file.mkrntuple(tree_name, events)
 
         return path
 
@@ -201,7 +296,8 @@ def get_writer(format: str) -> Any:
 
     Args:
         format: File format identifier. Supported values:
-            - "root" or "root_ttree": ROOT TTree format
+            - "ttree": ROOT TTree format
+            - "rntuple": ROOT RNTuple format
             - "parquet": Parquet format
 
     Returns:
@@ -215,8 +311,8 @@ def get_writer(format: str) -> Any:
         >>> writer.write({"pt": ak.Array([1, 2, 3])}, "/path/to/output.parquet")
     """
     format_map = {
-        "root": RootWriter(),
-        "root_ttree": RootWriter(),
+        "ttree": RootWriter(),
+        "rntuple": RNTupleWriter(),
         "parquet": ParquetWriter(),
     }
 

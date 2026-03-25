@@ -6,7 +6,6 @@ resolution and integration with the pipeline stages.
 
 import hashlib
 import logging
-from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypedDict, Union
 
 from coffea.processor.executor import WorkItem
@@ -74,9 +73,7 @@ def get_deterministic_fileuuid(file_path: str) -> bytes:
         >>> uuid1 == uuid2
         True
     """
-    # Normalize path and hash it
-    normalized_path = str(Path(file_path).resolve())
-    hash_bytes = hashlib.md5(normalized_path.encode()).digest()
+    hash_bytes = hashlib.md5(file_path.encode()).digest()
     return hash_bytes  # MD5 gives us exactly 16 bytes
 
 
@@ -128,7 +125,7 @@ def build_output_path(
 
     Args:
         workitem: coffea WorkItem with file metadata and entry ranges
-        fmt: Output format (parquet, root_ttree) - used for validation only
+        fmt: Output format (parquet, ttree, rntuple) - used for validation only
 
     Returns:
         Tuple of (relative_path, metadata_dict)
@@ -174,21 +171,12 @@ def resolve_output_path(
         - is_local_path: True if local filesystem, False for remote
         - metadata_dict: Manifest entry for this workitem
     """
-    # Build path and get metadata
     relative_path, metadata = build_output_path(workitem, output_cfg.format)
 
-    # Determine if local or remote
-    if output_cfg.local or not output_cfg.base_uri:
-        base_dir = Path(output_manager.skimmed_dir)
-        return str(base_dir / relative_path), True, metadata
-    else:
-        base_uri = (output_cfg.base_uri or "").rstrip("/")
-        if base_uri == "":
-            base_dir = Path(output_manager.skimmed_dir)
-            return str(base_dir / relative_path), output_cfg.local, metadata
-        else:
-            path = f"{base_uri}/{relative_path}"
-            return path, output_cfg.local, metadata
+    base_dir = (output_cfg.output_dir or str(output_manager.skimmed_dir)).rstrip("/")
+    path = f"{base_dir}/{relative_path}"
+    is_local = "://" not in path
+    return path, is_local, metadata
 
 
 def process_workitem(
@@ -228,7 +216,7 @@ def process_workitem(
         dataset = workitem.dataset
 
         # Stage 1: Load events
-        reader = get_reader("root")
+        reader = get_reader("ttree")
         events = load_events(
             reader,
             filename,
@@ -280,7 +268,7 @@ def process_workitem(
         writer_kwargs = resolve_lazy_values(config.output.to_kwargs or {})
 
         # Add tree_name for ROOT format
-        if config.output.format == "root_ttree":
+        if config.output.format in ("ttree", "rntuple"):
             writer_kwargs["tree_name"] = config.tree_name
 
         # Save events and get actual path used (with extension)

@@ -215,8 +215,9 @@ __marimo__/
 .asetup.save
 *.out
 *.err
-# bigpanda status
+# bigpanda status and metadata
 ntuple_production/production_status.json
+file_metadata*json
 # preprocess json
 preprocess_output.json
 # Dask reports
@@ -225,3 +226,5 @@ preprocess_output.json
 *png
 # histograms
 hist.json.gz
+# benchmarking results
+output/

@@ -1,11 +1,37 @@
 import logging
+import os
 from collections import defaultdict
+from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 import awkward as ak
 
 logger = logging.getLogger(__name__)
 
+
+def load_dotenv(path: str = ".env", overwrite: bool = True) -> None:
+    """Load KEY=VALUE pairs from a .env file into os.environ.
+
+    Ignores comments, blank lines, and keys already set in the environment.
+    Does nothing if the file does not exist.
+
+    Args:
+        path: Path to the .env file (default: ".env" in current directory).
+    """
+    env_path = Path(path)
+    if not env_path.is_file():
+        return
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip()
+        if key:
+            if key not in os.environ or overwrite: 
+                os.environ[key] = value
 
 def nested_defaultdict_to_dict(nested_structure: Any) -> dict:
     """

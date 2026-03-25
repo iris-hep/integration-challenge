@@ -6,7 +6,7 @@ the NanoAOD schema.
 """
 
 from .readers import RootReader, ParquetReader, get_reader
-from .writers import RootWriter, ParquetWriter, get_writer
+from .writers import RootWriter, ParquetWriter, RNTupleWriter, get_writer
 from .protocols import EventReader, EventWriter
 
 __all__ = [
@@ -15,6 +15,7 @@ __all__ = [
     "get_reader",
     "RootWriter",
     "ParquetWriter",
+    "RNTupleWriter",
     "get_writer",
     "EventReader",
     "EventWriter",

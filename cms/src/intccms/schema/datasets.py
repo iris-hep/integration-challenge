@@ -14,6 +14,15 @@ class DatasetConfig(SubscriptableModel):
     name: Annotated[str, Field(description="Dataset name/identifier")]
     directories: Annotated[Union[str, tuple[str, ...]], Field(description="Directories containing dataset files")]
     cross_sections: Annotated[Union[float, tuple[float, ...]], Field(description="Cross-sections in picobarns")]
+    years: Annotated[
+        Optional[Union[str, tuple[str, ...]]],
+        Field(
+            default=None,
+            description="Correction year(s) for each directory (e.g., '2016preVFP', '2017', '2018'). "
+                        "If single value, applies to all directories. "
+                        "If tuple, must match number of directories.",
+        ),
+    ]
     file_pattern: Annotated[str, Field(default="*.root", description="File pattern for dataset files")]
     tree_name: Annotated[str, Field(default="Events", description="ROOT tree name")]
     weight_branch: Annotated[Optional[str], Field(default="genWeight", description="Branch name for event weights")]
@@ -49,6 +58,7 @@ class DatasetManagerConfig(SubscriptableModel):
             dirs = dataset_config.directories
             xss = dataset_config.cross_sections
             lumi_masks = dataset_config.lumi_mask
+            years = dataset_config.years
 
             # Get the count of directories
             num_dirs = len(dirs) if isinstance(dirs, tuple) else 1
@@ -56,6 +66,8 @@ class DatasetManagerConfig(SubscriptableModel):
             num_xss = len(xss) if isinstance(xss, tuple) else 1
             # Get the count of lumi_masks (handle both tuple and list from OmegaConf)
             num_lumi_masks = len(lumi_masks) if isinstance(lumi_masks, (tuple, list)) else (1 if lumi_masks is not None else 0)
+            # Get the count of years
+            num_years = len(years) if isinstance(years, (tuple, list)) else (1 if years is not None else 0)
 
             # Validate cross-sections
             # Valid cases:
@@ -79,6 +91,18 @@ class DatasetManagerConfig(SubscriptableModel):
                     f"Dataset '{dataset_config.name}': You must provide either a single lumi_mask "
                     f"or an equal number of lumi_masks ({num_dirs}) to match the number of directories. "
                     f"Got {num_dirs} directories and {num_lumi_masks} lumi_masks."
+                )
+
+            # Validate years
+            # Valid cases:
+            # 1. No years (None) - corrections will use flat list config
+            # 2. Single year (will be replicated for multiple dirs)
+            # 3. Multiple years matching number of directories
+            if num_years > 1 and num_years != num_dirs:
+                raise ValueError(
+                    f"Dataset '{dataset_config.name}': You must provide either a single year "
+                    f"or an equal number of years ({num_dirs}) to match the number of directories. "
+                    f"Got {num_dirs} directories and {num_years} years."
                 )
 
         return self
