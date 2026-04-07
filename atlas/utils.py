@@ -213,12 +213,6 @@ def hplus_signal_mass(name: str) -> str:
     return str(m.group(1)+"GeV") if m else None
 
 
-def hplus_signal_mass(name: str) -> str:
-    """get the mass from these signal samples"""
-    m = re.search(r"(?i)mhc(\d+)(?=\.)", name)  # case-insensitive, stop at the dot
-    return str(m.group(1) + "GeV") if m else None
-
-
 def integrated_luminosity(campaign: str, total=False) -> float:
     """get integrated luminosity in pb for each MC campaign"""
     if "data" in campaign:
