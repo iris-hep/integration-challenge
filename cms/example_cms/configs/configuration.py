@@ -77,6 +77,7 @@ preprocess_config = {
         "mc_branches": {
             "event": ["genWeight"],
             "Pileup": ["nTrueInt"],
+            "Jet": ["hadronFlavour"],
         },
         "skimming": skimming_config,
 }
