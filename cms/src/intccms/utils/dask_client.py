@@ -124,7 +124,7 @@ def acquire_client(
     - ``"coffeacasa-condor"``: Direct connection to ``tls://localhost:8786``.
     - ``"coffeacasa-gateway"``: Connects via ``dask_gateway.Gateway()`` with
       X509 proxy setup and access token upload.
-    - ``"purdue-af"``: Connects via ``dask_gateway.Gateway()`` with minimal
+    - ``"purdue-af-k8s"` and ``"purdue-af-slurm"``: Connects via ``dask_gateway.Gateway()`` with minimal
       setup.
 
     :class:`PrintForwarder` is always registered. ``client.forward_logging()``
@@ -179,10 +179,22 @@ def acquire_client(
             client.upload_file("/tmp/x509up_u6440")
             client.register_worker_callbacks(setup=_set_gateway_env)
 
-        elif af == "purdue-af":
+        elif "purdue-af" in af:
             from dask_gateway import Gateway
 
-            gateway = Gateway()
+            if af == "purdue-af-k8s":
+                gateway = Gateway()
+            elif af == "purdue-af-slurm":
+                gateway = Gateway(
+                    "http://dask-gateway-k8s-slurm.geddes.rcac.purdue.edu/",
+                    proxy_address="api-dask-gateway-k8s-slurm.cms.geddes.rcac.purdue.edu:8000",
+                )
+            else:
+                raise NotImplementedError(
+                    f"Analysis facility '{af}' is not supported. "
+                    f"Supported Purdue AF options: purdue-af-k8s, purdue-af-slurm"
+                )
+
             clusters = gateway.list_clusters()
             cluster = gateway.connect(clusters[0].name)
             client = cluster.get_client()
@@ -193,7 +205,7 @@ def acquire_client(
         else:
             raise NotImplementedError(
                 f"Analysis facility '{af}' is not supported. "
-                f"Supported: coffeacasa-condor, coffeacasa-gateway, purdue-af"
+                f"Supported: coffeacasa-condor, coffeacasa-gateway, purdue-af-k8s, purdue-af-slurm"
             )
 
         # Propagate AWS credentials to workers
@@ -210,7 +222,7 @@ def acquire_client(
 
         # Install pip packages if requested
         if pip_packages:
-            _is_gateway = af in ("coffeacasa-gateway", "purdue-af")
+            _is_gateway = af in ("coffeacasa-gateway", "purdue-af-k8s", "purdue-af-slurm")
             _has_git = any("git" in pkg for pkg in pip_packages)
             if _is_gateway and _has_git:
                 raise ValueError(
