@@ -164,6 +164,17 @@ class GeneralConfig(SubscriptableModel):
             description="If True, process systematic variations.",
         ),
     ]
+    run_corrections: Annotated[
+        bool,
+        Field(
+            default=True,
+            description="If True, load correctionlib files and apply nominal "
+            "corrections (e.g. pileup, muon SF, JEC). If False, skip "
+            "correctionlib file loading entirely and the framework runs as "
+            "if no corrections were configured. Useful for local runs "
+            "without CMS-internal correction files.",
+        ),
+    ]
     run_plots_only: Annotated[
         bool,
         Field(
