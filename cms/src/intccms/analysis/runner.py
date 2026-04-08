@@ -16,7 +16,7 @@ from coffea.processor.executor import WorkItem
 from coffea.processor.executor import UprootMissTreeError
 from uproot import DeserializationError
 
-from intcms.processors  import SkimAndAnalyseProcessor
+from intccms.analysis.processors import SkimAndAnalyseProcessor
 from intccms.skimming import FilesetManager
 from intccms.utils.filters import filter_by_process
 from intccms.utils.output import (
@@ -207,13 +207,13 @@ def run_processor_workflow(
             output, report = runner(
                 coffea_fileset,
                 treename="Events",  # Will be overridden by fileset structure
-                processor_instance=unified_processor,
+                processor_instance=processor,
             )
         else:
             logger.info(f"Processing {len(workitems)} work items with chunksize={chunksize}")
             output, report = runner(
                 workitems,
-                processor_instance=unified_processor,
+                processor_instance=processor,
             )
 
         logger.info(
