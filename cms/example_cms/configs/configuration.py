@@ -13,8 +13,22 @@ from .cuts import (
     Zprime_workshop_cuts,
 )
 from .observables import get_mtt, get_mva_vars
-from .systematics import corrections_config, systematics_config
 from .skim import dataset_manager_config, skimming_config
+
+try:
+    from .systematics import corrections_config, systematics_config
+    _CORRECTIONS_AVAILABLE = True
+except (FileNotFoundError, OSError) as e:
+    import warnings
+    warnings.warn(
+        f"Could not load CMS corrections ({e.__class__.__name__}: {e}). "
+        f"Falling back to empty corrections — set run_corrections=False to "
+        f"silence this warning, or provide the correction files at "
+        f"'./example_cms/corrections/DONT_EXPOSE_CMS_INTERNAL/' to enable them."
+    )
+    corrections_config = {}
+    systematics_config = {}
+    _CORRECTIONS_AVAILABLE = False
 
 
 
@@ -48,6 +62,7 @@ general_config = {
         "run_histogramming": True,
         "run_statistics": True,
         "run_systematics": True,
+        "run_corrections": _CORRECTIONS_AVAILABLE,
         "run_plots_only": False,
         "run_mva_training": False,
         "run_metadata_generation": False,
