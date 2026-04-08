@@ -1,16 +1,14 @@
-"""Branch-size introspection for the throughput-measurement processor.
+"""Helpers for picking branches to read with the throughput processor.
 
-Modeled on iris-hep/idap-200gbps/input_files/size_per_branch.ipynb. Use this to
-turn 'I want to read N% of a NanoAOD file' into a config-ready branches dict
-that can be plugged straight into ``preprocess_config["branches"]`` and fed to
+Closely follows iris-hep/idap-200gbps/input_files/size_per_branch.ipynb. Use
+this when you want to say "read N% of a NanoAOD file" and get back a branches
+dict you can hand to ``preprocess_config["branches"]`` and
 :class:`intccms.analysis.TwoHundredGbpsProcessor`.
 
-Typical usage::
+Example::
 
     from example_cms.configs.throughput import get_branches_for_fraction
 
-    # One call: measure (cached) + pick the largest branches that sum to
-    # 50% of the file + return the dict shape preprocess_config expects.
     preprocess_config = {
         "branches": get_branches_for_fraction(
             "root://.../sample.root",
@@ -21,10 +19,10 @@ Typical usage::
         "skimming": skimming_config,
     }
 
-The three lower-level primitives (:func:`measure_branch_sizes`,
-:func:`select_branches_for_fraction`, :func:`branches_to_dict`) are exposed
-for advanced cases — re-using one measurement for multiple target fractions,
-inspecting per-branch sizes, applying custom selection logic.
+The three smaller functions (:func:`measure_branch_sizes`,
+:func:`select_branches_for_fraction`, :func:`branches_to_dict`) are also
+exposed if you want to reuse one measurement for several target fractions,
+inspect per-branch sizes, or do your own selection.
 """
 import json
 from pathlib import Path
@@ -38,11 +36,11 @@ def measure_branch_sizes(
     tree_name: str = "Events",
     cache_path: Optional[str] = None,
 ) -> Tuple[Dict[str, float], float]:
-    """Measure on-disk read cost (MB) of every branch in a NanoAOD tree.
+    """Measure how many MB each branch costs to read.
 
-    Opens the file once and reads each branch in isolation, tracking the
-    delta in ``tree.file.source.num_requested_bytes``. The result is the
-    per-branch contribution to a full read.
+    Opens the file once and reads each branch on its own, recording how
+    many bytes uproot pulled to satisfy that read. Returns the per-branch
+    sizes and the total file size in MB.
 
     Parameters
     ----------
@@ -50,21 +48,18 @@ def measure_branch_sizes(
         Path or URI to the NanoAOD file. Anything uproot can open works
         (local path, ``root://`` URI, etc.).
     tree_name : str, optional
-        Name of the events tree. Defaults to ``"Events"``.
+        Events tree name. Defaults to ``"Events"``.
     cache_path : str or None, optional
-        If given and the file exists, the measurement is loaded from
-        ``cache_path`` and ``file_path`` is not touched. If given and the
-        file does not exist, the result is written there after measuring.
-        Cache format matches IDAP's ``branch_sizes.json``: a flat JSON
-        object of ``{branch_name: size_mb}`` plus a ``_file_size_mb``
-        sentinel key.
+        Optional JSON cache. If the file exists, the result is loaded from
+        it instead of re-reading the NanoAOD file. If it doesn't exist, the
+        result is written there after measuring so subsequent runs are fast.
 
     Returns
     -------
     sizes_mb : dict[str, float]
-        Mapping of branch name to size in MB.
+        Branch name -> size in MB.
     file_size_mb : float
-        Total on-disk size of the file in MB.
+        Total file size in MB.
     """
     if cache_path and Path(cache_path).exists():
         cached = json.loads(Path(cache_path).read_text())
@@ -100,14 +95,13 @@ def select_branches_for_fraction(
     sizes_mb: Dict[str, float],
     file_size_mb: float,
     target_fraction: float = 1.0,
-    veto: Tuple[str, ...] = ("LHEPdfWeight",),
+    veto: Tuple[str, ...] = (),
 ) -> List[str]:
-    """Greedy-select branches largest-first to hit a target read fraction.
+    """Pick the biggest branches first until they cover the target fraction.
 
-    Iterates branches sorted by descending size, accumulating until the
-    selected total reaches ``target_fraction * file_size_mb``. The default
-    veto matches the IDAP notebook — ``LHEPdfWeight`` varies unpredictably
-    across files and skews benchmarks.
+    Walks branches from biggest to smallest, adding each one until the
+    selected total reaches ``target_fraction * file_size_mb``. Branches
+    listed in ``veto`` are skipped.
 
     Parameters
     ----------
@@ -117,15 +111,15 @@ def select_branches_for_fraction(
         Total file size in MB (the second return value of
         :func:`measure_branch_sizes`).
     target_fraction : float, optional
-        Fraction of ``file_size_mb`` to read. Must be in ``(0, 1.0]``.
-        Defaults to ``1.0`` (every branch).
+        Fraction of the file to read. Must be in ``(0, 1.0]``. Defaults
+        to ``1.0`` (every branch).
     veto : tuple of str, optional
-        Branch names to exclude regardless of size.
+        Branch names to skip.
 
     Returns
     -------
     list[str]
-        Selected branch names in descending size order.
+        The selected branch names, biggest first.
     """
     if not 0 < target_fraction <= 1.0:
         raise ValueError(
@@ -146,12 +140,11 @@ def select_branches_for_fraction(
 
 
 def branches_to_dict(branch_names: List[str]) -> Dict[str, List[str]]:
-    """Convert a flat NanoAOD branch list to ``Config.preprocess.branches`` shape.
+    """Group a flat NanoAOD branch list into the ``preprocess.branches`` shape.
 
-    NanoAOD branches use ``Collection_field`` naming where ``Collection``
-    starts with an uppercase letter (e.g. ``Jet_pt``, ``GenPart_eta``).
-    Anything else (or names without an underscore, e.g. ``run``) is
-    treated as an event-level branch and lands under ``"event"``.
+    NanoAOD names branches like ``Jet_pt`` (collection prefix in upper case
+    + underscore + field). Anything that doesn't fit that pattern (e.g.
+    ``run``) is put under ``"event"``.
 
     Examples
     --------
@@ -173,14 +166,15 @@ def get_branches_for_fraction(
     target_fraction: float = 1.0,
     tree_name: str = "Events",
     cache_path: Optional[str] = None,
-    veto: Tuple[str, ...] = ("LHEPdfWeight",),
+    veto: Tuple[str, ...] = (),
 ) -> Dict[str, List[str]]:
-    """One-call wrapper: measure → select → convert.
+    """Measure, pick, and group branches in one call.
 
-    Most users only need this. Measures branch sizes (with optional cache),
-    selects greedy by size to hit ``target_fraction`` of the file, and
-    returns the result already in the nested
-    ``Config.preprocess.branches`` shape.
+    The entry point for the common case: give it a file and a target
+    fraction, get back a branches dict ready to drop into
+    ``preprocess_config["branches"]``. Internally calls
+    :func:`measure_branch_sizes`, :func:`select_branches_for_fraction`,
+    and :func:`branches_to_dict`.
 
     Parameters
     ----------
@@ -198,7 +192,7 @@ def get_branches_for_fraction(
     Returns
     -------
     dict[str, list[str]]
-        Branches dict ready to plug into ``preprocess_config["branches"]``.
+        Branches dict ready to drop into ``preprocess_config["branches"]``.
     """
     sizes_mb, file_size_mb = measure_branch_sizes(
         file_path, tree_name=tree_name, cache_path=cache_path
