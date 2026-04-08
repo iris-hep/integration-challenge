@@ -17,14 +17,13 @@ from typing import (
 import awkward as ak
 import vector
 from coffea.nanoevents import NanoAODSchema
-from correctionlib import Correction, CorrectionSet
+from correctionlib import CorrectionSet
 
 from intccms.schema import GoodObjectMasksConfig, ObjVar, Sys
 from intccms.utils.functors import (
     GhostObservableExecutor,
     MaskExecutor,
     SelectionExecutor,
-    get_function_arguments,
 )
 from intccms.utils.output import OutputDirectoryManager
 

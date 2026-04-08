@@ -4,7 +4,7 @@ from . import base as base
 from . import cms as cms
 from .base import Analysis
 from .cms import CMSAnalysis
-from .processor import UnifiedProcessor
+from .processors import UnifiedProcessor
 from .runner import run_processor_workflow
 
 

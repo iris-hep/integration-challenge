@@ -36,7 +36,7 @@ from intccms.utils.functors import SelectionExecutor
 logger = logging.getLogger(__name__)
 
 
-class UnifiedProcessor(ProcessorABC):
+class SkimAndAnalyseProcessor(ProcessorABC):
     """Coffea processor for distributed skimming and/or analysis.
 
     This processor integrates the skimming pipeline with the analysis workflow,

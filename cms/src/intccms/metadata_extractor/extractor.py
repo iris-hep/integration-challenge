@@ -58,7 +58,7 @@ class CoffeaMetadataExtractor:
             schema=schema,
             savemetrics=True,
             chunksize=chunksize,
-            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, Exception),
+            skipbadfiles=(OSError, LZMAError, UprootMissTreeError),
         )
 
         logger.debug(

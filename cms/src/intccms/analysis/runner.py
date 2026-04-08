@@ -11,13 +11,12 @@ from typing import Any, Dict, List, Optional, Tuple
 from lzma import LZMAError
 
 from coffea.nanoevents import NanoAODSchema
-from coffea.processor import Runner
+from coffea.processor import Runner, ProcessorABC
 from coffea.processor.executor import WorkItem
 from coffea.processor.executor import UprootMissTreeError
 from uproot import DeserializationError
 
-
-from intccms.analysis.processor import UnifiedProcessor
+from intcms.processors  import SkimAndAnalyseProcessor
 from intccms.skimming import FilesetManager
 from intccms.utils.filters import filter_by_process
 from intccms.utils.output import (
@@ -29,10 +28,12 @@ from intccms.schema import Config
 logger = logging.getLogger(__name__)
 
 
+
 def run_processor_workflow(
     config: Config,
     output_manager: OutputDirectoryManager,
     metadata_lookup: Dict[str, Dict[str, Any]],
+    processor: Optional[ProcessorABC] = None,
     workitems: Optional[List[WorkItem]] = None,
     executor: Any = None,
     schema: Any = NanoAODSchema,
@@ -159,12 +160,13 @@ def run_processor_workflow(
                     logger.warning("No workitems remain after process filtering")
                     return {"histograms": {}, "processed_events": 0, "skimmed_events": 0}
 
-        # Initialize UnifiedProcessor
-        unified_processor = UnifiedProcessor(
-            config=config,
-            output_manager=output_manager,
-            metadata_lookup=metadata_lookup,
-        )
+        # Initialize processor
+        if not processor:
+            processor = SkimAndAnalyseProcessor(
+                config=config,
+                output_manager=output_manager,
+                metadata_lookup=metadata_lookup,
+            )
 
         # Determine chunksize
         if chunksize is None:
