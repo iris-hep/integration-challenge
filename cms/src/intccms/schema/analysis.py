@@ -108,8 +108,8 @@ class GeneralConfig(SubscriptableModel):
     ]
     analysis: Annotated[
         Optional[str],
-        Field(default="nondiff",
-              description="The analysis mode to run: 'nondiff' or 'skip' (skim-only mode)."),
+        Field(default="cms",
+              description="The analysis mode to run: 'cms' or 'skip' (skim-only mode)."),
     ]
     use_skimmed_input: Annotated[
         bool,
@@ -266,9 +266,9 @@ class GeneralConfig(SubscriptableModel):
     @model_validator(mode="after")
     def validate_general(self) -> "GeneralConfig":
         """Validate the general configuration settings."""
-        if self.analysis not in ["nondiff", "skip"]:
+        if self.analysis not in ["cms", "skip"]:
             raise ValueError(
-                f"Invalid analysis mode '{self.analysis}'. Must be 'nondiff' or 'skip'."
+                f"Invalid analysis mode '{self.analysis}'. Must be 'cms' or 'skip'."
             )
 
         return self

@@ -17,7 +17,7 @@ import awkward as ak
 from coffea.processor import ProcessorABC
 from roastcoffea import track_metrics, track_time
 
-from intccms.analysis.nondiff import NonDiffAnalysis
+from intccms.analysis.cms import CMSAnalysis
 from intccms.skimming.io.writers import get_writer
 from intccms.skimming.pipeline.stages import (
     build_column_list,
@@ -60,7 +60,7 @@ class UnifiedProcessor(ProcessorABC):
         (Parquet or ROOT). Writer automatically appends correct file extension.
       - When save_skimmed_output=False: No disk I/O (useful for analyzing pre-skimmed data)
 
-    - **Analysis** (via NonDiffAnalysis):
+    - **Analysis** (via CMSAnalysis):
       - When run_analysis=True: Object selection, corrections, observable calculations
       - When run_histogramming=True: Fill histograms during analysis
       - When run_systematics=True: Apply systematic variations
@@ -187,9 +187,9 @@ class UnifiedProcessor(ProcessorABC):
         # Initialize skimming components (always needed for filtering)
         self._init_skimming_components()
 
-        # Always create NonDiffAnalysis instance
+        # Always create CMSAnalysis instance
         # The run_analysis flag controls whether we execute its methods
-        self.analysis = NonDiffAnalysis(
+        self.analysis = CMSAnalysis(
             config=config,
             output_manager=output_manager,
         )
@@ -233,7 +233,7 @@ class UnifiedProcessor(ProcessorABC):
         acc = {"processed_events": 0}
 
         if self.config.general.run_histogramming:
-            # Use histograms from NonDiffAnalysis instance
+            # Use histograms from CMSAnalysis instance
             # Coffea will automatically merge these across chunks via hist.Hist.__add__
             acc["histograms"] = self.analysis.nD_hists_per_region
 
@@ -287,7 +287,7 @@ class UnifiedProcessor(ProcessorABC):
 
         # Step 2: Run analysis if enabled
         if self.config.general.run_analysis and len(events) > 0:
-            # NonDiffAnalysis.process() handles:
+            # CMSAnalysis.process() handles:
             # - Object selection and corrections
             # - Histogram filling (if run_histogramming=True)
             # - Systematics (if run_systematics=True)

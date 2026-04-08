@@ -1,22 +1,15 @@
-import glob
 import logging
-import os
-import warnings
 from collections import defaultdict
-from typing import Any, Literal, Optional, Dict, List, Tuple
+from typing import Any, Optional, Dict
+
 import awkward as ak
 import cabinetry
 import hist
 import numpy as np
 import vector
-from coffea.analysis_tools import PackedSelection
 
 from intccms.analysis.base import Analysis
-from intccms.utils.output import (
-    OutputDirectoryManager,
-    save_histograms_to_pickle,
-    save_histograms_to_root,
-)
+from intccms.utils.output import OutputDirectoryManager
 from intccms.utils.stats import get_cabinetry_rebinning_router
 from intccms.utils.functors import ObservableExecutor, SelectionExecutor
 from intccms.utils.logging import setup_logging
@@ -30,13 +23,12 @@ vector.register_awkward()
 # Logging Configuration
 # -----------------------------
 setup_logging()
-logger = logging.getLogger("NonDiffAnalysis")
-logging.getLogger("jax._src.xla_bridge").setLevel(logging.ERROR)
+logger = logging.getLogger("CMSAnalysis")
 
 # -----------------------------
 # ZprimeAnalysis Class Definition
 # -----------------------------
-class NonDiffAnalysis(Analysis):
+class CMSAnalysis(Analysis):
     """Non-differentiable analysis implementation.
 
     This class is designed to work with UnifiedProcessor for distributed processing.
@@ -46,7 +38,7 @@ class NonDiffAnalysis(Analysis):
 
     def __init__(self, config: dict[str, Any], output_manager: OutputDirectoryManager) -> None:
         """
-        Initialize NonDiffAnalysis with configuration.
+        Initialize CMSAnalysis with configuration.
 
         Parameters
         ----------
@@ -418,7 +410,7 @@ class NonDiffAnalysis(Analysis):
         Examples
         --------
         >>> # After processor completes and histograms are filled
-        >>> analysis = NonDiffAnalysis(config, [], output_manager)
+        >>> analysis = CMSAnalysis(config, [], output_manager)
         >>> analysis.nD_hists_per_region = output["histograms"]  # From processor
         >>> analysis.run_statistics(config.statistics.cabinetry_config)
         """
