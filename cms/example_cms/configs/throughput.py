@@ -1,32 +1,42 @@
 """Helpers for picking branches to read with the throughput processor.
 
 Closely follows iris-hep/idap-200gbps/input_files/size_per_branch.ipynb. Use
-this when you want to say "read N% of a NanoAOD file" and get back a branches
-dict you can hand to ``preprocess_config["branches"]`` and
+this when you want to say "read N% of a NanoAOD file" and get back branches
+dicts you can hand to ``preprocess_config["branches"]`` /
+``preprocess_config["mc_branches"]`` and
 :class:`intccms.analysis.TwoHundredGbpsProcessor`.
+
+The entry point :func:`get_branches_for_fraction` always returns a
+``(branches, mc_branches)`` tuple. If you only pass an MC file, the second
+dict is empty. If you also pass a representative data file, branches that
+exist in MC but not in data are split into the second dict — ready to drop
+into ``preprocess_config["mc_branches"]``.
 
 Example::
 
     from example_cms.configs.throughput import get_branches_for_fraction
 
+    branches, mc_branches = get_branches_for_fraction(
+        "root://.../mc_sample.root",
+        target_fraction=0.5,
+        cache_path="example_cms/configs/branch_sizes.json",
+        data_file="root://.../data_sample.root",  # optional
+    )
     preprocess_config = {
-        "branches": get_branches_for_fraction(
-            "root://.../sample.root",
-            target_fraction=0.5,
-            cache_path="example_cms/configs/branch_sizes.json",
-        ),
-        "mc_branches": {"event": ["genWeight"]},
+        "branches": branches,
+        "mc_branches": mc_branches,
         "skimming": skimming_config,
     }
 
 The three smaller functions (:func:`measure_branch_sizes`,
-:func:`select_branches_for_fraction`, :func:`branches_to_dict`) are also
-exposed if you want to reuse one measurement for several target fractions,
-inspect per-branch sizes, or do your own selection.
+:func:`select_branches_for_fraction`, :func:`branches_to_dict`) and
+:func:`find_mc_only_branches` are also exposed if you want to reuse one
+measurement for several target fractions, inspect per-branch sizes, or do
+your own selection.
 """
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import uproot
 
@@ -161,13 +171,47 @@ def branches_to_dict(branch_names: List[str]) -> Dict[str, List[str]]:
     return grouped
 
 
+def find_mc_only_branches(
+    mc_file: str,
+    data_file: str,
+    tree_name: str = "Events",
+) -> Set[str]:
+    """Return branches that exist in the MC file but not in the data file.
+
+    Just opens each file and lists its branches — no branch contents are
+    read, so this is cheap even over XRootD. Assumes both files are
+    representative; a stripped-down test data file with missing branches
+    will produce false positives.
+
+    Parameters
+    ----------
+    mc_file : str
+        Path or URI to a representative MC NanoAOD file.
+    data_file : str
+        Path or URI to a representative data NanoAOD file.
+    tree_name : str, optional
+        Events tree name. Defaults to ``"Events"``.
+
+    Returns
+    -------
+    set[str]
+        Branch names present in MC but missing from data.
+    """
+    with uproot.open({mc_file: tree_name}) as t:
+        mc = set(t.keys())
+    with uproot.open({data_file: tree_name}) as t:
+        data = set(t.keys())
+    return mc - data
+
+
 def get_branches_for_fraction(
     file_path: str,
     target_fraction: float = 1.0,
     tree_name: str = "Events",
     cache_path: Optional[str] = None,
     veto: Tuple[str, ...] = (),
-) -> Dict[str, List[str]]:
+    data_file: Optional[str] = None,
+) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
     """Measure, pick, and group branches in one call.
 
     The entry point for the common case: give it a file and a target
@@ -176,10 +220,15 @@ def get_branches_for_fraction(
     :func:`measure_branch_sizes`, :func:`select_branches_for_fraction`,
     and :func:`branches_to_dict`.
 
+    If ``data_file`` is also given, the picked branches are split into
+    MC-vs-data using :func:`find_mc_only_branches`, so you can plug the
+    second dict straight into ``preprocess_config["mc_branches"]``.
+
     Parameters
     ----------
     file_path : str
-        Path or URI to the NanoAOD file.
+        Path or URI to a NanoAOD file. If ``data_file`` is also given,
+        this is treated as the MC file.
     target_fraction : float, optional
         Fraction of file size to read. Defaults to ``1.0`` (every branch).
     tree_name : str, optional
@@ -188,11 +237,18 @@ def get_branches_for_fraction(
         See :func:`measure_branch_sizes`.
     veto : tuple of str, optional
         See :func:`select_branches_for_fraction`.
+    data_file : str or None, optional
+        Path or URI to a representative data NanoAOD file. When given,
+        branches that exist in MC but not in data are split out into the
+        second returned dict.
 
     Returns
     -------
-    dict[str, list[str]]
-        Branches dict ready to drop into ``preprocess_config["branches"]``.
+    branches : dict[str, list[str]]
+        Branches dict for ``preprocess_config["branches"]``.
+    mc_branches : dict[str, list[str]]
+        Branches dict for ``preprocess_config["mc_branches"]``. Empty
+        when ``data_file`` is not given.
     """
     sizes_mb, file_size_mb = measure_branch_sizes(
         file_path, tree_name=tree_name, cache_path=cache_path
@@ -200,4 +256,11 @@ def get_branches_for_fraction(
     selected = select_branches_for_fraction(
         sizes_mb, file_size_mb, target_fraction=target_fraction, veto=veto
     )
-    return branches_to_dict(selected)
+
+    if data_file is None:
+        return branches_to_dict(selected), {}
+
+    mc_only = find_mc_only_branches(file_path, data_file, tree_name=tree_name)
+    common = [b for b in selected if b not in mc_only]
+    mc_only_selected = [b for b in selected if b in mc_only]
+    return branches_to_dict(common), branches_to_dict(mc_only_selected)
