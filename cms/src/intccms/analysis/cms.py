@@ -29,11 +29,10 @@ logger = logging.getLogger("CMSAnalysis")
 # ZprimeAnalysis Class Definition
 # -----------------------------
 class CMSAnalysis(Analysis):
-    """Non-differentiable analysis implementation.
+    """A CMS analysis implementation.
 
-    This class is designed to work with UnifiedProcessor for distributed processing.
-    The processor calls process() method per-chunk, and histograms accumulate
-    via coffea's merge mechanism.
+    This class is designed to work with coffea processors for distributed processing.
+    The processor should call process() method per-chunk.
     """
 
     def __init__(self, config: dict[str, Any], output_manager: OutputDirectoryManager) -> None:

@@ -1,6 +1,6 @@
 """High-level orchestration for processor-based workflow.
 
-This module provides a clean entry point for running the UnifiedProcessor
+This module provides a clean entry point for running implemented coffea processors
 workflow, handling both the full processor execution and the histogram loading
 path (for iterating on statistical models without re-processing).
 """
@@ -42,8 +42,9 @@ def run_processor_workflow(
     """Execute processor workflow or load saved histograms.
 
     This function provides a unified entry point for the processor-based workflow.
-    When run_processor=True, it runs the UnifiedProcessor over data and saves
-    histograms. When run_processor=False, it loads previously saved histograms,
+    When run_processor=True, it runs a user-passed processor over data. If user
+    does not provide a processor, the SkimAndAnalyseProcessor will be used. 
+    When run_processor=False, it loads previously saved histograms,
     enabling fast iteration on statistical models without re-processing events.
 
     Metrics collection should be handled externally using roastcoffea's
@@ -58,7 +59,10 @@ def run_processor_workflow(
     metadata_lookup : Dict[str, Dict[str, Any]]
         Pre-built metadata lookup from DatasetMetadataManager.build_metadata_lookup()
         Maps dataset_key -> {process, variation, xsec, nevts, is_data, dataset}
-    workitems : List[WorkItem]
+    processor: Optional[ProcessorABC]:
+        An instantised coffea processor to be used in the runner exeutor workflows.
+        If not provided, SkimAndAnalyseProcessor is used.
+    workitems :  Optional[List[WorkItem]]
         Pre-generated work items from DatasetMetadataManager.workitems
     executor : Any
         Coffea executor (DaskExecutor, FuturesExecutor, etc.)
