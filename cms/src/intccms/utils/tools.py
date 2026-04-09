@@ -458,6 +458,5 @@ def get_branches_for_fraction(
         return branches_to_dict(selected), {}
 
     mc_only = find_mc_only_branches(file_path, data_file, tree_name=tree_name)
-    common = [b for b in selected if b not in mc_only]
     mc_only_selected = [b for b in selected if b in mc_only]
-    return branches_to_dict(common), branches_to_dict(mc_only_selected)
+    return branches_to_dict(selected), branches_to_dict(mc_only_selected)

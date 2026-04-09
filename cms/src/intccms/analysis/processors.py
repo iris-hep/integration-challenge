@@ -563,10 +563,20 @@ class TwoHundredGbpsProcessor(ProcessorABC):
             mc_only_columns=self.mc_only_columns,
             is_data=is_data,
         )
+        branches_read = set()
         with track_time(self, "materialize"):
-            for arr in columns.values():
-                ak.materialize(arr)
-        return {"processed_events": len(events)}
+            for key, arr in columns.items():
+                try:
+                    ak.materialize(arr)
+                    branches_read.add(key)
+                except Exception as e:
+                    print(e)
+                    if "unrecognized compression algorithm" in str(e) or "lzma data error" in str(e):
+                        continue
+                    else:
+                        raise e
+                    
+        return {"processed_events": len(events), "branches_read": branches_read}
 
     def postprocess(self, accumulator: Dict) -> Dict:
         logger.info(
