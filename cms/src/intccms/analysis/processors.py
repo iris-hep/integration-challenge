@@ -491,8 +491,7 @@ class SkimAndAnalyseProcessor(ProcessorABC):
 class TwoHundredGbpsProcessor(ProcessorABC):
     """Minimal coffea processor that reads branches and does nothing else.
 
-    Mirrors the IDAP 200 Gbps challenge
-    (iris-hep/idap-200gbps/materialize_branches.ipynb): force materialization
+    Mirrors the IDAP 200 Gbps challenge: force materialization
     of a configurable branch set per chunk so wall-clock time is dominated by
     I/O, then return only an event counter. Use this to benchmark max
     distributed throughput with the same config / fileset / runner plumbing
@@ -501,8 +500,8 @@ class TwoHundredGbpsProcessor(ProcessorABC):
     The branches read are taken from ``config.preprocess.branches`` (and
     ``config.preprocess.mc_branches``), so the user controls "fraction of
     branches read" via the existing skim-branch config. The helper
-    :func:`example_cms.configs.throughput.get_branches_for_fraction` can
-    populate that config from a real NanoAOD file.
+    :func:`intccms.utils.tools.get_branches_for_fraction` can populate
+    that config from a real NanoAOD file.
     """
 
     def __init__(
