@@ -141,13 +141,11 @@ def warm_xcache(
     redirector: Optional[str] = None,
     max_files: Optional[int] = None,
     processes: Optional[List[str]] = None,
-) -> Tuple[List[Dict[str, Any]], float]:
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     """Warm xcache by reading all dataset files through it using dask workers.
 
     Dispatches ``xrdcp`` calls to dask workers (so files are pulled from
     within the cluster, close to xcache) and waits for them to finish.
-    Returns per-file results and wall-clock time so you can compute
-    throughput.
 
     Parameters
     ----------
@@ -168,16 +166,10 @@ def warm_xcache(
     results : list of dict
         One dict per file with keys ``"fname"``, ``"t0"``, ``"t1"``,
         ``"GBread"``.
-    wall_time : float
-        Wall-clock seconds from first submit to last result.
-
-    Examples
-    --------
-    ::
-
-        results, wall_time = warm_xcache(dataset_manager, client, max_files=20)
-        total_GB = sum(r["GBread"] for r in results)
-        print(f"{total_GB * 8 / wall_time:.2f} Gbps")
+    meta : dict
+        Summary with ``"n_files"``, ``"total_GB"``, ``"wall_time_s"``,
+        ``"total_Gbps"``, ``"processtime_s"`` (sum of per-worker times),
+        ``"per_worker_Gbps"``.
     """
     import time
 
@@ -219,9 +211,22 @@ def warm_xcache(
     wall_time = t1 - t0
 
     total_GB = sum(r["GBread"] for r in results)
-    logger.info(f"Warming done: {total_GB:.1f} GB in {wall_time:.1f}s = {total_GB * 8 / wall_time:.2f} Gbps")
+    processtime = sum(r["t1"] - r["t0"] for r in results)
 
-    return results, wall_time
+    meta = {
+        "n_files": len(results),
+        "total_GB": total_GB,
+        "wall_time_s": wall_time,
+        "total_Gbps": total_GB * 8 / wall_time if wall_time > 0 else 0,
+        "processtime_s": processtime,
+        "per_worker_Gbps": total_GB * 8 / processtime if processtime > 0 else 0,
+    }
+    logger.info(
+        f"Warming done: {meta['total_GB']:.1f} GB in {meta['wall_time_s']:.1f}s "
+        f"= {meta['total_Gbps']:.2f} Gbps"
+    )
+
+    return results, meta
 
 
 # ---------------------------------------------------------------------------
