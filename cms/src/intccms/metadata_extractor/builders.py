@@ -205,7 +205,8 @@ class FilesetBuilder:
             years_list.append(year)
 
             # Collect file paths
-            file_paths = collect_file_paths(listing_dir, identifiers, redirector)
+            skip_files = self.dataset_manager.config.skip_files
+            file_paths = collect_file_paths(listing_dir, identifiers, redirector, skip_files=skip_files)
 
             # Apply max_files limit
             if max_files:

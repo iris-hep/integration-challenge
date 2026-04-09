@@ -185,7 +185,8 @@ def warm_xcache(
         dirs = dataset_manager.get_dataset_directories(name)
         redir = redirector or dataset_manager.get_redirector(name)
         for d in dirs:
-            all_uris.extend(collect_file_paths(d, redirector=redir))
+            skip = dataset_manager.config.skip_files
+            all_uris.extend(collect_file_paths(d, redirector=redir, skip_files=skip))
             if max_files and len(all_uris) >= max_files:
                 break
         if max_files and len(all_uris) >= max_files:

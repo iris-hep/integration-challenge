@@ -49,6 +49,16 @@ class DatasetManagerConfig(SubscriptableModel):
             description="Maximum number of files to process per dataset."
         ),
     ]
+    skip_files: Annotated[
+        List[str],
+        Field(
+            default_factory=list,
+            description=(
+                "File paths (or substrings) to skip. Any file whose path "
+                "contains one of these strings will be excluded."
+            ),
+        ),
+    ]
 
     @model_validator(mode="after")
     def validate_general(self) -> "DatasetManagerConfig":
