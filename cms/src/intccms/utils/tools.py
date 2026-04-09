@@ -104,6 +104,127 @@ def recursive_to_backend(data_structure: Any, backend: str = "jax") -> Any:
 
 
 # ---------------------------------------------------------------------------
+# XCache warming (closely follows distributed_xrdcp.ipynb)
+# ---------------------------------------------------------------------------
+
+
+def _xrdcp_one(fname: str) -> Dict[str, Any]:
+    """Run ``xrdcp <fname> /dev/null -f`` and return timing + size info.
+
+    This is the function that gets sent to dask workers. It uses
+    ``pexpect`` to capture xrdcp's progress output and parse the file
+    size from it.
+    """
+    import pexpect
+    import time
+
+    t0 = time.time()
+    child = pexpect.spawn(f"xrdcp {fname} /dev/null -f")
+    child.expect(pexpect.EOF)
+    t1 = time.time()
+    res = child.before.decode()
+    size = res.split("\r")[-2].split("/")[0][1:]
+    if "MB" in size:
+        size_in_GB = float(size[:-2]) / 1000
+    elif "GB" in size:
+        size_in_GB = float(size[:-2])
+    elif "kB" in size:
+        size_in_GB = float(size[:-2]) / 1000 / 1000
+    else:
+        raise ValueError(f"cannot handle size: {size}")
+    return {"fname": fname, "t0": t0, "t1": t1, "GBread": size_in_GB}
+
+
+def warm_xcache(
+    dataset_manager: Any,
+    client: Any,
+    redirector: Optional[str] = None,
+    max_files: Optional[int] = None,
+    processes: Optional[List[str]] = None,
+) -> Tuple[List[Dict[str, Any]], float]:
+    """Warm xcache by reading all dataset files through it using dask workers.
+
+    Dispatches ``xrdcp`` calls to dask workers (so files are pulled from
+    within the cluster, close to xcache) and waits for them to finish.
+    Returns per-file results and wall-clock time so you can compute
+    throughput.
+
+    Parameters
+    ----------
+    dataset_manager : DatasetManager
+        An initialized :class:`intccms.datasets.DatasetManager`.
+    client : dask.distributed.Client
+        A live dask distributed client.
+    redirector : str or None, optional
+        Override the per-dataset redirector. If None, each dataset's own
+        redirector is used.
+    max_files : int or None, optional
+        Stop after this many files total. None means all files.
+    processes : list of str or None, optional
+        Only warm these processes. None means all.
+
+    Returns
+    -------
+    results : list of dict
+        One dict per file with keys ``"fname"``, ``"t0"``, ``"t1"``,
+        ``"GBread"``.
+    wall_time : float
+        Wall-clock seconds from first submit to last result.
+
+    Examples
+    --------
+    ::
+
+        results, wall_time = warm_xcache(dataset_manager, client, max_files=20)
+        total_GB = sum(r["GBread"] for r in results)
+        print(f"{total_GB * 8 / wall_time:.2f} Gbps")
+    """
+    import time
+
+    import dask
+    from dask.distributed import as_completed
+
+    from intccms.metadata_extractor.io import collect_file_paths
+
+    # Collect file URIs from DatasetManager
+    process_names = processes or dataset_manager.list_processes()
+    all_uris: List[str] = []
+    for name in process_names:
+        dirs = dataset_manager.get_dataset_directories(name)
+        redir = redirector or dataset_manager.get_redirector(name)
+        for d in dirs:
+            all_uris.extend(collect_file_paths(d, redirector=redir))
+            if max_files and len(all_uris) >= max_files:
+                break
+        if max_files and len(all_uris) >= max_files:
+            break
+
+    if max_files:
+        all_uris = all_uris[:max_files]
+
+    logger.info(f"Warming xcache: {len(all_uris)} files")
+
+    # Dispatch to dask workers
+    t0 = time.time()
+    tasks = [dask.delayed(_xrdcp_one)(uri) for uri in all_uris]
+    futures = client.compute(tasks)
+
+    results = []
+    for future in as_completed(futures):
+        results.append(future.result())
+        if len(results) % 10 == 0 or len(results) == len(all_uris):
+            logger.info(f"  progress: {len(results)}/{len(all_uris)}")
+
+    t1 = time.time()
+    wall_time = t1 - t0
+
+    total_GB = sum(r["GBread"] for r in results)
+    logger.info(f"Warming done: {total_GB:.1f} GB in {wall_time:.1f}s = {total_GB * 8 / wall_time:.2f} Gbps")
+
+    return results, wall_time
+
+
+# ---------------------------------------------------------------------------
 # Branch-size helpers for the throughput processor
 #
 # Closely follows iris-hep/idap-200gbps/input_files/size_per_branch.ipynb.
