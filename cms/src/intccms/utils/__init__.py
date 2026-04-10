@@ -3,6 +3,7 @@ from . import filters
 from . import logging
 #from . import mva
 #from . import plot
+from . import profiling
 from . import stats
 from . import tools
 
@@ -12,6 +13,7 @@ __all__ = [
     "logging",
     "mva",
     "plot",
+    "profiling",
     "stats",
     "tools",
 ]

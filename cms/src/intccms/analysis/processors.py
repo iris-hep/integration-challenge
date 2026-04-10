@@ -4,6 +4,7 @@ This module provides the coffea processors. The processors
 respect configuration flags to control which stages run.
 """
 
+import cProfile
 import hashlib
 import json
 import logging
@@ -14,9 +15,10 @@ from typing import Any, Dict, List
 
 import awkward as ak
 from coffea.processor import ProcessorABC
-from roastcoffea import track_metrics, track_time
+from roastcoffea import track_memory, track_metrics, track_time
 
 from intccms.analysis.cms import CMSAnalysis
+from intccms.utils.profiling import MergeableProfile, categorize_profile
 from intccms.skimming.io.writers import get_writer
 from intccms.skimming.pipeline.stages import (
     build_column_list,
@@ -509,6 +511,7 @@ class TwoHundredGbpsProcessor(ProcessorABC):
         config: Config,
         output_manager: OutputDirectoryManager,
         metadata_lookup: Dict[str, Dict[str, Any]],
+        profile: bool = False,
     ):
         """Initialize TwoHundredGbpsProcessor.
 
@@ -523,8 +526,12 @@ class TwoHundredGbpsProcessor(ProcessorABC):
         metadata_lookup : Dict[str, Dict[str, Any]]
             Accepted for drop-in parity with :class:`SkimAndAnalyseProcessor`
             but unused — no per-dataset metadata is needed.
+        profile : bool
+            If True, wrap each chunk in cProfile and collect mergeable
+            stats plus per-chunk bucket summaries. Adds ~5-15% overhead.
         """
         self.config = config
+        self.profile = profile
 
         preprocess_cfg = config.preprocess
         self.columns_to_keep, self.mc_only_columns = build_column_list(
@@ -540,7 +547,11 @@ class TwoHundredGbpsProcessor(ProcessorABC):
 
     @property
     def accumulator(self):
-        return {"processed_events": 0}
+        acc = {"processed_events": 0}
+        if self.profile:
+            acc["cprofile"] = MergeableProfile()
+            acc["cprofile_chunks"] = []
+        return acc
 
     @track_metrics
     def process(self, events: ak.Array) -> Dict[str, Any]:
@@ -556,15 +567,20 @@ class TwoHundredGbpsProcessor(ProcessorABC):
         dict
             ``{"processed_events": n}`` where ``n`` is the input event count.
         """
+        if self.profile:
+            prof = cProfile.Profile()
+            prof.enable()
+
         is_data = events.metadata.get("is_data", False)
-        columns = extract_columns(
-            events,
-            self.columns_to_keep,
-            mc_only_columns=self.mc_only_columns,
-            is_data=is_data,
-        )
+        with track_time(self, "extract_columns"), track_memory(self, "extract_columns"):
+            columns = extract_columns(
+                events,
+                self.columns_to_keep,
+                mc_only_columns=self.mc_only_columns,
+                is_data=is_data,
+            )
         branches_read = set()
-        with track_time(self, "materialize"):
+        with track_time(self, "materialize"), track_memory(self, "materialize"):
             for key, arr in columns.items():
                 try:
                     ak.materialize(arr)
@@ -575,8 +591,19 @@ class TwoHundredGbpsProcessor(ProcessorABC):
                         continue
                     else:
                         raise e
-                    
-        return {"processed_events": len(events), "branches_read": branches_read}
+
+        result = {"processed_events": len(events), "branches_read": branches_read}
+
+        if self.profile:
+            prof.disable()
+            prof.create_stats()
+            result["cprofile"] = MergeableProfile(stats=prof.stats)
+            chunk_summary = categorize_profile(prof.stats)
+            chunk_summary["dataset"] = events.metadata.get("dataset", "unknown")
+            chunk_summary["nevents"] = len(events)
+            result["cprofile_chunks"] = [chunk_summary]
+
+        return result
 
     def postprocess(self, accumulator: Dict) -> Dict:
         logger.info(
