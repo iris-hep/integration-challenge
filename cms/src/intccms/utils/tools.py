@@ -3,10 +3,16 @@ import logging
 import os
 from collections import defaultdict
 from pathlib import Path
+import pexpect
+import time
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
 import awkward as ak
 import uproot
+import dask
+from dask.distributed import as_completed
+
+from intccms.metadata_extractor.io import collect_file_paths
 
 logger = logging.getLogger(__name__)
 
@@ -106,41 +112,13 @@ def recursive_to_backend(data_structure: Any, backend: str = "jax") -> Any:
 # ---------------------------------------------------------------------------
 # XCache warming (closely follows distributed_xrdcp.ipynb)
 # ---------------------------------------------------------------------------
-
-
-def _xrdcp_one(fname: str) -> Dict[str, Any]:
-    """Run ``xrdcp <fname> /dev/null -f`` and return timing + size info.
-
-    This is the function that gets sent to dask workers. It uses
-    ``pexpect`` to capture xrdcp's progress output and parse the file
-    size from it.
-    """
-    import pexpect
-    import time
-
-    t0 = time.time()
-    child = pexpect.spawn(f"xrdcp {fname} /dev/null -f")
-    child.expect(pexpect.EOF)
-    t1 = time.time()
-    res = child.before.decode()
-    size = res.split("\r")[-2].split("/")[0][1:]
-    if "MB" in size:
-        size_in_GB = float(size[:-2]) / 1000
-    elif "GB" in size:
-        size_in_GB = float(size[:-2])
-    elif "kB" in size:
-        size_in_GB = float(size[:-2]) / 1000 / 1000
-    else:
-        raise ValueError(f"cannot handle size: {size}")
-    return {"fname": fname, "t0": t0, "t1": t1, "GBread": size_in_GB}
-
-
 def warm_xcache(
     dataset_manager: Any,
     client: Any,
     redirector: Optional[str] = None,
     max_files: Optional[int] = None,
     processes: Optional[List[str]] = None,
+    max_retries: int = 3,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     """Warm xcache by reading all dataset files through it using dask workers.
 
@@ -160,6 +138,7 @@ def warm_xcache(
         Stop after this many files total. None means all files.
     processes : list of str or None, optional
         Only warm these processes. None means all.
+    max_retries: the maximum number of times to retry if some futures fail
 
     Returns
     -------
@@ -171,13 +150,29 @@ def warm_xcache(
         ``"total_Gbps"``, ``"processtime_s"`` (sum of per-worker times),
         ``"per_worker_Gbps"``.
     """
-    import time
-
-    import dask
-    from dask.distributed import as_completed
-
-    from intccms.metadata_extractor.io import collect_file_paths
-
+    def _xrdcp_one(fname: str) -> Dict[str, Any]:
+        """Run ``xrdcp <fname> /dev/null -f`` and return timing + size info.
+    
+        This is the function that gets sent to dask workers. It uses
+        ``pexpect`` to capture xrdcp's progress output and parse the file
+        size from it.
+        """
+        t0 = time.time()
+        child = pexpect.spawn(f"xrdcp {fname} /dev/null -f")
+        child.expect(pexpect.EOF, timeout=600) 
+        t1 = time.time()
+        res = child.before.decode()
+        size = res.split("\r")[-2].split("/")[0][1:]
+        if "MB" in size:
+            size_in_GB = float(size[:-2]) / 1000
+        elif "GB" in size:
+            size_in_GB = float(size[:-2])
+        elif "kB" in size:
+            size_in_GB = float(size[:-2]) / 1000 / 1000
+        else:
+            raise ValueError(f"cannot handle size: {size}")
+        return {"fname": fname, "t0": t0, "t1": t1, "GBread": size_in_GB}
+        
     # Collect file URIs from DatasetManager
     process_names = processes or dataset_manager.list_processes()
     all_uris: List[str] = []
@@ -203,10 +198,22 @@ def warm_xcache(
     futures = client.compute(tasks)
 
     results = []
-    for future in as_completed(futures):
-        results.append(future.result())
-        if len(results) % 10 == 0 or len(results) == len(all_uris):
-            logger.info(f"  progress: {len(results)}/{len(all_uris)}")
+    failed = []
+    to_run = futures
+    nretries = 0
+    while nretries < max_retries and to_run:
+        try:
+            for future in as_completed(to_run):
+                try:
+                    results.append(future.result())
+                except Exception as e:
+                    failed.append(future)
+        except KeyboardInterrupt:
+            logger.info("Interrupted — cancelling remaining futures")
+            client.cancel(futures)                                                                                                                                                            
+        to_run = failed
+        failed = []
+        nretries += 1
 
     t1 = time.time()
     wall_time = t1 - t0

@@ -9,6 +9,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from lzma import LZMAError
+from cramjam import DecompressionError
 
 from coffea.nanoevents import NanoAODSchema
 from coffea.processor import Runner, ProcessorABC
@@ -190,7 +191,7 @@ def run_processor_workflow(
             schema=schema,
             chunksize=chunksize,
             savemetrics=True,
-            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, DeserializationError),
+            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, DeserializationError, DecompressionError),
             **runner_kwargs,
         )
 
