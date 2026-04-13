@@ -348,11 +348,12 @@ This shows where worker CPU time is spent (decompression, network I/O, array con
 
 ## Notebooks
 
-| Notebook | Use when |
-|----------|----------|
+| Notebook | Purpose |
+|----------|---------|
 | `full_run.ipynb` | Standard analysis workflow (metadata &rarr; processing &rarr; histograms) |
-| `full_run_with_metrics.ipynb` | Same workflow with roastcoffea dashboards |
-| `full_run_with_skimming.ipynb` | Demonstrates all four workflow modes |
+| `full_run_with_metrics.ipynb` | Same workflow with roastcoffea performance dashboards |
+| `full_run_workflow_modes.ipynb` | Runs all four workflow modes (skim+analysis, analysis only, skim only, analysis on skims) with per-mode metrics comparison |
+| `full_run_skim_formats.ipynb` | Tests skimming output formats (Parquet/S3, TTree/XRootD, RNTuple/XRootD) with read-back verification |
 | `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
 | `input_inspector.ipynb` | Characterize inputs (event counts, branch sizes, compression) |
 
