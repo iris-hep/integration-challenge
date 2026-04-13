@@ -2,7 +2,20 @@
 
 A coffea-based distributed analysis framework for the CMS Z' → tt̄ single-lepton search on Run 2 NanoAOD.
 
-**Contents**: [Setup](#setup) | [Configuration](#configuration) | [Datasets](#datasets) | [Metadata generation](#metadata-generation) | [Handling bad files](#handling-bad-files) | [Workflow modes](#workflow-modes) | [Skimming](#skimming) | [The processor](#the-processor) | [Histogramming](#histogramming) | [Corrections and systematics](#corrections-and-systematics) | [Metrics and profiling](#metrics-and-profiling) | [Notebooks](#notebooks) | [Credentials](#credentials)
+**Contents**
+- [Setup](#setup)
+- [Configuration](#configuration)
+- [Datasets](#datasets)
+- [Metadata generation](#metadata-generation)
+- [Handling bad files](#handling-bad-files)
+- [Workflow modes](#workflow-modes)
+- [Skimming](#skimming)
+- [The processor](#the-processor)
+- [Histogramming](#histogramming)
+- [Corrections and systematics](#corrections-and-systematics)
+- [Metrics and profiling](#metrics-and-profiling)
+- [Notebooks](#notebooks)
+- [Credentials](#credentials)
 
 ## Setup
 
