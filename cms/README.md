@@ -117,6 +117,28 @@ Set `config["general"]["run_metadata_generation"] = True` to run it (requires a 
 
 **Re-run when**: datasets change, files are added/removed, or you switch redirectors.
 
+### [Advanced] What are the components of the preprocessing workflow?
+
+The metadata extraction pipeline lives in `src/intccms/metadata_extractor/` and has four components:
+
+| Module | Class/Functions | Role |
+|--------|----------------|------|
+| `manager.py` | `DatasetMetadataManager` | Top-level orchestrator. Calls the builder and extractor in sequence, caches results as JSON, and builds `metadata_lookup` for the processor. |
+| `builders.py` | `FilesetBuilder` | Reads dataset configs from `DatasetManager`, enumerates file paths (applying `skip_files`), and builds a coffea-compatible fileset dict + `Dataset` objects. |
+| `extractor.py` | `CoffeaMetadataExtractor` | Runs coffea's preprocessing over the fileset using a `Runner` with the configured executor (Dask or local). Produces `WorkItem` objects with file paths, entry ranges, and chunk boundaries. |
+| `core.py` | `parse_dataset_key`, `aggregate_workitem_events`, `format_event_summary` | Pure functions for dataset key parsing, event count aggregation across workitems, and summary formatting. |
+| `io.py` | `collect_file_paths`, `save_json`, `load_json`, `serialize_workitems` | File I/O helpers: path enumeration from dataset directories, JSON persistence for fileset/workitems/summaries. |
+
+The flow when `run_metadata_generation=True`:
+
+1. `DatasetMetadataManager.run(executor=...)` is called
+2. `FilesetBuilder.build_fileset()` enumerates files from dataset directories → produces `fileset` dict and `Dataset` objects
+3. `CoffeaMetadataExtractor.extract_metadata(fileset)` runs coffea preprocessing on workers → produces `WorkItem` list with chunked entry ranges
+4. Results are saved to `metadata_dir/` as JSON (`fileset.json`, `workitems.json`, `nanoaods.json`)
+5. `build_metadata_lookup()` combines dataset configs with event counts into a `MetadataLookup` dict keyed by dataset name, containing process, xsec, nevts, is_data, year, etc.
+
+When `run_metadata_generation=False`, step 2-3 are skipped and cached JSON files are loaded instead.
+
 ## Handling bad files
 
 There are two levels of protection against bad files:
