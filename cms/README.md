@@ -194,11 +194,23 @@ Set `use_skimmed_input=True` in the config. The runner auto-discovers skimmed fi
 
 ## The processor
 
-### Where does it live?
+### How is the analysis code organized?
+
+Three layers in `src/intccms/analysis/`:
+
+| File | Class | Role |
+|------|-------|------|
+| `base.py` | `Analysis` | Generic base class. Handles corrections (correctionlib + custom functions), object masks, baseline selection, ghost observables. Experiment-agnostic. |
+| `cms.py` | `CMSAnalysis(Analysis)` | CMS-specific implementation. Initializes histograms, runs the histogramming loop (nominal + systematic variations), runs statistical inference via cabinetry. |
+| `processors.py` | `SkimAndAnalyseProcessor`, `TwoHundredGbpsProcessor` | Coffea processors. `SkimAndAnalyseProcessor` owns a `CMSAnalysis` instance and dispatches to it for the analysis step. |
+
+The flow per chunk: `SkimAndAnalyseProcessor.process()` → skim selection → optionally save to disk → `CMSAnalysis.process()` → `Analysis.prepare_objects()` (corrections + masks) → `CMSAnalysis.histogramming()` (fill histograms).
+
+### Where does the processor live?
 
 `src/intccms/analysis/processors.py` has two processors:
 
-- **`SkimAndAnalyseProcessor`**: The main processor. Per chunk, it: (1) applies skim selection, (2) saves filtered events to disk if enabled, (3) runs analysis (corrections + histogramming) if enabled. All controlled by the config flags above.
+- **`SkimAndAnalyseProcessor`**: The main processor. Per chunk, it: (1) applies skim selection, (2) saves filtered events to disk if enabled, (3) calls `CMSAnalysis.process()` for corrections and histogramming if enabled. All controlled by the config flags above.
 - **`TwoHundredGbpsProcessor`**: Minimal I/O benchmark. Reads and materializes configured branches, returns event count only.
 
 Both are passed to `run_processor_workflow()` in `src/intccms/analysis/runner.py`.
@@ -265,14 +277,24 @@ Channels (in `configuration.py`) tie a selection function to a list of observabl
 }
 ```
 
+### How are histograms initialized?
+
+`CMSAnalysis._init_histograms()` in `src/intccms/analysis/cms.py` creates one `hist.Hist` per (channel, observable) combination. Each histogram has three axes:
+
+- **Observable** (`hist.axis.Variable`): binning from the observable config
+- **Process** (`hist.axis.StrCategory`, growth): filled dynamically with dataset names
+- **Variation** (`hist.axis.StrCategory`, growth): `"nominal"` plus one entry per systematic up/down
+
+Storage is `hist.storage.Weight()` (supports weighted events). The histograms are created once during processor initialization and filled per chunk.
+
 ### Where does histogramming happen?
 
-`CMSAnalysis.histogramming()` in `src/intccms/analysis/cms.py`. For each chunk, it:
+`CMSAnalysis.histogramming()` in the same file. For each chunk, it:
 
 1. Applies the channel selection
 2. Computes event weights (genWeight &times; xsec normalization &times; correction SFs)
 3. Evaluates the observable function
-4. Fills a `hist.Hist` with axes: observable (Variable), process (StrCategory), variation (StrCategory)
+4. Fills the histogram for the matching (process, variation) bin
 
 ### Where are histograms saved?
 
