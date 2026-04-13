@@ -14,6 +14,7 @@ A coffea-based distributed analysis framework for the CMS Z' → tt̄ single-lep
 - [Histogramming](#histogramming)
 - [Corrections and systematics](#corrections-and-systematics)
 - [Metrics and profiling](#metrics-and-profiling)
+- [Inspecting inputs](#inspecting-inputs)
 - [Notebooks](#notebooks)
 - [Credentials](#credentials)
 
@@ -430,6 +431,27 @@ save(fig)
 
 This shows where worker CPU time is spent (decompression, network I/O, array construction, etc.). The "time" values are cumulative across all workers.
 
+## Inspecting inputs
+
+### How do I inspect NanoAOD input files?
+
+`input_inspector.ipynb` uses the `intccms.metrics.inspector` module to characterize input ROOT files. It runs distributed inspection via Dask and reports:
+- Event counts per file and per dataset
+- Branch sizes (compressed and uncompressed)
+- Compression ratios
+- Optional Rucio-backed file size lookups
+
+The inspector produces rich tables (via `rich`) and matplotlib visualizations (event distributions, branch size distributions, dataset comparisons, summary dashboard).
+
+### How do I inspect skimmed output files?
+
+`skim_inspector.ipynb` uses the same inspector module but pointed at skimmed files on XRootD (or other remote storage). It:
+1. Derives skimmed subdirectory paths from the original dataset config and a configurable `SKIM_BASE` / `SKIM_REDIRECTOR`
+2. Lists files via `xrdfs ls`
+3. Runs the same distributed inspection and visualization pipeline
+
+To use it, edit the `SKIM_REDIRECTOR` and `SKIM_BASE` variables in the config cell to point at your skimmed file location.
+
 ## Notebooks
 
 | Notebook | Purpose |
@@ -439,7 +461,8 @@ This shows where worker CPU time is spent (decompression, network I/O, array con
 | `full_run_workflow_modes.ipynb` | Runs all four workflow modes (skim+analysis, analysis only, skim only, analysis on skims) with per-mode metrics comparison |
 | `full_run_skim_formats.ipynb` | Tests skimming output formats (Parquet/S3, TTree/XRootD, RNTuple/XRootD) with read-back verification |
 | `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
-| `input_inspector.ipynb` | Characterize inputs (event counts, branch sizes, compression) |
+| `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
+| `skim_inspector.ipynb` | Inspect skimmed output files on XRootD or other remote storage |
 
 ## Credentials
 
