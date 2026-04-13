@@ -1,8 +1,7 @@
 """Coffea processor for unified skimming and analysis workflow.
 
-This module provides the UnifiedProcessor class that integrates skimming
-and analysis into a single distributed coffea-based workflow. The processor
-respects configuration flags to control which stages run.
+This module provides the coffea processors. The processors
+respect configuration flags to control which stages run.
 """
 
 import hashlib
@@ -11,13 +10,13 @@ import logging
 import uuid
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import awkward as ak
 from coffea.processor import ProcessorABC
-from roastcoffea import track_metrics, track_time
+from roastcoffea import track_memory, track_metrics, track_time
 
-from intccms.analysis.nondiff import NonDiffAnalysis
+from intccms.analysis.cms import CMSAnalysis
 from intccms.skimming.io.writers import get_writer
 from intccms.skimming.pipeline.stages import (
     build_column_list,
@@ -36,7 +35,7 @@ from intccms.utils.functors import SelectionExecutor
 logger = logging.getLogger(__name__)
 
 
-class UnifiedProcessor(ProcessorABC):
+class SkimAndAnalyseProcessor(ProcessorABC):
     """Coffea processor for distributed skimming and/or analysis.
 
     This processor integrates the skimming pipeline with the analysis workflow,
@@ -60,7 +59,7 @@ class UnifiedProcessor(ProcessorABC):
         (Parquet or ROOT). Writer automatically appends correct file extension.
       - When save_skimmed_output=False: No disk I/O (useful for analyzing pre-skimmed data)
 
-    - **Analysis** (via NonDiffAnalysis):
+    - **Analysis** (via CMSAnalysis):
       - When run_analysis=True: Object selection, corrections, observable calculations
       - When run_histogramming=True: Fill histograms during analysis
       - When run_systematics=True: Apply systematic variations
@@ -96,7 +95,7 @@ class UnifiedProcessor(ProcessorABC):
     **Example 1: Skim original NanoAOD files**
 
     >>> from coffea.processor import Runner, FuturesExecutor
-    >>> from intccms.analysis import UnifiedProcessor
+    >>> from intccms.analysis import SkimAndAnalyseProcessor
     >>> from intccms.metadata_extractor import DatasetMetadataManager
     >>>
     >>> # Generate metadata from NanoAOD files
@@ -109,7 +108,7 @@ class UnifiedProcessor(ProcessorABC):
     >>> config.general.save_skimmed_output = True
     >>> config.general.run_analysis = False
     >>>
-    >>> processor = UnifiedProcessor(
+    >>> processor = SkimAndAnalyseProcessor(
     ...     config=config,
     ...     output_manager=output_manager,
     ...     metadata_lookup=metadata_lookup,
@@ -151,7 +150,7 @@ class UnifiedProcessor(ProcessorABC):
     >>> config.general.run_analysis = True
     >>> config.general.run_histogramming = True
     >>>
-    >>> processor = UnifiedProcessor(
+    >>> processor = SkimAndAnalyseProcessor(
     ...     config=config,
     ...     output_manager=output_manager,
     ...     metadata_lookup=metadata_lookup,
@@ -168,7 +167,7 @@ class UnifiedProcessor(ProcessorABC):
         output_manager: OutputDirectoryManager,
         metadata_lookup: Dict[str, Dict[str, Any]],
     ):
-        """Initialize UnifiedProcessor.
+        """Initialize SkimAndAnalyseProcessor.
 
         Parameters
         ----------
@@ -187,15 +186,15 @@ class UnifiedProcessor(ProcessorABC):
         # Initialize skimming components (always needed for filtering)
         self._init_skimming_components()
 
-        # Always create NonDiffAnalysis instance
+        # Always create CMSAnalysis instance
         # The run_analysis flag controls whether we execute its methods
-        self.analysis = NonDiffAnalysis(
+        self.analysis = CMSAnalysis(
             config=config,
             output_manager=output_manager,
         )
 
         logger.info(
-            f"Initialized UnifiedProcessor: "
+            f"Initialized SkimAndAnalyseProcessor: "
             f"save_skimmed_output={config.general.save_skimmed_output}, "
             f"analysis={config.general.run_analysis}, "
             f"histogramming={config.general.run_histogramming}, "
@@ -233,7 +232,7 @@ class UnifiedProcessor(ProcessorABC):
         acc = {"processed_events": 0}
 
         if self.config.general.run_histogramming:
-            # Use histograms from NonDiffAnalysis instance
+            # Use histograms from CMSAnalysis instance
             # Coffea will automatically merge these across chunks via hist.Hist.__add__
             acc["histograms"] = self.analysis.nD_hists_per_region
 
@@ -287,7 +286,7 @@ class UnifiedProcessor(ProcessorABC):
 
         # Step 2: Run analysis if enabled
         if self.config.general.run_analysis and len(events) > 0:
-            # NonDiffAnalysis.process() handles:
+            # CMSAnalysis.process() handles:
             # - Object selection and corrections
             # - Histogram filling (if run_histogramming=True)
             # - Systematics (if run_systematics=True)
@@ -487,3 +486,103 @@ class UnifiedProcessor(ProcessorABC):
                     # Don't raise - allow workflow to complete
 
         return accumulator
+
+
+class TwoHundredGbpsProcessor(ProcessorABC):
+    """Minimal coffea processor that reads branches and does nothing else.
+
+    Mirrors the IDAP 200 Gbps challenge: force materialization
+    of a configurable branch set per chunk so wall-clock time is dominated by
+    I/O, then return only an event counter. Use this to benchmark max
+    distributed throughput with the same config / fileset / runner plumbing
+    as :class:`SkimAndAnalyseProcessor`.
+
+    The branches read are taken from ``config.preprocess.branches`` (and
+    ``config.preprocess.mc_branches``), so the user controls "fraction of
+    branches read" via the existing skim-branch config. The helper
+    :func:`intccms.utils.tools.get_branches_for_fraction` can populate
+    that config from a real NanoAOD file.
+    """
+
+    def __init__(
+        self,
+        config: Config,
+        output_manager: OutputDirectoryManager,
+        metadata_lookup: Dict[str, Dict[str, Any]],
+    ):
+        """Initialize TwoHundredGbpsProcessor.
+
+        Parameters
+        ----------
+        config : Config
+            Full analysis configuration. Only ``config.preprocess.branches``
+            and ``config.preprocess.mc_branches`` are read.
+        output_manager : OutputDirectoryManager
+            Accepted for drop-in parity with :class:`SkimAndAnalyseProcessor`
+            but unused — this processor produces no files.
+        metadata_lookup : Dict[str, Dict[str, Any]]
+            Accepted for drop-in parity with :class:`SkimAndAnalyseProcessor`
+            but unused — no per-dataset metadata is needed.
+        """
+        self.config = config
+
+        preprocess_cfg = config.preprocess
+        self.columns_to_keep, self.mc_only_columns = build_column_list(
+            preprocess_cfg.branches,
+            preprocess_cfg.get("mc_branches"),
+            is_data=False,  # filtered per-chunk in process()
+        )
+
+        logger.info(
+            f"Initialized TwoHundredGbpsProcessor: "
+            f"{len(self.columns_to_keep)} branches to materialize"
+        )
+
+    @property
+    def accumulator(self):
+        return {"processed_events": 0}
+
+    @track_metrics
+    def process(self, events: ak.Array) -> Dict[str, Any]:
+        """Materialize the configured branches and count events.
+
+        Parameters
+        ----------
+        events : ak.Array
+            NanoEvents array from coffea (NanoAODSchema applied).
+
+        Returns
+        -------
+        dict
+            ``{"processed_events": n}`` where ``n`` is the input event count.
+        """
+        is_data = events.metadata.get("is_data", False)
+        with track_time(self, "extract_columns"), track_memory(self, "extract_columns"):
+            columns = extract_columns(
+                events,
+                self.columns_to_keep,
+                mc_only_columns=self.mc_only_columns,
+                is_data=is_data,
+            )
+        branches_read = set()
+        with track_time(self, "materialize"), track_memory(self, "materialize"):
+            for key, arr in columns.items():
+                try:
+                    ak.materialize(arr)
+                    branches_read.add(key)
+                except Exception as e:
+                    print(e)
+                    if "unrecognized compression algorithm" in str(e) or "lzma data error" in str(e):
+                        continue
+                    else:
+                        raise e
+
+        return {"processed_events": len(events), "branches_read": branches_read}
+
+    def postprocess(self, accumulator: Dict) -> Dict:
+        logger.info(
+            f"TwoHundredGbpsProcessor done: "
+            f"{accumulator.get('processed_events', 0):,} events read"
+        )
+        return accumulator
+

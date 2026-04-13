@@ -42,7 +42,7 @@ LIST_OF_VARS = [
 general_config = {
         "lumi": 16400,
         "weight_branch": "genWeight",
-        "analysis": "nondiff",
+        "analysis": "cms",
         "run_skimming": False,
         "run_histogramming": True,
         "run_statistics": True,

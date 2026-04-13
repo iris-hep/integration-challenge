@@ -1,6 +1,6 @@
 """High-level orchestration for processor-based workflow.
 
-This module provides a clean entry point for running the UnifiedProcessor
+This module provides a clean entry point for running implemented coffea processors
 workflow, handling both the full processor execution and the histogram loading
 path (for iterating on statistical models without re-processing).
 """
@@ -9,15 +9,15 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from lzma import LZMAError
+from cramjam import DecompressionError
 
 from coffea.nanoevents import NanoAODSchema
-from coffea.processor import Runner
+from coffea.processor import Runner, ProcessorABC
 from coffea.processor.executor import WorkItem
 from coffea.processor.executor import UprootMissTreeError
 from uproot import DeserializationError
 
-
-from intccms.analysis.processor import UnifiedProcessor
+from intccms.analysis.processors import SkimAndAnalyseProcessor
 from intccms.skimming import FilesetManager
 from intccms.utils.filters import filter_by_process
 from intccms.utils.output import (
@@ -29,10 +29,12 @@ from intccms.schema import Config
 logger = logging.getLogger(__name__)
 
 
+
 def run_processor_workflow(
     config: Config,
     output_manager: OutputDirectoryManager,
     metadata_lookup: Dict[str, Dict[str, Any]],
+    processor: Optional[ProcessorABC] = None,
     workitems: Optional[List[WorkItem]] = None,
     executor: Any = None,
     schema: Any = NanoAODSchema,
@@ -41,8 +43,9 @@ def run_processor_workflow(
     """Execute processor workflow or load saved histograms.
 
     This function provides a unified entry point for the processor-based workflow.
-    When run_processor=True, it runs the UnifiedProcessor over data and saves
-    histograms. When run_processor=False, it loads previously saved histograms,
+    When run_processor=True, it runs a user-passed processor over data. If user
+    does not provide a processor, the SkimAndAnalyseProcessor will be used. 
+    When run_processor=False, it loads previously saved histograms,
     enabling fast iteration on statistical models without re-processing events.
 
     Metrics collection should be handled externally using roastcoffea's
@@ -57,7 +60,10 @@ def run_processor_workflow(
     metadata_lookup : Dict[str, Dict[str, Any]]
         Pre-built metadata lookup from DatasetMetadataManager.build_metadata_lookup()
         Maps dataset_key -> {process, variation, xsec, nevts, is_data, dataset}
-    workitems : List[WorkItem]
+    processor: Optional[ProcessorABC]:
+        An instantised coffea processor to be used in the runner exeutor workflows.
+        If not provided, SkimAndAnalyseProcessor is used.
+    workitems :  Optional[List[WorkItem]]
         Pre-generated work items from DatasetMetadataManager.workitems
     executor : Any
         Coffea executor (DaskExecutor, FuturesExecutor, etc.)
@@ -159,12 +165,13 @@ def run_processor_workflow(
                     logger.warning("No workitems remain after process filtering")
                     return {"histograms": {}, "processed_events": 0, "skimmed_events": 0}
 
-        # Initialize UnifiedProcessor
-        unified_processor = UnifiedProcessor(
-            config=config,
-            output_manager=output_manager,
-            metadata_lookup=metadata_lookup,
-        )
+        # Initialize processor
+        if not processor:
+            processor = SkimAndAnalyseProcessor(
+                config=config,
+                output_manager=output_manager,
+                metadata_lookup=metadata_lookup,
+            )
 
         # Determine chunksize
         if chunksize is None:
@@ -184,7 +191,7 @@ def run_processor_workflow(
             schema=schema,
             chunksize=chunksize,
             savemetrics=True,
-            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, DeserializationError),
+            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, DeserializationError, DecompressionError, AssertionError),
             **runner_kwargs,
         )
 
@@ -201,13 +208,13 @@ def run_processor_workflow(
             output, report = runner(
                 coffea_fileset,
                 treename="Events",  # Will be overridden by fileset structure
-                processor_instance=unified_processor,
+                processor_instance=processor,
             )
         else:
             logger.info(f"Processing {len(workitems)} work items with chunksize={chunksize}")
             output, report = runner(
                 workitems,
-                processor_instance=unified_processor,
+                processor_instance=processor,
             )
 
         logger.info(
