@@ -1,6 +1,8 @@
 # CMS integration challenge
 
-A coffea-based distributed analysis framework for the CMS Z' &rarr; t&tbar; single-lepton search on Run 2 NanoAOD.
+A coffea-based distributed analysis framework for the CMS Z' → tt̄ single-lepton search on Run 2 NanoAOD.
+
+**Contents**: [Setup](#setup) | [Configuration](#configuration) | [Datasets](#datasets) | [Metadata generation](#metadata-generation) | [Handling bad files](#handling-bad-files) | [Workflow modes](#workflow-modes) | [Skimming](#skimming) | [The processor](#the-processor) | [Histogramming](#histogramming) | [Corrections and systematics](#corrections-and-systematics) | [Metrics and profiling](#metrics-and-profiling) | [Notebooks](#notebooks) | [Credentials](#credentials)
 
 ## Setup
 
@@ -101,6 +103,31 @@ Metadata generation runs coffea preprocessing: enumerates files, counts events, 
 Set `config["general"]["run_metadata_generation"] = True` to run it (requires a Dask client). Results are cached locally, so set it to `False` on subsequent runs.
 
 **Re-run when**: datasets change, files are added/removed, or you switch redirectors.
+
+## Handling bad files
+
+There are two levels of protection against bad files:
+
+### Skipping known bad files before processing
+
+If you know specific files are corrupted, exclude them via `skip_files` in the dataset config. Any file whose path contains one of these strings is filtered out during dataset building (before metadata generation or processing):
+
+```python
+config["datasets"]["skip_files"] = [
+    "92D0BDF3-91AE-514F-88B5-8F591450B8AD.root",
+    "8E2613E5-9327-D644-9567-C3A5CE721D27.root",
+]
+```
+
+### Tolerating bad files during processing
+
+Both the metadata extractor and the processor runner use coffea's `skipbadfiles` parameter to catch and skip files that fail at read time. The errors caught include `OSError`, `LZMAError`, `DecompressionError`, `DeserializationError`, and `AssertionError`.
+
+This is configured in:
+- `src/intccms/metadata_extractor/extractor.py` (preprocessing)
+- `src/intccms/analysis/runner.py` (processing)
+
+To change which errors are tolerated, edit the `skipbadfiles` tuple in the `Runner(...)` constructor call in those files. Setting `skipbadfiles=False` disables this and makes any bad file a hard failure.
 
 ## Workflow modes
 
