@@ -5,7 +5,7 @@ from . import logging
 #from . import plot
 from . import profiling
 from . import stats
-from . import tools
+#from . import tools
 
 __all__ = [
     "dask_client",

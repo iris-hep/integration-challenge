@@ -191,7 +191,7 @@ def run_processor_workflow(
             schema=schema,
             chunksize=chunksize,
             savemetrics=True,
-            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, DeserializationError, DecompressionError),
+            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, DeserializationError, DecompressionError, AssertionError),
             **runner_kwargs,
         )
 
