@@ -186,12 +186,23 @@ class HistServAnalysis(CMSAnalysis):
                 logger.debug(f"Computing observable {observable_name}")
                 executor = ObservableExecutor(observable)
                 observable_vals = executor.execute(object_copies_channel)
-                try:
-                    ret = self.nD_hists_per_region[channel_name][observable_name].fill(
-                        observable=np.asarray(observable_vals),
-                        process=process,
-                        variation=variation,
-                        weight=np.asarray(weights),
-                    )
-                except grpc.RpcError as exc:
-                  raise exc
+                self._fill_buffer[(channel_name, observable_name)].append({
+                    "observable": np.asarray(observable_vals),
+                    "process": process,
+                    "variation": variation,
+                    "weight": np.asarray(weights),
+                })
+
+    def _flush_fills(self):
+        """Send all buffered fills to histserv in batch."""
+        for (channel_name, obs_name), fill_kwargs in self._fill_buffer.items():
+            try:
+                self.nD_hists_per_region[channel_name][obs_name].fill_many(fill_kwargs)
+            except grpc.RpcError as exc:
+                raise exc
+        self._fill_buffer.clear()
+
+    def process(self, events, metadata):
+        self._fill_buffer = defaultdict(list)
+        super().process(events, metadata)
+        self._flush_fills()
