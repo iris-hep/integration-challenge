@@ -6,6 +6,7 @@ import hist
 import logging                                                                                                                                                                        
 import numpy as np                                                                                                                                                                  
 import cloudpickle
+import grpc
 
 from histserv import Client
 from intccms.analysis.cms import CMSAnalysis                                                                                                                                          
@@ -66,13 +67,8 @@ class HistServAnalysis(CMSAnalysis):
                 )
 
                 client_hist = histserv_client.init(h)
-                histograms[channel_name][observable_name] = client_hist.reset()
-
-                cloudpickle.dumps(histserv_client)
-                cloudpickle.dumps(client_hist)
-                cloudpickle.dumps(histograms[channel_name][observable_name])
-                print("OKKK")
-
+                client_hist.reset()
+                histograms[channel_name][observable_name] = client_hist
                 
         return histograms
 
@@ -179,10 +175,10 @@ class HistServAnalysis(CMSAnalysis):
                         object_copies_channel, year,
                         syst_function=syst_function)
 
-            logger.info(
+            logger.debug(
                 f"Number of weighted events in {channel_name}: {ak.sum(weights):.2f}"
             )
-            logger.info(
+            logger.debug(
                 f"Number of raw events in {channel_name}: {ak.sum(mask)}"
             )
             for observable in channel.observables:
@@ -190,11 +186,12 @@ class HistServAnalysis(CMSAnalysis):
                 logger.debug(f"Computing observable {observable_name}")
                 executor = ObservableExecutor(observable)
                 observable_vals = executor.execute(object_copies_channel)
-                ret = self.nD_hists_per_region[channel_name][observable_name].fill(
-                    observable=np.asarray(observable_vals),
-                    process=process,
-                    variation=variation,
-                    weight=np.asarray(weights),
-                )
-
-                assert ret.success
+                try:
+                    ret = self.nD_hists_per_region[channel_name][observable_name].fill(
+                        observable=np.asarray(observable_vals),
+                        process=process,
+                        variation=variation,
+                        weight=np.asarray(weights),
+                    )
+                except grpc.RpcError as exc:
+                  raise exc

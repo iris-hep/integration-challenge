@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from lzma import LZMAError
 from cramjam import DecompressionError
+from collections import defaultdict
 
 from coffea.nanoevents import NanoAODSchema
 from coffea.nanoevents.trace import trace
@@ -227,9 +228,9 @@ def run_processor_workflow(
             )
 
         hists = defaultdict(dict)
-        for ch, ch_histos in unified_processor.analysis.nD_hists_per_region.items():
+        for ch, ch_histos in processor.analysis.nD_hists_per_region.items():
             for obs, obs_histo in ch_histos.items():
-                hists[ch][obs] = obs_histo.snapshot(drop_from_server=True)
+                hists[ch][obs] = obs_histo.snapshot(delete_from_server=True)
         
         output["histograms"] = hists
             
