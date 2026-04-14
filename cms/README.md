@@ -12,6 +12,7 @@ A coffea-based distributed analysis framework for the CMS Z' → tt̄ single-lep
 - [Skimming](#skimming)
 - [The processor](#the-processor)
 - [Histogramming](#histogramming)
+- [Histogramming as a Service (HaaS)](#histogramming-as-a-service-haas)
 - [Corrections and systematics](#corrections-and-systematics)
 - [Metrics and profiling](#metrics-and-profiling)
 - [Inspecting inputs](#inspecting-inputs)
@@ -348,6 +349,64 @@ In `postprocess()`, histograms are saved to:
 
 Both go to `output_manager.histograms_dir`.
 
+## Histogramming as a Service (HaaS)
+
+Instead of filling histograms on workers and reducing them at the end of the job, HaaS sends every fill over gRPC to a remote [histserv](https://pypi.org/project/histserv/) process that owns the histogram state. Workers hold only a client handle, so the reduce step disappears.
+
+### When would I use this?
+
+Use it to experiment with replacing coffea's reduce-aggregate step with a server-side histogram, or when the reduce is the bottleneck (many chunks, many histograms, or large growth-axis categories).
+
+### How do I run it?
+
+Use `full_run_histserv.ipynb`. The differences from `full_run.ipynb` are:
+
+1. `histserv` is added to the client install and to `WORKER_DEPENDENCIES` so Dask workers can talk to the server:
+    ```python
+    ensure("histserv", "histserv==0.1.9", "0.1.9")
+    WORKER_DEPENDENCIES = [COFFEA_PIP, "roastcoffea==0.1.2", "histserv==0.1.9"]
+    ```
+2. The processor is `HistServProcessor` instead of `SkimAndAnalyseProcessor`:
+    ```python
+    from intccms.analysis import HistServProcessor
+    processor = HistServProcessor(
+        config=validated_config,
+        output_manager=output_manager,
+        metadata_lookup=metadata_lookup,
+    )
+    ```
+
+`HistServProcessor` supports only the analysis path &mdash; skimming (`save_skimmed_output=True`) is not implemented.
+
+### How does `HistServAnalysis` differ from `CMSAnalysis`?
+
+Two overrides in `src/intccms/analysis/histserv.py`:
+
+| Method | Change vs `CMSAnalysis` |
+|--------|-------------------------|
+| `_init_histograms()` | Builds the same `hist.Hist` template, then registers it with `histserv.Client.init(h)`. The per-region dict stores server-side client handles, not local histograms. |
+| `histogramming()` | Does not fill directly. Appends one dict of fill kwargs (`observable`, `process`, `variation`, `weight`) per observable to `self._fill_buffer`. |
+
+A third method, `_flush_fills()`, is called at the end of each chunk's `process()`. It collapses the buffer into a single `fill_many(...)` gRPC call per `(channel, observable)` pair &mdash; batching amortizes the round-trip cost.
+
+### Where is the histserv server address set?
+
+Currently hardcoded in `src/intccms/analysis/histserv.py`:
+
+```python
+histserv_client = Client(address="...:8788")
+```
+
+Edit this line to point at your own `histserv` instance.
+
+### How do I read back the final histograms?
+
+The accumulator only carries `processed_events` &mdash; the histogram lives on the server. Call `.to_hist()` on the client handle to pull it back as a regular `hist.Hist`:
+
+```python
+output["histograms"]["CMS_WORKSHOP"]["workshop_mtt"].to_hist()
+```
+
 ## Corrections and systematics
 
 ### How are corrections configured?
@@ -497,6 +556,7 @@ To use it, edit the `SKIM_REDIRECTOR` and `SKIM_BASE` variables in the config ce
 | `full_run_skim_formats.ipynb` | Tests skimming output formats (Parquet/S3, TTree/XRootD, RNTuple/XRootD) with read-back verification |
 | `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
 | `full_run_200gbps_preload_vs_not.ipynb` | Compares the 200gbps workflow with and without `preload=True` |
+| `full_run_histserv.ipynb` | Standard workflow with histograms filled via HaaS (histserv) instead of reduce-aggregate |
 | `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
 | `skim_inspector.ipynb` | Inspect skimmed output files on XRootD or other remote storage |
 
