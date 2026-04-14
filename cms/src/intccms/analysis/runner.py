@@ -226,6 +226,13 @@ def run_processor_workflow(
                 **run_kwargs,
             )
 
+        hists = defaultdict(dict)
+        for ch, ch_histos in unified_processor.analysis.nD_hists_per_region.items():
+            for obs, obs_histo in ch_histos.items():
+                hists[ch][obs] = obs_histo.snapshot(drop_from_server=True)
+        
+        output["histograms"] = hists
+            
         logger.info(
             f"Processor complete: {output.get('processed_events', 0):,} events processed, "
             f"{output.get('skimmed_events', 0):,} events after skim"

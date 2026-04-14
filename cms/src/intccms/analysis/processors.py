@@ -17,6 +17,7 @@ from coffea.processor import ProcessorABC
 from roastcoffea import track_memory, track_metrics, track_time
 
 from intccms.analysis.cms import CMSAnalysis
+from intccms.analysis.histserv import HistServAnalysis
 from intccms.skimming.io.writers import get_writer
 from intccms.skimming.pipeline.stages import (
     build_column_list,
@@ -487,6 +488,121 @@ class SkimAndAnalyseProcessor(ProcessorABC):
 
         return accumulator
 
+
+class HistServProcessor(ProcessorABC):
+    """Coffea processor for testing HaaS.
+        This proceseor does not support skimming.
+    
+    Attributes
+    ----------
+    config : Config
+        Full analysis configuration
+    output_manager : OutputDirectoryManager
+        Manager for output directory paths
+    metadata_lookup : Dict[str, Dict[str, Any]]
+        Pre-built metadata lookup mapping fileset_key to metadata dict
+    """
+
+    def __init__(
+        self,
+        config: Config,
+        output_manager: OutputDirectoryManager,
+        metadata_lookup: Dict[str, Dict[str, Any]],
+    ):
+        """Initialize HistServProcessor.
+
+        Parameters
+        ----------
+        config : Config
+            Full analysis configuration with general.run_* flags
+        output_manager : OutputDirectoryManager
+            For resolving output paths
+        metadata_lookup : Dict[str, Dict[str, Any]]
+            Pre-built metadata lookup from NanoAODMetadataGenerator.build_metadata_lookup()
+            Maps fileset_key -> {process, variation, xsec, nevts, is_data, dataset}
+        """
+        self.config = config
+        self.output_manager = output_manager
+        self.metadata_lookup = metadata_lookup
+
+        # Always create HistServAnalysis instance
+        # The run_analysis flag controls whether we execute its methods
+        self.analysis = HistServAnalysis(
+            config=config,
+            output_manager=output_manager,
+        )
+
+        logger.info(
+            f"Initialized HistServProcessor: "
+            f"analysis={config.general.run_analysis}, "
+            f"histogramming={config.general.run_histogramming}, "
+            f"systematics={config.general.run_systematics}"
+        )
+
+
+    @property
+    def accumulator(self):
+        """Define accumulator structure based on enabled stages.
+
+        Returns
+        -------
+        dict
+            Accumulator dict with histograms, counters, etc.
+        """
+        acc = {"processed_events": 0}
+        return acc
+
+    @track_metrics
+    def process(self, events: ak.Array) -> Dict[str, Any]:
+        """Process a single chunk of events.
+
+        This is called by coffea's Runner for each chunk from the fileset.
+
+        Parameters
+        ----------
+        events : ak.Array
+            NanoEvents array from coffea (has NanoAODSchema applied)
+
+        Returns
+        -------
+        dict
+            Accumulator dict with histograms, counters, etc.
+        """
+        # Initialize output accumulator
+        output = self.accumulator
+
+        # Get chunk metadata
+        dataset_name = events.metadata["dataset"]
+        metadata = self.metadata_lookup.get(dataset_name)
+
+        if not metadata:
+            logger.warning(f"No metadata found for dataset {dataset_name}, skipping chunk")
+            output["processed_events"] = 0
+            return output
+
+        # Track total input events
+        input_events_count = len(events)
+
+        # Run analysis
+        if self.config.general.run_analysis and len(events) > 0:
+            # HistServAnalysis.process() handles:
+            # - Object selection and corrections
+            # - Histogram filling (if run_histogramming=True)
+            # - Systematics (if run_systematics=True)
+            with track_time(self, "analysis"):
+                self.analysis.process(events=events, metadata=metadata)
+
+
+        # Track total events processed (input events, not after filtering)
+        output["processed_events"] = input_events_count
+        return output
+
+
+    def postprocess(self, accumulator: Dict) -> Dict:
+        """Finalize accumulator after all chunks processed.
+        """
+        return accumulator
+        
 
 class TwoHundredGbpsProcessor(ProcessorABC):
     """Minimal coffea processor that reads branches and does nothing else.
