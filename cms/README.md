@@ -466,7 +466,14 @@ To use it, edit the `SKIM_REDIRECTOR` and `SKIM_BASE` variables in the config ce
 
 ## Credentials
 
-Storage credentials (AWS keys for S3) go in an untracked `.env` file. Load early with:
+Storage credentials (AWS keys for S3) go in an untracked `.env` file at the repo root (`cms/.env`). See `.env.example` for the expected variable names. Copy it and fill in your values:
+
+```sh
+cp .env.example .env
+# edit .env with your credentials
+```
+
+Load early with:
 
 ```python
 from intccms.utils.tools import load_dotenv
