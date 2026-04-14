@@ -1,6 +1,22 @@
 # CMS integration challenge
 
-A coffea-based distributed analysis framework for the CMS Z' &rarr; t&tbar; single-lepton search on Run 2 NanoAOD.
+A coffea-based distributed analysis framework for the CMS Z' → tt̄ single-lepton search on Run 2 NanoAOD.
+
+**Contents**
+- [Setup](#setup)
+- [Configuration](#configuration)
+- [Datasets](#datasets)
+- [Metadata generation](#metadata-generation)
+- [Handling bad files](#handling-bad-files)
+- [Workflow modes](#workflow-modes)
+- [Skimming](#skimming)
+- [The processor](#the-processor)
+- [Histogramming](#histogramming)
+- [Corrections and systematics](#corrections-and-systematics)
+- [Metrics and profiling](#metrics-and-profiling)
+- [Inspecting inputs](#inspecting-inputs)
+- [Notebooks](#notebooks)
+- [Credentials](#credentials)
 
 ## Setup
 
@@ -102,6 +118,53 @@ Set `config["general"]["run_metadata_generation"] = True` to run it (requires a 
 
 **Re-run when**: datasets change, files are added/removed, or you switch redirectors.
 
+### [Advanced] What are the components of the preprocessing workflow?
+
+The metadata extraction pipeline lives in `src/intccms/metadata_extractor/` and has four components:
+
+| Module | Class/Functions | Role |
+|--------|----------------|------|
+| `manager.py` | `DatasetMetadataManager` | Top-level orchestrator. Calls the builder and extractor in sequence, caches results as JSON, and builds `metadata_lookup` for the processor. |
+| `builders.py` | `FilesetBuilder` | Reads dataset configs from `DatasetManager`, enumerates file paths (applying `skip_files`), and builds a coffea-compatible fileset dict + `Dataset` objects. |
+| `extractor.py` | `CoffeaMetadataExtractor` | Runs coffea's preprocessing over the fileset using a `Runner` with the configured executor (Dask or local). Produces `WorkItem` objects with file paths, entry ranges, and chunk boundaries. |
+| `core.py` | `parse_dataset_key`, `aggregate_workitem_events`, `format_event_summary` | Pure functions for dataset key parsing, event count aggregation across workitems, and summary formatting. |
+| `io.py` | `collect_file_paths`, `save_json`, `load_json`, `serialize_workitems` | File I/O helpers: path enumeration from dataset directories, JSON persistence for fileset/workitems/summaries. |
+
+The flow when `run_metadata_generation=True`:
+
+1. `DatasetMetadataManager.run(executor=...)` is called
+2. `FilesetBuilder.build_fileset()` enumerates files from dataset directories → produces `fileset` dict and `Dataset` objects
+3. `CoffeaMetadataExtractor.extract_metadata(fileset)` runs coffea preprocessing on workers → produces `WorkItem` list with chunked entry ranges
+4. Results are saved to `metadata_dir/` as JSON (`fileset.json`, `workitems.json`, `nanoaods.json`)
+5. `build_metadata_lookup()` combines dataset configs with event counts into a `MetadataLookup` dict keyed by dataset name, containing process, xsec, nevts, is_data, year, etc.
+
+When `run_metadata_generation=False`, step 2-3 are skipped and cached JSON files are loaded instead.
+
+## Handling bad files
+
+There are two levels of protection against bad files:
+
+### Skipping known bad files before processing
+
+If you know specific files are corrupted, exclude them via `skip_files` in the dataset config. Any file whose path contains one of these strings is filtered out during dataset building (before metadata generation or processing):
+
+```python
+config["datasets"]["skip_files"] = [
+    "92D0BDF3-91AE-514F-88B5-8F591450B8AD.root",
+    "8E2613E5-9327-D644-9567-C3A5CE721D27.root",
+]
+```
+
+### Tolerating bad files during processing
+
+Both the metadata extractor and the processor runner use coffea's `skipbadfiles` parameter to catch and skip files that fail at read time. The errors caught include `OSError`, `LZMAError`, `DecompressionError`, `DeserializationError`, and `AssertionError`.
+
+This is configured in:
+- `src/intccms/metadata_extractor/extractor.py` (preprocessing)
+- `src/intccms/analysis/runner.py` (processing)
+
+To change which errors are tolerated, edit the `skipbadfiles` tuple in the `Runner(...)` constructor call in those files. Setting `skipbadfiles=False` disables this and makes any bad file a hard failure.
+
 ## Workflow modes
 
 Two flags control what the processor does:
@@ -154,11 +217,23 @@ Set `use_skimmed_input=True` in the config. The runner auto-discovers skimmed fi
 
 ## The processor
 
-### Where does it live?
+### How is the analysis code organized?
+
+Three layers in `src/intccms/analysis/`:
+
+| File | Class | Role |
+|------|-------|------|
+| `base.py` | `Analysis` | Generic base class. Handles corrections (correctionlib + custom functions), object masks, baseline selection, ghost observables. Experiment-agnostic. |
+| `cms.py` | `CMSAnalysis(Analysis)` | CMS-specific implementation. Initializes histograms, runs the histogramming loop (nominal + systematic variations), runs statistical inference via cabinetry. |
+| `processors.py` | `SkimAndAnalyseProcessor`, `TwoHundredGbpsProcessor` | Coffea processors. `SkimAndAnalyseProcessor` owns a `CMSAnalysis` instance and dispatches to it for the analysis step. |
+
+The flow per chunk: `SkimAndAnalyseProcessor.process()` → skim selection → optionally save to disk → `CMSAnalysis.process()` → `Analysis.prepare_objects()` (corrections + masks) → `CMSAnalysis.histogramming()` (fill histograms).
+
+### Where does the processor live?
 
 `src/intccms/analysis/processors.py` has two processors:
 
-- **`SkimAndAnalyseProcessor`**: The main processor. Per chunk, it: (1) applies skim selection, (2) saves filtered events to disk if enabled, (3) runs analysis (corrections + histogramming) if enabled. All controlled by the config flags above.
+- **`SkimAndAnalyseProcessor`**: The main processor. Per chunk, it: (1) applies skim selection, (2) saves filtered events to disk if enabled, (3) calls `CMSAnalysis.process()` for corrections and histogramming if enabled. All controlled by the config flags above.
 - **`TwoHundredGbpsProcessor`**: Minimal I/O benchmark. Reads and materializes configured branches, returns event count only.
 
 Both are passed to `run_processor_workflow()` in `src/intccms/analysis/runner.py`.
@@ -225,14 +300,24 @@ Channels (in `configuration.py`) tie a selection function to a list of observabl
 }
 ```
 
+### How are histograms initialized?
+
+`CMSAnalysis._init_histograms()` in `src/intccms/analysis/cms.py` creates one `hist.Hist` per (channel, observable) combination. Each histogram has three axes:
+
+- **Observable** (`hist.axis.Variable`): binning from the observable config
+- **Process** (`hist.axis.StrCategory`, growth): filled dynamically with dataset names
+- **Variation** (`hist.axis.StrCategory`, growth): `"nominal"` plus one entry per systematic up/down
+
+Storage is `hist.storage.Weight()` (supports weighted events). The histograms are created once during processor initialization and filled per chunk.
+
 ### Where does histogramming happen?
 
-`CMSAnalysis.histogramming()` in `src/intccms/analysis/cms.py`. For each chunk, it:
+`CMSAnalysis.histogramming()` in the same file. For each chunk, it:
 
 1. Applies the channel selection
 2. Computes event weights (genWeight &times; xsec normalization &times; correction SFs)
 3. Evaluates the observable function
-4. Fills a `hist.Hist` with axes: observable (Variable), process (StrCategory), variation (StrCategory)
+4. Fills the histogram for the matching (process, variation) bin
 
 ### Where are histograms saved?
 
@@ -346,6 +431,27 @@ save(fig)
 
 This shows where worker CPU time is spent (decompression, network I/O, array construction, etc.). The "time" values are cumulative across all workers.
 
+## Inspecting inputs
+
+### How do I inspect NanoAOD input files?
+
+`input_inspector.ipynb` uses the `intccms.metrics.inspector` module to characterize input ROOT files. It runs distributed inspection via Dask and reports:
+- Event counts per file and per dataset
+- Branch sizes (compressed and uncompressed)
+- Compression ratios
+- Optional Rucio-backed file size lookups
+
+The inspector produces rich tables (via `rich`) and matplotlib visualizations (event distributions, branch size distributions, dataset comparisons, summary dashboard).
+
+### How do I inspect skimmed output files?
+
+`skim_inspector.ipynb` uses the same inspector module but pointed at skimmed files on XRootD (or other remote storage). It:
+1. Derives skimmed subdirectory paths from the original dataset config and a configurable `SKIM_BASE` / `SKIM_REDIRECTOR`
+2. Lists files via `xrdfs ls`
+3. Runs the same distributed inspection and visualization pipeline
+
+To use it, edit the `SKIM_REDIRECTOR` and `SKIM_BASE` variables in the config cell to point at your skimmed file location.
+
 ## Notebooks
 
 | Notebook | Purpose |
@@ -355,7 +461,8 @@ This shows where worker CPU time is spent (decompression, network I/O, array con
 | `full_run_workflow_modes.ipynb` | Runs all four workflow modes (skim+analysis, analysis only, skim only, analysis on skims) with per-mode metrics comparison |
 | `full_run_skim_formats.ipynb` | Tests skimming output formats (Parquet/S3, TTree/XRootD, RNTuple/XRootD) with read-back verification |
 | `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
-| `input_inspector.ipynb` | Characterize inputs (event counts, branch sizes, compression) |
+| `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
+| `skim_inspector.ipynb` | Inspect skimmed output files on XRootD or other remote storage |
 
 ## Credentials
 
