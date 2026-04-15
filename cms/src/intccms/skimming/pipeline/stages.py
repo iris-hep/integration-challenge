@@ -208,11 +208,17 @@ def extract_columns(
         # Handle nested fields (e.g., "Muon.pt" -> events.Muon.pt)
         if "." in col:
             parts = col.split(".")
-            value = events
-            for part in parts:
-                value = getattr(value, part)
-            # Use underscore for output key
             output_key = "_".join(parts)
+            try:
+                value = events
+                for part in parts:
+                    value = getattr(value, part)
+            except AttributeError:
+                # Flat schema fallback (e.g., BaseSchema uses "Muon_pt" not "Muon.pt")
+                if not hasattr(events, output_key):
+                    logger.warning(f"Column '{col}' not found in events, skipping")
+                    continue
+                value = getattr(events, output_key)
         else:
             # Top-level field
             if not hasattr(events, col):
