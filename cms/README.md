@@ -275,6 +275,26 @@ output, report = run_processor_workflow(
 )
 ```
 
+### How do I preload only the branches the processor accesses?
+
+Pass `preload=True` to `run_processor_workflow`:
+
+```python
+output, report = run_processor_workflow(
+    config=validated_config,
+    output_manager=output_manager,
+    metadata_lookup=metadata_lookup,
+    processor=processor,
+    workitems=workitems,
+    executor=DaskExecutor(client=client),
+    preload=True,
+)
+```
+
+This passes coffea's `trace` function to the Runner. The Runner runs your processor on a typetracer (no real data) to discover which branches are accessed, then preloads only those branches eagerly per chunk instead of loading the full set of configured branches lazily.
+
+Requires coffea 2026.4.0 or newer.
+
 ## Histogramming
 
 ### How are histograms configured?
@@ -409,6 +429,21 @@ The processor already uses `@track_metrics`, `track_time`, and `track_memory` de
 
 roastcoffea provides summary tables (`format_throughput_table`, `format_resources_table`, etc.) and timeline plots (worker count, throughput, CPU/memory utilization). See `full_run_with_metrics.ipynb` for the full pattern.
 
+### How do I pre-warm xcache before a run?
+
+If you want benchmark numbers that reflect cache-hit performance (not first-touch fetches), pre-warm xcache with `warm_xcache`. It dispatches `xrdcp <file> /dev/null` to dask workers so files are pulled into the cache from inside the cluster:
+
+```python
+from intccms.utils.tools import warm_xcache
+
+with acquire_client(AF, close_after=False) as (client, cluster):
+    results, meta = warm_xcache(dataset_manager, client)
+
+print(f"Files: {meta['n_files']}, total GB: {meta['total_GB']:.1f}")
+```
+
+Optional kwargs: `redirector` (override per-dataset), `max_files` (cap total), `processes` (subset by process name), `max_retries`.
+
 ### How do I profile worker activity?
 
 Capture Dask's statistical call stack profile while the client is alive:
@@ -461,6 +496,7 @@ To use it, edit the `SKIM_REDIRECTOR` and `SKIM_BASE` variables in the config ce
 | `full_run_workflow_modes.ipynb` | Runs all four workflow modes (skim+analysis, analysis only, skim only, analysis on skims) with per-mode metrics comparison |
 | `full_run_skim_formats.ipynb` | Tests skimming output formats (Parquet/S3, TTree/XRootD, RNTuple/XRootD) with read-back verification |
 | `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
+| `full_run_200gbps_preload_vs_not.ipynb` | Compares the 200gbps workflow with and without `preload=True` |
 | `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
 | `skim_inspector.ipynb` | Inspect skimmed output files on XRootD or other remote storage |
 

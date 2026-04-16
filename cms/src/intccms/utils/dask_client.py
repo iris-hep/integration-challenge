@@ -10,6 +10,7 @@ import os
 import sys
 import threading
 from contextlib import contextmanager
+from datetime import datetime
 import cloudpickle
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -116,6 +117,8 @@ def acquire_client(
     close_after: bool = False,
     pip_packages: Optional[List[str]] = None,
     propagate_aws_env: bool = False,
+    profile_output_dir: Optional[str] = None,
+    profile_suffix: Optional[str] = None,
 ) -> Tuple[Client, Optional[object]]:
     """Context manager to acquire a Dask client for a given analysis facility.
 
@@ -141,6 +144,10 @@ def acquire_client(
         propagate_aws_env: If True, capture ``AWS_ACCESS_KEY_ID`` and
             ``AWS_SECRET_ACCESS_KEY`` from the client environment and set
             them on all workers.
+        profile_output_dir: If set, save the Dask worker profile as an
+            HTML file in this directory when the context exits.
+        profile_suffix: Optional suffix appended to the profile filename
+            (e.g., ``"baseschema"`` → ``dask_profile_baseschema.html``).
 
     Yields:
         Tuple of ``(client, cluster)`` where *cluster* is ``None`` for
@@ -243,6 +250,14 @@ def acquire_client(
         yield client, cluster
 
     finally:
+        if profile_output_dir is not None and client is not None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            suffix = f"_{profile_suffix}" if profile_suffix else ""
+            profile_dir = Path(profile_output_dir) / timestamp
+            profile_dir.mkdir(parents=True, exist_ok=True)
+            profile_path = profile_dir / f"dask_profile{suffix}.html"
+            client.profile(filename=str(profile_path))
+            logger.info("Saved Dask profile to %s", profile_path)
         if close_after and client is not None:
             client.close()
             logger.info("Client closed")

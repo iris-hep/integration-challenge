@@ -12,6 +12,7 @@ from lzma import LZMAError
 from cramjam import DecompressionError
 
 from coffea.nanoevents import NanoAODSchema
+from coffea.nanoevents.trace import trace
 from coffea.processor import Runner, ProcessorABC
 from coffea.processor.executor import WorkItem
 from coffea.processor.executor import UprootMissTreeError
@@ -39,6 +40,7 @@ def run_processor_workflow(
     executor: Any = None,
     schema: Any = NanoAODSchema,
     chunksize: Optional[int] = None,
+    preload: bool = False,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Execute processor workflow or load saved histograms.
 
@@ -72,6 +74,9 @@ def run_processor_workflow(
         NanoAOD schema for coffea, by default NanoAODSchema
     chunksize : int, optional
         Number of events per chunk, by default None (uses config value or 100k)
+    preload : bool, optional
+        If True, pass coffea's ``trace`` function to the Runner so it
+        preloads only the branches the processor accesses. Default False.
 
     Returns
     -------
@@ -195,6 +200,8 @@ def run_processor_workflow(
             **runner_kwargs,
         )
 
+        run_kwargs = {"trace": trace} if preload else {}
+
         # Run processor over fileset or workitems
         if use_fileset:
             logger.info(f"Processing fileset with {len(fileset)} datasets, chunksize={chunksize}")
@@ -203,18 +210,20 @@ def run_processor_workflow(
             for dataset_name, dataset_info in fileset.items():
                 files = dataset_info["files"]
                 treename = dataset_info["metadata"].get("treename", "Events")
-                coffea_fileset[dataset_name] = {"files": files, "treename": treename} 
+                coffea_fileset[dataset_name] = {"files": files, "treename": treename}
 
             output, report = runner(
                 coffea_fileset,
                 treename="Events",  # Will be overridden by fileset structure
                 processor_instance=processor,
+                **run_kwargs,
             )
         else:
             logger.info(f"Processing {len(workitems)} work items with chunksize={chunksize}")
             output, report = runner(
                 workitems,
                 processor_instance=processor,
+                **run_kwargs,
             )
 
         logger.info(

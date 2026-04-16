@@ -345,7 +345,7 @@ def select_branches_for_fraction(
     selected: List[str] = []
     accumulated = 0.0
     for key, size in sorted(sizes_mb.items(), key=lambda kv: kv[1], reverse=True):
-        if key in veto:
+        if any(v in key for v in veto):
             continue
         selected.append(key)
         accumulated += size
