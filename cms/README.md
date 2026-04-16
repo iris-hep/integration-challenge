@@ -275,6 +275,26 @@ output, report = run_processor_workflow(
 )
 ```
 
+### How do I preload only the branches the processor accesses?
+
+Pass `preload=True` to `run_processor_workflow`:
+
+```python
+output, report = run_processor_workflow(
+    config=validated_config,
+    output_manager=output_manager,
+    metadata_lookup=metadata_lookup,
+    processor=processor,
+    workitems=workitems,
+    executor=DaskExecutor(client=client),
+    preload=True,
+)
+```
+
+This passes coffea's `trace` function to the Runner. The Runner runs your processor on a typetracer (no real data) to discover which branches are accessed, then preloads only those branches eagerly per chunk instead of loading the full set of configured branches lazily.
+
+Requires coffea 2026.4.0 or newer.
+
 ## Histogramming
 
 ### How are histograms configured?
@@ -408,6 +428,21 @@ tracking_data = collector.tracking_data
 The processor already uses `@track_metrics`, `track_time`, and `track_memory` decorators from roastcoffea &mdash; these are picked up automatically by the collector.
 
 roastcoffea provides summary tables (`format_throughput_table`, `format_resources_table`, etc.) and timeline plots (worker count, throughput, CPU/memory utilization). See `full_run_with_metrics.ipynb` for the full pattern.
+
+### How do I pre-warm xcache before a run?
+
+If you want benchmark numbers that reflect cache-hit performance (not first-touch fetches), pre-warm xcache with `warm_xcache`. It dispatches `xrdcp <file> /dev/null` to dask workers so files are pulled into the cache from inside the cluster:
+
+```python
+from intccms.utils.tools import warm_xcache
+
+with acquire_client(AF, close_after=False) as (client, cluster):
+    results, meta = warm_xcache(dataset_manager, client)
+
+print(f"Files: {meta['n_files']}, total GB: {meta['total_GB']:.1f}")
+```
+
+Optional kwargs: `redirector` (override per-dataset), `max_files` (cap total), `processes` (subset by process name), `max_retries`.
 
 ### How do I profile worker activity?
 
