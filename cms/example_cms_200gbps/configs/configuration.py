@@ -1,0 +1,351 @@
+'''
+Note that all relative paths are relative to your current working directory
+(i.e., where you run `python analysis.py`), not relative to this configuration file.
+This example assumes you are running from the `cms/` directory.
+'''
+import numpy as np
+
+from intccms.schema.base import ObjVar
+
+from .cuts import (
+    Zprime_hardcuts,
+    Zprime_hardcuts_no_fj,
+    Zprime_workshop_cuts,
+)
+from .observables import get_mtt, get_mva_vars
+from .skim import dataset_manager_config, skimming_config
+
+try:
+    from .systematics import corrections_config, systematics_config
+    _CORRECTIONS_AVAILABLE = True
+except (FileNotFoundError, OSError) as e:
+    import warnings
+    warnings.warn(
+        f"Could not load CMS corrections ({e.__class__.__name__}: {e}). "
+        f"Falling back to empty corrections — set run_corrections=False to "
+        f"silence this warning, or provide the correction files at "
+        f"'./example_cms/corrections/DONT_EXPOSE_CMS_INTERNAL/' to enable them."
+    )
+    corrections_config = {}
+    systematics_config = {}
+    _CORRECTIONS_AVAILABLE = False
+
+
+
+# ==============================================================================
+#  Observables Definition
+# ==============================================================================
+
+LIST_OF_VARS = [
+    {
+        "name": "workshop_mtt",
+        "binning": "200,3000,20",
+        "label": r"$M(t\bar{t})$ [GeV]",
+        "function": get_mtt,
+        "use": [
+            ObjVar("Muon", None),
+            ObjVar("Jet", None),
+            ObjVar("FatJet", None),
+            ObjVar("PuppiMET", None),
+        ],
+    },
+]
+
+# ==============================================================================
+#  General Configuration
+# ==============================================================================
+
+general_config = {
+        "lumi": 16400,
+        "weight_branch": "genWeight",
+        "analysis": "cms",
+        "run_histogramming": True,
+        "run_statistics": True,
+        "run_systematics": True,
+        "run_corrections": _CORRECTIONS_AVAILABLE,
+        "run_plots_only": False,
+        "run_mva_training": False,
+        "run_metadata_generation": False,
+        "read_from_cache": True,
+        "output_dir": "example_cms_200gbps/outputs/",
+        "cache_dir": "/tmp/integration/",
+        # Optional: specify existing metadata/skimmed directories
+        # "metadata_dir": "path/to/existing/metadata/",
+        # "skimmed_dir": "path/to/existing/skimmed/",
+}
+
+# ==============================================================================
+#  Preprocessing Configuration
+# ==============================================================================
+
+preprocess_config = {
+        "branches": {
+            "Muon": ["pt", "eta", "phi", "mass", "miniIsoId", "tightId", "charge"],
+            "FatJet": ["particleNet_TvsQCD", "pt", "eta", "phi", "mass"],
+            "Jet": ["btagDeepB", "jetId", "pt", "eta", "phi", "mass", "hadronFlavour", "area"],
+            "PuppiMET": ["pt", "phi"],
+            "HLT": ["Mu50"],
+            "Pileup": ["nTrueInt"],
+            "event": ["genWeight", "run", "luminosityBlock", "event", "fixedGridRhoFastjetAll"],
+        },
+        "ignore_missing": False,  # is this implemented?
+        "mc_branches": {
+            "event": ["genWeight"],
+            "Pileup": ["nTrueInt"],
+            "Jet": ["hadronFlavour"],
+        },
+        "skimming": skimming_config,
+}
+
+
+# ==============================================================================
+#  Baseline Selections & Masks
+# ==============================================================================
+
+baseline_selection_config = {
+    "function": Zprime_hardcuts_no_fj,
+    "use": [
+        ObjVar("Muon", None),
+        ObjVar("Jet", None),
+    ],
+}
+
+good_object_masks_config = {
+    "analysis": [
+        {
+            "object": "Muon",
+            "function": lambda muons: (
+                (muons.pt > 55)
+                & (abs(muons.eta) < 2.4)
+                & (muons.tightId)
+                & (muons.miniIsoId > 1)
+            ),
+            "use": [ObjVar("Muon", None)],
+        },
+        {
+            "object": "Jet",
+            "function": lambda jets: (
+                (jets.jetId >= 4) 
+                #& (jets.btagDeepB > 0.5)
+                & (abs(jets.eta) < 2.5)
+                & (jets.pt > 30)
+            ),
+            "use": [ObjVar("Jet", None)],
+        },
+        {
+            "object": "FatJet",
+            "function": lambda fatjets: (
+                (fatjets.pt > 500) & (fatjets.particleNet_TvsQCD > 0.5)
+            ),
+            "use": [ObjVar("FatJet", None)],
+        },
+    ],
+    "mva": [
+        {
+            "object": "Muon",
+            "function": lambda muons: (
+                (muons.pt > 55)
+                & (abs(muons.eta) < 2.4)
+                & (muons.tightId)
+                & (muons.miniIsoId > 1)
+            ),
+            "use": [ObjVar("Muon", None)],
+        },
+        {
+            "object": "FatJet",
+            "function": lambda fatjets: (
+                (fatjets.pt > 500) & (fatjets.particleNet_TvsQCD > 0.5)
+            ),
+            "use": [ObjVar("FatJet", None)],
+        },
+    ],
+}
+
+# ==============================================================================
+#  Analysis Channels
+# ==============================================================================
+
+channels_config = [
+    {
+        "name": "CMS_WORKSHOP",
+        "fit_observable": "workshop_mtt",
+        "observables": LIST_OF_VARS,
+        "selection": {
+            "function": Zprime_workshop_cuts,
+            "use": [
+                ObjVar("Muon", None),
+                ObjVar("Jet", None),
+                ObjVar("FatJet", None),
+                ObjVar("PuppiMET", None),
+            ],
+        },
+    },
+]
+
+# ==============================================================================
+#  Ghost Observables
+# ==============================================================================
+
+ghost_observables_config = [
+    {
+        "names": (
+            "n_jet",
+            "leading_jet_mass",
+            "subleading_jet_mass",
+            "st",
+            "leading_jet_btag_score",
+            "subleading_jet_btag_score",
+            "S_zz",
+            "deltaR",
+            "pt_rel",
+            "deltaR_times_pt",
+        ),
+        "collections": "mva",
+        "function": get_mva_vars,
+        "use": [
+            ObjVar("Muon", None),
+            ObjVar("Jet", None),
+        ],
+    },
+]
+
+# ==============================================================================
+#  MVA Configuration
+# ==============================================================================
+
+# mva_config = [
+#     {
+#         "name": "wjets_vs_ttbar_nn",
+#         "epochs": 500,
+#         "framework": "jax",  # keras/tf/... if TF need more info
+#         # (e.g. Model: Sequential layers: Dense)
+#         "validation_split": 0.2,
+#         "random_state": 42,
+#         "batch_size": None,
+#         "classes": [
+#             "wjets",
+#             {"ttbar": ("ttbar_semilep", "ttbar_had", "ttbar_lep")},
+#         ],
+#         "plot_classes": ["wjets", "ttbar", "signal"],
+#         "balance_strategy": "undersample",
+#         "layers": [
+#             {
+#                 "ndim": 16,
+#                 "activation": lambda x, w, b: jnp.tanh(
+#                     jnp.dot(x, w) + b
+#                 ),  # if using TF, this should be a string (e.g. "relu")
+#                 "weights": "W1",
+#                 "bias": "b1",
+#             },
+#             {
+#                 "ndim": 16,
+#                 "activation": lambda x, w, b: jnp.tanh(jnp.dot(x, w) + b),
+#                 "weights": "W2",
+#                 "bias": "b2",
+#             },
+#             {
+#                 "ndim": 1,
+#                 "activation": lambda x, w, b: jnp.dot(x, w) + b,
+#                 "weights": "W3",
+#                 "bias": "b3",
+#             },
+#         ],
+#         "loss": lambda pred, y: (
+#             np.mean(
+#                 jnp.maximum(pred, 0)
+#                 - pred * y
+#                 + jnp.log(1 + jnp.exp(-jnp.abs(pred)))
+#             )
+#         ),
+#         "features": [
+#             {
+#                 "name": "n_jet",
+#                 "label": r"$N_{jets}$",
+#                 "function": lambda mva: mva.n_jet,
+#                 "use": [("mva", None)],
+#                 "scale": lambda x: x / 10.0,  # scale to [0, 1]
+#                 "binning": "0,10,10",  # optional binning for pre-scaling
+#                 # data scaled by "scale" for post-scaling data
+#             },
+#             {
+#                 "name": "leading_jet_mass",
+#                 "label": r"$m_{j_1}$ [GeV]",
+#                 "function": lambda mva: mva.leading_jet_mass,
+#                 "use": [("mva", None)],
+#                 "scale": lambda x: x / 20.0,  # scale to [0, 1]
+#                 "binning": "0,100,50",  # optional binning for pre-scaling
+#                 # data scaled by "scale" for post-scaling data
+#             },
+#             {
+#                 "name": "subleading_jet_mass",
+#                 "label": r"$m_{j_2}$ [GeV]",
+#                 "function": lambda mva: mva.subleading_jet_mass,
+#                 "use": [("mva", None)],
+#                 "binning": "0,50,25",  # optional binning for pre-scaling
+#                 # data scaled by "scale" for post-scaling data
+#             },
+#         ],
+#     }
+# ]
+
+# ==============================================================================
+#  Corrections & Systematics
+# ==============================================================================
+# Imported from systematics.py - corrections_config and systematics_config
+# are year-keyed dicts: {"2016preVFP": [...], "2017": [...], "2018": [...]}
+
+# ==============================================================================
+#  Statistics Configuration
+# ==============================================================================
+
+statistics_config = {"cabinetry_config": "example_cms/outputs/cabinetry/cabinetry_config.yaml"}
+
+# ==============================================================================
+#  Plotting Configuration
+# ==============================================================================
+
+plotting_config = {
+    "process_colors": {
+        "ttbar_semilep": "#907AD6",
+        "signal": "#DABFFF",
+        "ttbar_lep": "#7FDEFF",
+        "ttbar_had": "#2C2A4A",
+        "wjets": "#72A1E5",
+        "ttbar": "#907AD6",
+    },
+    "process_labels": {
+        "ttbar_semilep": r"$t\bar{t}\,\textrm{(lepton+jets)}$",
+        "signal": r"$Z^{\prime} \rightarrow t\bar{t}$",
+        "ttbar_lep": r"$t\bar{t}\,\textrm{(leptonic)}$",
+        "ttbar_had": r"$t\bar{t}\,\textrm{(hadronic)}$",
+        "wjets": r"$W+\textrm{jets}$",
+        "ttbar": r"$t\bar{t}$",
+    },
+    "process_order": [
+        "ttbar",
+        "ttbar_had",
+        "ttbar_lep",
+        "ttbar_semilep",
+        "wjets",
+        "signal",
+    ],
+}
+
+# ==============================================================================
+#  Final Configuration Assembly
+# ==============================================================================
+
+config = {
+    "general": general_config,
+    "preprocess": preprocess_config,
+    "baseline_selection": baseline_selection_config,
+    "good_object_masks": good_object_masks_config,
+    "channels": channels_config,
+    "ghost_observables": ghost_observables_config,
+    #"mva": mva_config,
+    "corrections": corrections_config,
+    "systematics": systematics_config,
+    "statistics": statistics_config,
+    "plotting": plotting_config,
+    "datasets": dataset_manager_config,
+}
