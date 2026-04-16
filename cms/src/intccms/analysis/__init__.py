@@ -4,7 +4,12 @@ from . import base as base
 from . import cms as cms
 from .base import Analysis
 from .cms import CMSAnalysis
-from .processors import SkimAndAnalyseProcessor, TwoHundredGbpsProcessor, HistServProcessor
+from .processors import (
+    HistLocalProcessor,
+    HistServProcessor,
+    SkimAndAnalyseProcessor,
+    TwoHundredGbpsProcessor,
+)
 from .runner import run_processor_workflow
 
 
@@ -16,6 +21,7 @@ __all__ = [
     "SkimAndAnalyseProcessor",
     "TwoHundredGbpsProcessor",
     "HistServProcessor",
+    "HistLocalProcessor",
     "run_processor_workflow",
 ]
 
