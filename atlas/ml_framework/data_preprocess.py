@@ -19,14 +19,13 @@ def to_hdf5(samples_dict, output_file, max_events_per_sample=-1):
         label = 1 if sample.startswith("Hplus") else 0
 
         arr = ak.from_parquet(list(files)) #files is ServiceX Guardlist wrapper
-        arr = ak.with_field(arr, label, "label")
 
         if max_events_per_sample != -1:
             arr = arr[:max_events_per_sample]
 
         # add fields
         arr = ak.with_field(arr, label, "label")
-        arr = ak.with_field(arr, sample, "sample") 
+   #     arr = ak.with_field(arr, sample, "sample") 
 
         print(f"\Loading {sample} ({len(files)} files, label={label})")
 
@@ -57,7 +56,7 @@ def to_hdf5(samples_dict, output_file, max_events_per_sample=-1):
         ("met_sig", "f4"),
         ("met_sumet", "f4"),
         ("label", "i4"),
-        ("sample", "S64"), 
+#        ("sample", "S64"), 
     ])
 
     jet_dtype = np.dtype([
@@ -89,7 +88,7 @@ def to_hdf5(samples_dict, output_file, max_events_per_sample=-1):
     event["met_sig"]   = ak.to_numpy(arr.met_significance_NOSYS)
     event["met_sumet"] = ak.to_numpy(arr.met_sumet_NOSYS)
     event["label"]     = ak.to_numpy(arr.label)
-    event["sample"]    = ak.to_numpy(arr.sample).astype("S64")
+#    event["sample"]    = ak.to_numpy(arr.sample).astype("S64")
 
     # -----------------
     # loop objects
@@ -181,7 +180,7 @@ def split_h5(input_file, train_frac=0.7, val_frac=0.15):
     # write files
     for name, indices in splits.items():
         
-        out_file = input_file[:-3]+name+".h5"
+        out_file = input_file[:-3]+"_"+name+".h5"
         with h5py.File(out_file, "w") as f:
             f.create_dataset("event", data=event[indices])
             f.create_dataset("jet", data=jet[indices])
