@@ -236,7 +236,7 @@ def run_processor_workflow(
             
         logger.info(
             f"Processor complete: {output.get('processed_events', 0):,} events processed, "
-            f"{output.get('skimmed_events', 0):,} events after skim"
+            f"{output.get('skimmed_events', None):,} events after skim"
         )
 
         return output, report
