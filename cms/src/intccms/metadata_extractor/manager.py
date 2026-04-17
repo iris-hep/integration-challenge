@@ -30,6 +30,7 @@ from intccms.metadata_extractor.io import (
     serialize_workitems,
     deserialize_workitems,
 )
+from intccms.metadata_extractor.servicex_preskim import ServiceXMetadataSkimmer
 
 logger = logging.getLogger(__name__)
 
@@ -214,10 +215,20 @@ class DatasetMetadataManager:
         self.fileset, self.datasets = self.fileset_builder.build_fileset(
             identifiers, self.processes_filter
         )
+        if self.config and self.config.general.servicex.enable_preskim:
+            self.fileset = ServiceXMetadataSkimmer().run(
+                self.fileset,
+                servicex_deliver_kwargs=self.config.general.servicex.deliver_kwargs,
+            )
         self.fileset_builder.save_fileset(self.fileset)
 
         # Step 2: Extract and save WorkItem metadata
-        self.workitems = metadata_extractor.extract_metadata(self.fileset)
+        uproot_opts: Dict[str, Any] = {}
+        if self.config and self.config.general.servicex.use_s3:
+            uproot_opts["encoded"] = True
+        self.workitems = metadata_extractor.extract_metadata(
+            self.fileset, uproot_options=uproot_opts
+        )
         self._save_workitems()
 
         # Step 3: Aggregate event counts and save summary

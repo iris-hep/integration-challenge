@@ -188,6 +188,10 @@ def run_processor_workflow(
             **runner_kwargs,
         )
 
+        uopts: Dict[str, Any] = {}
+        if config.general.servicex.use_s3:
+            uopts["encoded"] = True
+
         # Run processor over fileset or workitems
         if use_fileset:
             logger.info(f"Processing fileset with {len(fileset)} datasets, chunksize={chunksize}")
@@ -202,12 +206,14 @@ def run_processor_workflow(
                 coffea_fileset,
                 treename="Events",  # Will be overridden by fileset structure
                 processor_instance=unified_processor,
+                uproot_options=uopts,
             )
         else:
             logger.info(f"Processing {len(workitems)} work items with chunksize={chunksize}")
             output, report = runner(
                 workitems,
                 processor_instance=unified_processor,
+                uproot_options=uopts,
             )
 
         logger.info(
