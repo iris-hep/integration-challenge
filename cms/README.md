@@ -296,6 +296,38 @@ This passes coffea's `trace` function to the Runner. The Runner runs your proces
 
 Requires coffea 2026.4.0 or newer.
 
+### How do I post-process the processor output?
+
+Pass a callable via the `post` argument of `run_processor_workflow`. The required signature is:
+
+```python
+def post(processor: coffea.processor.ProcessorABC, accumulator: dict) -> dict
+```
+
+It receives the processor instance and the merged accumulator (after coffea has combined all chunks) and must return the (possibly updated) accumulator. Example:
+
+```python
+def add_totals(processor, accumulator):
+    accumulator["total_weighted_events"] = sum(
+        h.view()["value"].sum()
+        for by_obs in accumulator.get("histograms", {}).values()
+        for h in by_obs.values()
+    )
+    return accumulator
+
+output, report = run_processor_workflow(
+    config=validated_config,
+    output_manager=output_manager,
+    metadata_lookup=metadata_lookup,
+    processor=processor,
+    workitems=workitems,
+    executor=DaskExecutor(client=client),
+    post=add_totals,
+)
+```
+
+Useful for pulling histograms off a remote store (e.g. histserv), deriving cross-output summaries, or any custom output manipulation that does not belong in the processor's own `postprocess`.
+
 ## Histogramming
 
 ### How are histograms configured?
@@ -376,7 +408,11 @@ Use `full_run_histserv.ipynb`. The differences from `full_run.ipynb` are:
     )
     ```
 
-`HistServProcessor` supports only the analysis path &mdash; skimming (`save_skimmed_output=True`) is not implemented.
+`HistServProcessor` applies the skim selection just like `SkimAndAnalyseProcessor` but does not save skimmed events to disk, run statistics, or write ROOT/pickle outputs. It is a stripped-down sibling focused on the histogramming step.
+
+### Is there a local-histogramming counterpart?
+
+Yes: `HistLocalProcessor`. Same shape as `HistServProcessor` (applies the skim selection, runs the analysis, no file saving or statistics) but uses `CMSAnalysis` so histograms are filled on workers and reduced by coffea. Useful for debugging and as the local arm in HaaS vs local-reduce comparisons. See `full_run_haas_or_not.ipynb`, which runs both back-to-back on the same inputs and reports side-by-side metrics plus a per-category bin-by-bin correctness check.
 
 ### How does `HistServAnalysis` differ from `CMSAnalysis`?
 
@@ -557,6 +593,7 @@ To use it, edit the `SKIM_REDIRECTOR` and `SKIM_BASE` variables in the config ce
 | `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
 | `full_run_200gbps_preload_vs_not.ipynb` | Compares the 200gbps workflow with and without `preload=True` |
 | `full_run_histserv.ipynb` | Standard workflow with histograms filled via HaaS (histserv) instead of reduce-aggregate |
+| `full_run_haas_or_not.ipynb` | Runs `HistServProcessor` and `HistLocalProcessor` back-to-back and compares metrics plus bin-by-bin histogram outputs |
 | `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
 | `skim_inspector.ipynb` | Inspect skimmed output files on XRootD or other remote storage |
 
