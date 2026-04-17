@@ -22,6 +22,7 @@ def collect_file_paths(
     directory: Union[str, Path],
     identifiers: int | List[int] | None = None,
     redirector: str | None = None,
+    skip_files: List[str] | None = None,
 ) -> List[str]:
     """
     Read ROOT file paths from .txt listing files.
@@ -41,6 +42,9 @@ def collect_file_paths(
     redirector : str, optional
         URL prefix to prepend to paths (e.g., "root://xrootd.server.com//").
         If None, paths used as-is.
+    skip_files : list of str, optional
+        File paths (or substrings) to skip. Any file whose path contains
+        one of these strings will be excluded.
 
     Returns
     -------
@@ -65,6 +69,7 @@ def collect_file_paths(
     if not listing_files:
         raise FileNotFoundError(f"No listing files found in {dir_path}")
 
+    skip = skip_files or []
     root_paths: List[str] = []
 
     # Iterate through each listing file
@@ -78,6 +83,9 @@ def collect_file_paths(
             if path_str:
                 if redirector:
                     path_str = f"{redirector}{path_str}"
+                if any(s in path_str for s in skip):
+                    logger.debug(f"Skipping file: {path_str}")
+                    continue
                 root_paths.append(path_str)
 
     return root_paths
