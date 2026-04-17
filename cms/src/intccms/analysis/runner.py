@@ -7,7 +7,7 @@ path (for iterating on statistical models without re-processing).
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from lzma import LZMAError
 from cramjam import DecompressionError
 from collections import defaultdict
@@ -42,6 +42,7 @@ def run_processor_workflow(
     schema: Any = NanoAODSchema,
     chunksize: Optional[int] = None,
     preload: bool = False,
+    post: Optional[Callable] = None,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Execute processor workflow or load saved histograms.
 
@@ -78,6 +79,10 @@ def run_processor_workflow(
     preload : bool, optional
         If True, pass coffea's ``trace`` function to the Runner so it
         preloads only the branches the processor accesses. Default False.
+    post: Callable, optional
+        If not None, this is a post-processing function that runs over the output from
+        the coffea processor. The function must accept the processor and its output (in order)
+        and return and updated output dictionary/accumlator.
 
     Returns
     -------
@@ -227,16 +232,18 @@ def run_processor_workflow(
                 **run_kwargs,
             )
 
-        hists = defaultdict(dict)
-        for ch, ch_histos in processor.analysis.nD_hists_per_region.items():
-            for obs, obs_histo in ch_histos.items():
-                hists[ch][obs] = obs_histo.snapshot(delete_from_server=True)
-        
-        output["histograms"] = hists
+        if post is not None:
+            try:
+                output = post(processor, output)
+            except Exception as e:
+                logger.warning("Could not run post processing function. Ensure the signature is:" \
+                              "def post(processor: coffea.processor.ProcessorABC, accumlator: dict) -> dict"
+                             )
+                raise e
             
         logger.info(
             f"Processor complete: {output.get('processed_events', 0):,} events processed, "
-            f"{output.get('skimmed_events', None):,} events after skim"
+            f"{output.get('skimmed_events', -1):,} events after skim"
         )
 
         return output, report
