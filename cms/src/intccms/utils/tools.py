@@ -409,6 +409,59 @@ def find_mc_only_branches(
     return mc - data
 
 
+def prepare_branches_from_list(
+    branches: Dict[str, List[str]],
+    mc_file: Optional[str] = None,
+    data_file: Optional[str] = None,
+    tree_name: str = "Events",
+) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
+    """Wrap a fixed branches dict and optionally split off the MC-only subset.
+
+    Companion to :func:`get_branches_for_fraction` for the case when the
+    branch list is known up front (e.g. replicating a reference workflow)
+    instead of being derived from a size fraction.
+
+    When ``mc_file`` and ``data_file`` are both given, branches that exist
+    in the MC file but not in the data file are returned as the second
+    dict, ready to drop into ``preprocess_config["mc_branches"]``.
+
+    Parameters
+    ----------
+    branches : dict[str, list[str]]
+        The fixed branches dict, keyed by collection name. Use ``"event"``
+        for top-level scalar branches.
+    mc_file : str or None, optional
+        Path or URI to a representative MC NanoAOD file. Required with
+        ``data_file`` for the MC/data split.
+    data_file : str or None, optional
+        Path or URI to a representative data NanoAOD file. Required with
+        ``mc_file`` for the MC/data split.
+    tree_name : str, optional
+        Events tree name. Defaults to ``"Events"``.
+
+    Returns
+    -------
+    branches : dict[str, list[str]]
+        The input branches dict (unchanged), ready for
+        ``preprocess_config["branches"]``.
+    mc_branches : dict[str, list[str]]
+        MC-only subset, ready for ``preprocess_config["mc_branches"]``.
+        Empty when either file is not given.
+    """
+    if mc_file is None or data_file is None:
+        return branches, {}
+
+    mc_only = find_mc_only_branches(mc_file, data_file, tree_name=tree_name)
+
+    flat: List[str] = []
+    for obj, obj_branches in branches.items():
+        for br in obj_branches:
+            flat.append(br if obj == "event" else f"{obj}_{br}")
+
+    mc_only_flat = [b for b in flat if b in mc_only]
+    return branches, branches_to_dict(mc_only_flat)
+
+
 def get_branches_for_fraction(
     file_path: str,
     target_fraction: float = 1.0,
