@@ -1,0 +1,17 @@
+{
+    "diboson_4": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL17NanoAODv9/WZ_TuneCP5_13TeV-pythia8/NANOAODSIM/106X_mc2017_realistic_v9-v1/120000/936C5557-15D6-B74C-9260-582B71C8B1C3.root",
+                    "nevts": 21000
+                },
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL17NanoAODv9/WZ_TuneCP5_13TeV-pythia8/NANOAODSIM/106X_mc2017_realistic_v9-v1/70000/AA222480-64FA-2140-B920-4606F5772B4C.root",
+                    "nevts": 18000
+                }
+            ],
+            "nevts_total": 39000
+        }
+    }
+}

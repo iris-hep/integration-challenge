@@ -14,6 +14,7 @@ from .cuts import (
 )
 from .observables import get_mtt, get_mva_vars
 from .skim import dataset_manager_config, skimming_config
+from .preskim import servicex_preskim_config
 
 try:
     from .systematics import corrections_config, systematics_config
@@ -65,6 +66,7 @@ general_config = {
         "run_corrections": _CORRECTIONS_AVAILABLE,
         "run_plots_only": False,
         "run_mva_training": False,
+        "run_servicex_preskim": True, # Prayag: WIP
         "run_metadata_generation": False,
         "read_from_cache": True,
         "output_dir": "example_cms/outputs/",
@@ -337,6 +339,7 @@ plotting_config = {
 
 config = {
     "general": general_config,
+    "servicex_preskim": servicex_preskim_config, # Prayag: WIP
     "preprocess": preprocess_config,
     "baseline_selection": baseline_selection_config,
     "good_object_masks": good_object_masks_config,

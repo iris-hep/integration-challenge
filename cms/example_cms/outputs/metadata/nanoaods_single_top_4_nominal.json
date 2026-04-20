@@ -1,0 +1,13 @@
+{
+    "single_top_4": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL16NanoAODv9/ST_tW_antitop_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/270000/ED75F63B-5CB3-DA49-B3E3-BB1819C694C3.root",
+                    "nevts": 54671
+                }
+            ],
+            "nevts_total": 54671
+        }
+    }
+}

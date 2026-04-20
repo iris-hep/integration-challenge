@@ -1,0 +1,13 @@
+{
+    "qcd_19": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL18NanoAODv9/QCD_HT100to200_TuneCP5_PSWeights_13TeV-madgraph-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v1/270000/7340EA64-7191-164A-B21C-DB2E4F76676D.root",
+                    "nevts": 47512
+                }
+            ],
+            "nevts_total": 47512
+        }
+    }
+}

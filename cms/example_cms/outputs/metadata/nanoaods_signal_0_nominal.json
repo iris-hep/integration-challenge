@@ -1,0 +1,13 @@
+{
+    "signal_0": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL16NanoAODv9/ZPrimeToTT_M2000_W200_TuneCP2_13TeV-madgraph-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v2/270000/7A83E108-8CB7-5647-8848-C2C48F430E09.root",
+                    "nevts": 228000
+                }
+            ],
+            "nevts_total": 228000
+        }
+    }
+}

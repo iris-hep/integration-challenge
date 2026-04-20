@@ -1,0 +1,25 @@
+{
+    "data_8": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/data/Run2017E/SingleMuon/NANOAOD/UL2017_MiniAODv2_NanoAODv9-v1/280000/10AD78F9-CC95-5943-8E1F-C521BD0C062A.root",
+                    "nevts": 3087350
+                },
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/data/Run2017E/SingleMuon/NANOAOD/UL2017_MiniAODv2_NanoAODv9-v1/280000/178C567D-41B4-BF44-9489-EE125B598A37.root",
+                    "nevts": 2087279
+                },
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/data/Run2017E/SingleMuon/NANOAOD/UL2017_MiniAODv2_NanoAODv9-v1/280000/17AF9EB4-40E3-834F-ABD9-A6263A9B7A89.root",
+                    "nevts": 2753825
+                },
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/data/Run2017E/SingleMuon/NANOAOD/UL2017_MiniAODv2_NanoAODv9-v1/280000/17EE2935-B8EF-F14A-B30B-C5DD99A5FA75.root",
+                    "nevts": 1335896
+                }
+            ],
+            "nevts_total": 9264350
+        }
+    }
+}

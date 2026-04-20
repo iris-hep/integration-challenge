@@ -1,0 +1,13 @@
+{
+    "ttbar_had_0": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL16NanoAODv9/TTToHadronic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/280000/0BF4BFF2-D7F5-E645-A159-6315A2C6CEB3.root",
+                    "nevts": 924000
+                }
+            ],
+            "nevts_total": 924000
+        }
+    }
+}

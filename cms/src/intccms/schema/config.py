@@ -24,6 +24,7 @@ from intccms.schema.analysis import (
 from intccms.schema.base import FunctorConfig, SubscriptableModel
 from intccms.schema.mva import MVAConfig
 from intccms.schema.skimming import PreprocessConfig
+from intccms.schema.preskimming import PreSkimConfig
 from intccms.schema.datasets import DatasetManagerConfig
 
 
@@ -69,6 +70,10 @@ class Config(SubscriptableModel):
     systematics: Annotated[
         Union[List[SystematicConfig], Dict[str, List[SystematicConfig]]],
         Field(description="Systematic variations - either a flat list or year-keyed dict"),
+    ]
+    servicex_preskim: Annotated[
+        Optional[PreSkimConfig],
+        Field(default=None, description="Preprocessing settings"),
     ]
     preprocess: Annotated[
         Optional[PreprocessConfig],

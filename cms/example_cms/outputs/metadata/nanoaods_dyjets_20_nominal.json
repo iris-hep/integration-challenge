@@ -1,0 +1,21 @@
+{
+    "dyjets_20": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL18NanoAODv9/DYJetsToLL_M-50_HT-600to800_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v1/120000/A180B4E8-7AAA-A64B-B279-D21C2054AAFC.root",
+                    "nevts": 385572
+                },
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL18NanoAODv9/DYJetsToLL_M-50_HT-600to800_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v1/270000/58A63F19-FB52-8A4F-8F75-20FFD56D1C67.root",
+                    "nevts": 333715
+                },
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL18NanoAODv9/DYJetsToLL_M-50_HT-600to800_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v1/280000/6E2F7BE4-857E-DE4D-82CD-DEC677DA7697.root",
+                    "nevts": 633884
+                }
+            ],
+            "nevts_total": 1353171
+        }
+    }
+}

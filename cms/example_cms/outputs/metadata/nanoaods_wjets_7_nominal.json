@@ -1,0 +1,13 @@
+{
+    "wjets_7": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL16NanoAODv9/WJetsToLNu_HT-2500ToInf_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v2/270000/EE551727-A428-7C4B-B4BC-D7C3A47387A3.root",
+                    "nevts": 47039
+                }
+            ],
+            "nevts_total": 47039
+        }
+    }
+}

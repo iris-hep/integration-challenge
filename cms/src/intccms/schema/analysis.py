@@ -191,6 +191,13 @@ class GeneralConfig(SubscriptableModel):
             "If True, run the MVA model pre-training step.",
         ),
     ]
+    run_servicex_preskim: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="If True, run the preskim with servicex before further skimming.",
+        ),
+    ]
     run_metadata_generation: Annotated[
         bool,
         Field(

@@ -1,0 +1,13 @@
+{
+    "wjets_23": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL18NanoAODv9/WJetsToLNu_HT-2500ToInf_TuneCP5_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v2/270000/6113BC7D-D653-5648-8E6E-536F1ED389B0.root",
+                    "nevts": 5170
+                }
+            ],
+            "nevts_total": 5170
+        }
+    }
+}

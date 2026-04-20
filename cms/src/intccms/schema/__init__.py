@@ -7,6 +7,7 @@ All public classes are re-exported from this module for convenient imports.
 from intccms.schema.base import FunctorConfig, ObjVar, SubscriptableModel, Sys, WorkerEval
 from intccms.schema.datasets import DatasetConfig, DatasetManagerConfig
 from intccms.schema.skimming import PreprocessConfig, SkimOutputConfig, SkimmingConfig
+from intccms.schema.preskimming import PreSkimConfig
 from intccms.schema.analysis import (
     ChannelConfig,
     CorrectionConfig,
@@ -33,6 +34,8 @@ __all__ = [
     # Datasets
     "DatasetConfig",
     "DatasetManagerConfig",
+    #PreSkimming
+    "PreSkimConfig",
     # Skimming
     "PreprocessConfig",
     "SkimOutputConfig",

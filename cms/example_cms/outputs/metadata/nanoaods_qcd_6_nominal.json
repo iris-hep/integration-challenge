@@ -1,0 +1,13 @@
+{
+    "qcd_6": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL16NanoAODv9/QCD_HT1000to1500_TuneCP5_PSWeights_13TeV-madgraph-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/260000/48CA023B-BD0C-BC48-B7CF-B40C226E78CB.root",
+                    "nevts": 129552
+                }
+            ],
+            "nevts_total": 129552
+        }
+    }
+}

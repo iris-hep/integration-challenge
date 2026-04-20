@@ -1,0 +1,13 @@
+{
+    "single_top_5": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL17NanoAODv9/ST_s-channel_4f_leptonDecays_TuneCP5_13TeV-amcatnlo-pythia8/NANOAODSIM/106X_mc2017_realistic_v9-v1/280000/16D0C073-5B58-784A-8DCE-E8727A51B456.root",
+                    "nevts": 486000
+                }
+            ],
+            "nevts_total": 486000
+        }
+    }
+}

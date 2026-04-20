@@ -11,6 +11,14 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TypedDict, Union
 
+from servicex import ProgressBarFormat
+from servicex import query, dataset, deliver
+import os
+import yaml
+import copy
+from collections import defaultdict, deque
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from rich.pretty import pretty_repr
 from coffea.processor.executor import WorkItem
 from coffea.nanoevents import NanoAODSchema
@@ -109,6 +117,7 @@ class DatasetMetadataManager:
         if config:
             self.generate_metadata = config.general.run_metadata_generation
             self.processes_filter = getattr(config.general, 'processes', None)
+            self.servicex_preskim = config.general.run_servicex_preskim #Prayag:WIP
             # Extract chunksize from config
             if hasattr(config, 'preprocess') and hasattr(config.preprocess, 'skimming'):
                 self.chunksize = config.preprocess.skimming.chunk_size
@@ -116,6 +125,7 @@ class DatasetMetadataManager:
                 self.chunksize = 100_000
         else:
             self.generate_metadata = True
+            self.servicex_preskim = False #Prayag:WIP
             self.processes_filter = None
             self.chunksize = 100_000
 
@@ -175,6 +185,10 @@ class DatasetMetadataManager:
         SystemExit
             If loading metadata and required files are missing
         """
+        # logger.info(f"Prayag WIP: self.service_preskim : {self.servicex_preskim}")
+        if self.servicex_preskim: #Prayag:WIP
+            
+            self._generate_servicex_preskim(identifiers) #Prayag:WIP
         if self.generate_metadata:
             if executor is None:
                 raise ValueError(
@@ -185,6 +199,174 @@ class DatasetMetadataManager:
         else:
             self._load_existing_metadata()
 
+    def _servicex_key(self, path):#Prayag:WIP
+        return path.replace("://", "___").replace("/", "_")
+        
+    def _reorder_servicex_output(self, og_filelist, servicex_files):#Prayag:WIP
+        '''Service applies sort on input list : this function ondoes that'''
+    
+        if len(servicex_files) < 2:
+            return servicex_files
+        
+        # map encoded original path -> servicex file(s)
+        sx_map = defaultdict(deque)
+        for f in servicex_files:
+            encoded = f.split("/")[-1]
+            sx_map[encoded].append(f)
+        
+        ordered_servicex = []
+        for f in og_filelist:
+            key = self._servicex_key(f)
+            if key in sx_map:
+                ordered_servicex.append(sx_map[key].popleft())
+            else:
+                ordered_servicex.append(None)
+        return ordered_servicex
+
+    def _servicex_query(self, treename, cuts, branch_list):
+        '''Query Builder'''
+        the_query = [
+         {
+          'treename': treename,
+          'filter_name': branch_list,
+          'cut': cuts
+         }
+        ]
+        return the_query
+
+    def _filter_these_branches(self, config, is_data):
+        '''Using the preprocess config construct a list of branches to be filtered'''
+        branches = copy.copy(config["branches"])
+        mc_branches = copy.copy(config["mc_branches"])
+    
+        if is_data :
+            # Remove MC-specific branches
+            out_branches = copy.copy(branches)
+            for key, mc_values in mc_branches.items():
+                out_branches[key] = list(set(branches[key]) - set(mc_values))
+        else:
+            out_branches = branches
+            
+        # Optional: remove keys that become empty
+        need_these_branches = {k: v for k, v in out_branches.items() if len(v) > 0}
+        expanded_list = []
+        for branch, subbranch_list in need_these_branches.items():
+            for subbranch in subbranch_list:
+                if branch == 'event':
+                    to_append = subbranch
+                else:
+                    to_append = branch+'_'+subbranch
+                expanded_list.append(to_append)
+        
+        return expanded_list
+        
+    def _add_tree_info_to_files(self, fileset, treenames):
+        output = copy.copy(fileset)
+        for name in fileset.keys():
+            tree = treenames[name]
+            output[name]["files"] = {file:tree for file in fileset[name]["files"]}
+        return output
+        
+    def _batch_deliver(self, fileset, treenames, is_data_list, servicex_config, preprocess_config):#Prayag:WIP
+        '''Deliver each dataset by concurrently submitting to servicex'''
+
+        def process_key(key, fileset, treename, cuts, config, is_data):
+            files_to_process = list(fileset[key]["files"].keys())
+
+            expanded_branch_list = self._filter_these_branches(config, is_data)
+            
+            spec = {
+                "Sample": [
+                    {
+                        "Name": key,
+                        "Dataset": dataset.FileList(files_to_process),
+                        "Query": query.UprootRaw(self._servicex_query(treename, cuts, expanded_branch_list)),
+                    }
+                ]
+            }
+        
+            result = self._reorder_servicex_output(
+                files_to_process,
+                list(deliver(spec)[key])
+            )
+        
+            return key, result
+
+        
+        output = copy.deepcopy(fileset)
+        max_workers = servicex_config.get("futures_max_workers",8)
+        cuts = servicex_config.get("selections", None)
+        cut_string = f"(({') & ('.join(cuts)}))"
+        if (not isinstance(cuts, list)) or (len(cuts) == 0):
+            raise ValueError("No Pre-Skim selections provided")
+    
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [
+                executor.submit(process_key, key, fileset, treenames[key], cut_string, preprocess_config, is_data_list[key])
+                for key in fileset.keys()
+            ]
+    
+            # for future in as_completed(futures):
+            #     key, result = future.result()
+            #     output[key]["files"] = list(result)
+            for future in as_completed(futures):
+                key, result = future.result()
+            
+                cleaned = [f for f in result if f is not None]
+            
+                if len(cleaned) == 0:
+                    logger.warning(f"No ServiceX output files for dataset {key}")
+            
+                output[key]["files"] = cleaned
+        
+        return self._add_tree_info_to_files(output, treenames)
+
+    def _extract_treenames(self,datasets): #Prayag:WIP
+        keys = self.fileset.keys()
+        out = {}
+        for name in datasets:
+            treename = self.dataset_manager.get_tree_name(name)
+            for key in keys:
+                if key.startswith(name):
+                    out[key] = treename
+        return out
+
+    def _extract_isdata(self,datasets): #Prayag:WIP
+        keys = self.fileset.keys()
+        out = {}
+        for name in datasets:
+            isdata = self.dataset_manager.is_data_dataset(name)
+            for key in keys:
+                if key.startswith(name):
+                    out[key] = isdata
+        return out
+        
+    def _generate_servicex_preskim(
+        self,
+        identifiers: Optional[Union[int, List[int]]],
+    ) -> None: #Prayag:WIP
+        """Use servicex to do the pre-skimming"""
+        logger.info("Performing the ServiceX Pre-skim ...")
+        self.fileset, self.datasets = self.fileset_builder.build_fileset(
+            identifiers, self.processes_filter
+        )
+        datasets = list(self.dataset_manager.datasets.keys())
+        treenames = self._extract_treenames(datasets)
+        is_data_dataset = self._extract_isdata(datasets)
+        # logger.info(f"is_data_dataset : {is_data_dataset}")
+        
+        self._servicex_output = self._batch_deliver(
+            fileset = self.fileset,
+            treenames = treenames,
+            is_data_list = is_data_dataset,
+            servicex_config = self.config.servicex_preskim,
+            preprocess_config = self.config.preprocess
+        )
+
+        self._use_servicex_as_input = True
+        # logger.info(f"self.fileset\n {self._servicex_output} \n \n")
+        logger.info("ServiceX Pre-skim complete.")
+    
     def _generate_metadata(
         self,
         executor: Any,
@@ -211,9 +393,14 @@ class DatasetMetadataManager:
         metadata_extractor = CoffeaMetadataExtractor(executor, schema, self.chunksize)
 
         # Step 1: Build and save fileset and Dataset objects
-        self.fileset, self.datasets = self.fileset_builder.build_fileset(
-            identifiers, self.processes_filter
-        )
+        # If servicex preskimming was active, use the output from that
+        if self._use_servicex_as_input:
+            self.fileset = self._servicex_output
+            # logger.info(f"self.fileset : {self.fileset}")
+        else:
+            self.fileset, self.datasets = self.fileset_builder.build_fileset(
+                identifiers, self.processes_filter
+            )
         self.fileset_builder.save_fileset(self.fileset)
 
         # Step 2: Extract and save WorkItem metadata

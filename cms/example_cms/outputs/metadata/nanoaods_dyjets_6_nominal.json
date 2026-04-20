@@ -1,0 +1,25 @@
+{
+    "dyjets_6": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL16NanoAODv9/DYJetsToLL_M-50_HT-1200to2500_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v2/2510000/3964CAF5-9F31-694D-BED0-F5EB2BD5F65B.root",
+                    "nevts": 85153
+                },
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL16NanoAODv9/DYJetsToLL_M-50_HT-1200to2500_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v2/2510000/DCEC1866-9260-0A43-ABAE-742B2BCDDAE8.root",
+                    "nevts": 38570
+                },
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL16NanoAODv9/DYJetsToLL_M-50_HT-1200to2500_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v2/2510000/E90419DC-3D41-A646-8FD5-780AFF942E72.root",
+                    "nevts": 65807
+                },
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL16NanoAODv9/DYJetsToLL_M-50_HT-1200to2500_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v2/260000/5BCD0BC6-823B-7A44-BEBD-FEDA20BCBDA5.root",
+                    "nevts": 27630
+                }
+            ],
+            "nevts_total": 217160
+        }
+    }
+}

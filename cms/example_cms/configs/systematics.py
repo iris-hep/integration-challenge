@@ -32,7 +32,7 @@ SYS = Sys()
 YEARS = ["2016preVFP", "2017", "2018"]
 
 # Base path for correction files
-CORRECTIONS_BASE = "./example_cms/corrections/DONT_EXPOSE_CMS_INTERNAL"
+CORRECTIONS_BASE = "./example_cms/corrections/DONT_EXPOSE_CMS_INTERNAL" 
 
 
 def get_correction_file(year: str, correction_type: str) -> str:

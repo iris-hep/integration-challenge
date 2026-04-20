@@ -1,0 +1,13 @@
+{
+    "ttbar_semilep_0": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL16NanoAODv9/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/NANOAODSIM/106X_mcRun2_asymptotic_v17-v1/120000/0BD60695-8388-5141-B157-32AE1A3B4885.root",
+                    "nevts": 1365000
+                }
+            ],
+            "nevts_total": 1365000
+        }
+    }
+}

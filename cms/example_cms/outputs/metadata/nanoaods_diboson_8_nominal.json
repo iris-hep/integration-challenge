@@ -1,0 +1,13 @@
+{
+    "diboson_8": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL18NanoAODv9/ZZ_TuneCP5_13TeV-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v1/40000/C807DA48-E33D-7E42-87BA-BC2DC15D8AC0.root",
+                    "nevts": 336000
+                }
+            ],
+            "nevts_total": 336000
+        }
+    }
+}

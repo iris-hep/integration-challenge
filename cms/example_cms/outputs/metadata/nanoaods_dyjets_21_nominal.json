@@ -1,0 +1,13 @@
+{
+    "dyjets_21": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL18NanoAODv9/DYJetsToLL_M-50_HT-800to1200_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v1/280000/AB0FE2C8-9010-BF41-8FDD-AED3C180B287.root",
+                    "nevts": 57304
+                }
+            ],
+            "nevts_total": 57304
+        }
+    }
+}

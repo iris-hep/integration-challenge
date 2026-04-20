@@ -1,0 +1,25 @@
+{
+    "qcd_23": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL18NanoAODv9/QCD_HT700to1000_TuneCP5_PSWeights_13TeV-madgraph-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v2/230000/9C45F373-DFDD-3847-88EE-599A672E8BB9.root",
+                    "nevts": 276929
+                },
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL18NanoAODv9/QCD_HT700to1000_TuneCP5_PSWeights_13TeV-madgraph-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v2/230000/9ED8E757-2BAE-FB4D-9E51-46B5288A2048.root",
+                    "nevts": 606120
+                },
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL18NanoAODv9/QCD_HT700to1000_TuneCP5_PSWeights_13TeV-madgraph-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v2/230000/D784C1B6-AD6E-B042-B410-79AAFD589824.root",
+                    "nevts": 356973
+                },
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/mc/RunIISummer20UL18NanoAODv9/QCD_HT700to1000_TuneCP5_PSWeights_13TeV-madgraph-pythia8/NANOAODSIM/106X_upgrade2018_realistic_v16_L1v1-v2/2510000/77C5E41D-E61D-504F-951A-5C6A677C9533.root",
+                    "nevts": 199111
+                }
+            ],
+            "nevts_total": 1439133
+        }
+    }
+}

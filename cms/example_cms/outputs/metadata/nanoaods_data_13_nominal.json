@@ -1,0 +1,13 @@
+{
+    "data_13": {
+        "nominal": {
+            "files": [
+                {
+                    "path": "root://cmsxrootd.fnal.gov//store/data/Run2018D/SingleMuon/NANOAOD/UL2018_MiniAODv2_NanoAODv9-v1/130000/02945FF5-75FA-D14B-ADDC-68A0F71E6F5E.root",
+                    "nevts": 520605
+                }
+            ],
+            "nevts_total": 520605
+        }
+    }
+}
