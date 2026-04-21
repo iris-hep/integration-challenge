@@ -191,10 +191,10 @@ class CMSAnalysis(Analysis):
                         object_copies_channel, year,
                         syst_function=syst_function)
 
-            logger.info(
+            logger.debug(
                 f"Number of weighted events in {channel_name}: {ak.sum(weights):.2f}"
             )
-            logger.info(
+            logger.debug(
                 f"Number of raw events in {channel_name}: {ak.sum(mask)}"
             )
             for observable in channel.observables:
