@@ -11,11 +11,6 @@ from intccms.utils.tools import dict_to_branches
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SERVICEX_DELIVER_KWARGS: Dict[str, Any] = {
-    "fail_if_incomplete": True,
-    "ignore_local_cache": False,
-}
-
 Task = Tuple[str, Dict[str, Any], List[str], str, List[str]]
 
 
@@ -115,13 +110,10 @@ class ServiceXMetadataSkimmer:
             ``config.preprocess``). ServiceX ``filter_name`` lists are built via
             :func:`intccms.utils.tools.dict_to_branches`.
         servicex_deliver_kwargs
-            Passed to ``servicex.deliver`` after merging over
-            :data:`DEFAULT_SERVICEX_DELIVER_KWARGS`.
+            Keyword arguments forwarded to ``servicex.deliver`` (e.g.
+            ``general.servicex.deliver_kwargs`` from the analysis config).
         """
-        deliver_kwargs = {
-            **DEFAULT_SERVICEX_DELIVER_KWARGS,
-            **(servicex_deliver_kwargs or {}),
-        }
+        deliver_kwargs: Dict[str, Any] = dict(servicex_deliver_kwargs or {})
         tasks: List[Task] = []
         for dataset_key, entry in input_fileset.items():
             metadata = entry.get("metadata", {})

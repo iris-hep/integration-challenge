@@ -115,9 +115,9 @@ class ServicexConfig(SubscriptableModel):
     deliver_kwargs: Annotated[
         Dict[str, Any],
         Field(
-            default_factory=dict,
-            description="Extra keyword arguments passed to servicex.deliver() during metadata "
-            "preskim. Merged over defaults in the skimmer.",
+            default={"fail_if_incomplete": True, "ignore_local_cache": False},
+            description="Keyword arguments passed to servicex.deliver() during metadata "
+            "preskim.",
         ),
     ]
     use_s3: Annotated[
