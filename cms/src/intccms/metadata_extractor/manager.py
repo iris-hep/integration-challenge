@@ -216,8 +216,16 @@ class DatasetMetadataManager:
             identifiers, self.processes_filter
         )
         if self.config and self.config.general.servicex.enable_preskim:
+            preprocess_config = getattr(self.config, "preprocess", None)
+            if preprocess_config is None:
+                raise ValueError(
+                    "general.servicex.enable_preskim=True requires config.preprocess "
+                    "(preprocess_config with branches and mc_branches for ServiceX "
+                    "filter_name)."
+                )
             self.fileset = ServiceXMetadataSkimmer().run(
                 self.fileset,
+                preprocess_config,
                 servicex_deliver_kwargs=self.config.general.servicex.deliver_kwargs,
             )
         self.fileset_builder.save_fileset(self.fileset)

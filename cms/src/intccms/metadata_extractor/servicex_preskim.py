@@ -5,7 +5,9 @@ keys are output URLs.
 """
 
 import logging
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+
+from intccms.utils.tools import dict_to_branches
 
 logger = logging.getLogger(__name__)
 
@@ -14,51 +16,18 @@ DEFAULT_SERVICEX_DELIVER_KWARGS: Dict[str, Any] = {
     "ignore_local_cache": False,
 }
 
-# NanoAOD Events branch names for ServiceX ``UprootRaw`` ``filter_name``.
-# Align with ``example_cms/configs/configuration.py`` preprocess branches + mc_only.
-_NANOAOD_BRANCHES: Tuple[str, ...] = (
-    "nMuon",
-    "Muon_pt",
-    "Muon_eta",
-    "Muon_phi",
-    "Muon_mass",
-    "Muon_miniIsoId",
-    "Muon_tightId",
-    "Muon_charge",
-    "Muon_etaErr",
-    "nFatJet",
-    "FatJet_particleNet_TvsQCD",
-    "FatJet_pt",
-    "FatJet_eta",
-    "FatJet_phi",
-    "FatJet_mass",
-    "nJet",
-    "Jet_btagDeepB",
-    "Jet_jetId",
-    "Jet_pt",
-    "Jet_eta",
-    "Jet_phi",
-    "Jet_mass",
-    "Jet_hadronFlavour",
-    "Jet_area",
-    "PuppiMET_pt",
-    "PuppiMET_phi",
-    "HLT_Mu50",
-    "run",
-    "luminosityBlock",
-    "event",
-    "fixedGridRhoFastjetAll",
-)
-_NANOAOD_MC_ONLY: Tuple[str, ...] = ("Pileup_nTrueInt", "genWeight")
-
 Task = Tuple[str, Dict[str, Any], List[str], str, List[str]]
 
 
-def _skimming_columns(is_data: bool) -> List[str]:
-    """Selection of branches to keep during skimming."""
+def _skimming_columns(preprocess_config: Any, is_data: bool) -> List[str]:
+    """Flat NanoAOD branch names for ServiceX; strip ``mc_branches`` when ``is_data``."""
+    flat = dict_to_branches(
+        preprocess_config.branches, nanoaod_collection_counts=True
+    )
     if is_data:
-        return list(_NANOAOD_BRANCHES)
-    return list(_NANOAOD_BRANCHES + _NANOAOD_MC_ONLY)
+        mc_only: Set[str] = set(dict_to_branches(preprocess_config.mc_branches))
+        return [c for c in flat if c not in mc_only]
+    return flat
 
 
 def _flatten_delivered_urls(value: Any) -> List[str]:
@@ -134,12 +103,17 @@ class ServiceXMetadataSkimmer:
     def run(
         self,
         input_fileset: Dict[str, Dict[str, Any]],
+        preprocess_config: Any,
         servicex_deliver_kwargs: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Dict[str, Any]]:
         """Return a copy of the fileset with ``files`` keys replaced by ServiceX output paths/urls.
 
         Parameters
         ----------
+        preprocess_config
+            Preprocess config with ``branches`` and ``mc_branches`` (e.g.
+            ``config.preprocess``). ServiceX ``filter_name`` lists are built via
+            :func:`intccms.utils.tools.dict_to_branches`.
         servicex_deliver_kwargs
             Passed to ``servicex.deliver`` after merging over
             :data:`DEFAULT_SERVICEX_DELIVER_KWARGS`.
@@ -162,7 +136,13 @@ class ServiceXMetadataSkimmer:
                 continue
             treename = next(iter(files.values()), "Events")
             tasks.append(
-                (dataset_key, metadata, input_files, treename, _skimming_columns(is_data))
+                (
+                    dataset_key,
+                    metadata,
+                    input_files,
+                    treename,
+                    _skimming_columns(preprocess_config, is_data),
+                )
             )
 
         if not tasks:
