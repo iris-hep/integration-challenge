@@ -280,7 +280,7 @@ output, report = run_processor_workflow(
 
 `TwoHundredGbpsProcessor` reads whatever is in `config["preprocess"]["branches"]` (and `mc_branches`). Two helpers in `intccms.utils.tools` build those dicts:
 
-- **`get_branches_for_fraction(file_path, target_fraction=..., data_file=..., cache_path=...)`**: measures per-branch sizes in a representative file, then picks the biggest branches until they cover the target fraction of the file. Used in `full_run_200gbps.ipynb` to sweep I/O throughput at different read fractions.
+- **`get_branches_for_fraction(file_path, target_fraction=..., data_file=..., cache_path=..., strategy=...)`**: measures per-branch sizes in a representative file, then picks branches until they cover the target fraction of the file. `strategy="largest-first"` (default) gives the fewest branches covering that fraction; `strategy="smallest-first"` gives a larger number of smaller branches at the same total data volume, for studying how branch count affects throughput. Used in `full_run_200gbps.ipynb` to sweep I/O throughput at different read fractions.
 - **`prepare_branches_from_list(branch_list, mc_file=..., data_file=...)`**: takes a fixed flat list of NanoAOD branch names and groups them into the `preprocess.branches` shape. Use when the branch set is known up front, for example when replicating a reference workflow. Used in `full_run_200gbps_replicate_legacy.ipynb` to reproduce the idap-200gbps legacy benchmark branch-for-branch.
 
 Both return the same `(branches, mc_branches)` pair. The second dict is empty unless a representative data file is passed, in which case `find_mc_only_branches` splits out the MC-only subset.

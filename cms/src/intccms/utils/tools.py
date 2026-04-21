@@ -5,7 +5,7 @@ from collections import defaultdict
 from pathlib import Path
 import pexpect
 import time
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Literal, Mapping, Optional, Sequence, Set, Tuple
 
 import awkward as ak
 import uproot
@@ -311,12 +311,13 @@ def select_branches_for_fraction(
     file_size_mb: float,
     target_fraction: float = 1.0,
     veto: Tuple[str, ...] = (),
+    strategy: Literal["largest-first", "smallest-first"] = "largest-first",
 ) -> List[str]:
-    """Pick the biggest branches first until they cover the target fraction.
+    """Pick branches until they cover the target fraction of the file.
 
-    Walks branches from biggest to smallest, adding each one until the
-    selected total reaches ``target_fraction * file_size_mb``. Branches
-    listed in ``veto`` are skipped.
+    Walks branches in the order set by ``strategy``, adding each one
+    until the selected total reaches ``target_fraction * file_size_mb``.
+    Branches listed in ``veto`` are skipped.
 
     Parameters
     ----------
@@ -330,21 +331,32 @@ def select_branches_for_fraction(
         to ``1.0`` (every branch).
     veto : tuple of str, optional
         Branch names to skip.
+    strategy : {"largest-first", "smallest-first"}, optional
+        Order in which branches are picked. ``"largest-first"`` (default)
+        gives the fewest branches covering the target fraction.
+        ``"smallest-first"`` gives a larger number of smaller branches
+        covering the same fraction, useful for studying the effect of
+        branch count at fixed data volume.
 
     Returns
     -------
     list[str]
-        The selected branch names, biggest first.
+        The selected branch names, in the order they were picked.
     """
     if not 0 < target_fraction <= 1.0:
         raise ValueError(
             f"target_fraction must be in (0, 1.0], got {target_fraction}"
         )
+    if strategy not in ("largest-first", "smallest-first"):
+        raise ValueError(
+            f"strategy must be 'largest-first' or 'smallest-first', got {strategy!r}"
+        )
 
     target_mb = target_fraction * file_size_mb
+    reverse = strategy == "largest-first"
     selected: List[str] = []
     accumulated = 0.0
-    for key, size in sorted(sizes_mb.items(), key=lambda kv: kv[1], reverse=True):
+    for key, size in sorted(sizes_mb.items(), key=lambda kv: kv[1], reverse=reverse):
         if any(v in key for v in veto):
             continue
         selected.append(key)
@@ -464,6 +476,7 @@ def get_branches_for_fraction(
     cache_path: Optional[str] = None,
     veto: Tuple[str, ...] = (),
     data_file: Optional[str] = None,
+    strategy: Literal["largest-first", "smallest-first"] = "largest-first",
 ) -> Tuple[Dict[str, List[str]], Dict[str, List[str]]]:
     """Measure, pick, and group branches in one call.
 
@@ -494,6 +507,9 @@ def get_branches_for_fraction(
         Path or URI to a representative data NanoAOD file. When given,
         branches that exist in MC but not in data are split out into the
         second returned dict.
+    strategy : {"largest-first", "smallest-first"}, optional
+        See :func:`select_branches_for_fraction`. Defaults to
+        ``"largest-first"``.
 
     Returns
     -------
@@ -507,7 +523,11 @@ def get_branches_for_fraction(
         file_path, tree_name=tree_name, cache_path=cache_path
     )
     selected = select_branches_for_fraction(
-        sizes_mb, file_size_mb, target_fraction=target_fraction, veto=veto
+        sizes_mb,
+        file_size_mb,
+        target_fraction=target_fraction,
+        veto=veto,
+        strategy=strategy,
     )
 
     if data_file is None:
