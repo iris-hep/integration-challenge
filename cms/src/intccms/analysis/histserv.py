@@ -49,7 +49,7 @@ class HistServAnalysis(CMSAnalysis):
             for observable in channel.observables:
 
                 observable_label = observable.label
-                observable_binning = np.asarray(observable.binning).tolist()  # Already array of edges from schema
+                observable_binning = observable.binning  # Already array of edges from schema
                 observable_name = observable.name
 
                 # Binning is already parsed to edges by schema validation
