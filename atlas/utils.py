@@ -446,16 +446,30 @@ def custom_preprocess(
         for _ in dask.distributed.as_completed(futures):
             pbar.update(1)
 
+    print("opening per file")
+    
+    f_results =[]
+    for f in futures:
+        try:
+            f_results.append(f.result())
+        except:
+            print("skipping future", f)
+            pass
     # turn into dict for easier use
     result_dict = {
-        k: v for res in [f.result() for f in futures] for k, v in res.items()
+        k: v for res in f_results for k, v in res.items()
+  #      k: v for res in [f.result() for f in futures] for k, v in res.items()
+
     }
 
     # join back together per-file information with fileset-level information and turn into WorkItem list for coffea
     workitems = []
     for category_name, category_info in fileset.items():
         for fname, treename in category_info["files"].items():
-            preprocess_meta = result_dict[fname]
+            try :
+                preprocess_meta = result_dict[fname]
+            except:
+                pass
             # split into chunks as done in coffea, taken from
             # https://github.com/scikit-hep/coffea/blob/f7e1249745484567d1e380865dc05fae83165084/src/coffea/dataset_tools/preprocess.py#L129-L140
             n_steps_target = max(round(preprocess_meta["num_entries"] / chunksize), 1)
