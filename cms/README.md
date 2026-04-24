@@ -694,6 +694,22 @@ The Dask profile via `profile_output_dir` on `acquire_client` is separate and st
 
 ## Credentials
 
+### VOMS proxy (CMS data access)
+
+To read CMS internal data over xrootd, initialize a VOMS proxy:
+
+```sh
+voms-proxy-init -voms cms -vomses /etc/vomses
+```
+
+This writes the proxy to `/tmp/x509up_u<uid>` and sets `X509_USER_PROXY` for the current shell.
+
+**Caveat for `coffeacasa-condor`**: the Dask cluster inherits the proxy location from the environment at the time it was started. If you run `voms-proxy-init` after the cluster is already up, the refreshed proxy does not reach workers, and any xrootd access from workers (reads or writes) will fail. Restart the Dask cluster after refreshing the proxy.
+
+**`coffeacasa-gateway`**: `acquire_client` uploads the proxy file from `/tmp/x509up_u<uid>` to every worker and points `X509_USER_PROXY` at the uploaded file via a worker callback, so a refreshed proxy is picked up on the next `acquire_client` context. No cluster restart needed.
+
+### S3 storage credentials
+
 Storage credentials (AWS keys for S3) go in an untracked `.env` file at the repo root (`cms/.env`). See `.env.example` for the expected variable names. Copy it and fill in your values:
 
 ```sh
