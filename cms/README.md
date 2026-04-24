@@ -6,6 +6,7 @@ A coffea-based distributed analysis framework for the CMS Z' → tt̄ single-lep
 - [Setup](#setup)
 - [Configuration](#configuration)
 - [Datasets](#datasets)
+- [Dask client](#dask-client)
 - [Metadata generation](#metadata-generation)
 - [Handling bad files](#handling-bad-files)
 - [Workflow modes](#workflow-modes)
@@ -108,6 +109,74 @@ Override per dataset after validation:
 for dataset in validated_config.datasets.datasets:
     dataset.redirector = "root://xcache/"
 ```
+
+## Dask client
+
+### How do I connect to a Dask cluster?
+
+Use `acquire_client` from `intccms.utils.dask_client`. It is a context manager that handles the facility-specific connection logic, registers a few useful worker plugins, and cleans up on exit:
+
+```python
+from intccms.utils.dask_client import acquire_client
+
+AF = "coffeacasa-condor"   # or coffeacasa-gateway, purdue-af-k8s, purdue-af-slurm
+AUTO_CLOSE_CLIENT = False
+WORKER_DEPENDENCIES = [COFFEA_PIP, "roastcoffea==0.1.2", "histserv==0.1.3"]
+
+with acquire_client(AF, close_after=AUTO_CLOSE_CLIENT, pip_packages=WORKER_DEPENDENCIES) as (client, cluster):
+    output, report = run_processor_workflow(..., executor=DaskExecutor(client=client))
+```
+
+It yields `(client, cluster)`. `cluster` is `None` for `coffeacasa-condor`, else it is the gateway cluster object.
+
+### Which facilities are supported?
+
+| `af` | How it connects |
+|------|-----------------|
+| `coffeacasa-condor` | Direct connect to `tls://localhost:8786` |
+| `coffeacasa-gateway` | Via `dask_gateway.Gateway()`, with X509 proxy and access token uploaded to workers |
+| `purdue-af-k8s` | Via `dask_gateway.Gateway()` against Purdue's k8s dask-gateway |
+| `purdue-af-slurm` | Via `dask_gateway.Gateway()` against Purdue's slurm dask-gateway |
+
+### What options does `acquire_client` take?
+
+| Argument | Default | What it controls |
+|----------|---------|------------------|
+| `af` | required | Facility identifier from the table above |
+| `num_workers` | `None` | Scales the gateway cluster to this many workers and waits for them via `client.wait_for_workers`. Ignored for `coffeacasa-condor` |
+| `close_after` | `False` | Close the client on context exit. Leave `False` when you want to reuse the client for follow-up work (pulling metrics, inspecting state) |
+| `pip_packages` | `None` | List of pip specifiers to install on every worker via `PipInstall` (coffea, roastcoffea, histserv, etc.). Gateway facilities reject git URLs here |
+| `propagate_aws_env` | `False` | Captures `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` from the client environment and sets them on workers. Needed for S3 skim output |
+| `profile_output_dir` | `None` | If set, dumps a Dask profile HTML to `<dir>/<timestamp>/dask_profile[_<suffix>].html` on context exit |
+| `profile_suffix` | `None` | Suffix appended to the profile filename, e.g. `"200gbps_preload"` |
+
+### What are `WORKER_DEPENDENCIES` for?
+
+Client-side installed packages are not automatically present on workers. `pip_packages` triggers `dask.distributed.PipInstall`, which pip-installs the listed specs on every worker before any task runs. The notebooks pin this in sync with the client-side installs:
+
+```python
+COFFEA_PIP = COFFEA_VERSION if "git" in COFFEA_VERSION else f"coffea=={COFFEA_VERSION}"
+WORKER_DEPENDENCIES = [COFFEA_PIP, "roastcoffea==0.1.2", "histserv==0.1.3"]
+```
+
+### Where is the client used?
+
+- **Metadata generation**: `metadata_generator.run(executor=DaskExecutor(client=client))` preprocesses files on the cluster.
+- **Processing**: `run_processor_workflow(..., executor=DaskExecutor(client=client))` fans out processor chunks.
+- **Metrics and profiling**: `MetricsCollector(client=client, ...)` tracks per-worker time and memory; `client.profile(...)` dumps a flamegraph.
+- **xcache pre-warm**: `warm_xcache(dataset_manager, client)` pre-pulls files into xcache from inside the cluster.
+
+### Where do I add support for a new facility?
+
+All facility wiring lives in `acquire_client()` in `src/intccms/utils/dask_client.py`. Add a new branch to the `if/elif` chain that:
+
+1. Builds the connection (direct `Client(...)` or `dask_gateway.Gateway(...)`).
+2. Optionally scales the cluster and calls `client.wait_for_workers(num_workers)`.
+3. Uploads credentials or registers worker callbacks if the site needs custom env setup (see the `coffeacasa-gateway` branch for a proxy + token example).
+
+Then add the new identifier to the `NotImplementedError` message in the final `else` branch, to the docstring's supported-facilities list, and to the table above.
+
+Shared setup (`PrintForwarder`, AWS env, `PipInstall`, `forward_logging`, optional profile dump) runs after your branch, so as long as you assign `client` and (if relevant) `cluster`, you get those plugins and the cleanup path for free.
 
 ## Metadata generation
 
