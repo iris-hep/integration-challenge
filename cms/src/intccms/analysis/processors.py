@@ -35,8 +35,15 @@ from intccms.analysis.cms import CMSAnalysis
 try:
     from intccms.analysis.histserv import HistServAnalysis
 except ImportError as ie:
-    warn("Cannot import histserv, HaaS setup will not be available.")
-
+    warn(f"Cannot import histserv, HaaS setup will not be available: {ie}")
+    class HistServAnalysis:  # type: ignore[no-redef]
+        """Fallback placeholder when optional histserv dependency is unavailable."""
+        def __init__(self, *args, **kwargs):
+            raise ImportError(
+                "HistServAnalysis is unavailable, likely because " \
+                "histserv is not available"
+            ) from ie
+    
 logger = logging.getLogger(__name__)
 
 
