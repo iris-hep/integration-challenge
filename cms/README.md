@@ -276,6 +276,15 @@ output, report = run_processor_workflow(
 )
 ```
 
+### How do I pick which branches `TwoHundredGbpsProcessor` reads?
+
+`TwoHundredGbpsProcessor` reads whatever is in `config["preprocess"]["branches"]` (and `mc_branches`). Two helpers in `intccms.utils.tools` build those dicts:
+
+- **`get_branches_for_fraction(file_path, target_fraction=..., data_file=..., cache_path=..., strategy=...)`**: measures per-branch sizes in a representative file, then picks branches until they cover the target fraction of the file. `strategy="largest-first"` (default) gives the fewest branches covering that fraction; `strategy="smallest-first"` gives a larger number of smaller branches at the same total data volume, for studying how branch count affects throughput. Used in `full_run_200gbps.ipynb` to sweep I/O throughput at different read fractions.
+- **`prepare_branches_from_list(branch_list, mc_file=..., data_file=...)`**: takes a fixed flat list of NanoAOD branch names and groups them into the `preprocess.branches` shape. Use when the branch set is known up front, for example when replicating a reference workflow. Used in `full_run_200gbps_replicate_legacy.ipynb` to reproduce the idap-200gbps legacy benchmark branch-for-branch.
+
+Both return the same `(branches, mc_branches)` pair. The second dict is empty unless a representative data file is passed, in which case `find_mc_only_branches` splits out the MC-only subset.
+
 ### How do I preload only the branches the processor accesses?
 
 Pass `preload=True` to `run_processor_workflow`:
@@ -592,6 +601,7 @@ To use it, edit the `SKIM_REDIRECTOR` and `SKIM_BASE` variables in the config ce
 | `full_run_skim_formats.ipynb` | Tests skimming output formats (Parquet/S3, TTree/XRootD, RNTuple/XRootD) with read-back verification |
 | `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
 | `full_run_200gbps_preload_vs_not.ipynb` | Compares the 200gbps workflow with and without `preload=True` |
+| `full_run_200gbps_replicate_legacy.ipynb` | 200gbps run with the branch list hardcoded to the idap-200gbps legacy benchmark (via `prepare_branches_from_list`) for direct comparison |
 | `full_run_histserv.ipynb` | Standard workflow with histograms filled via HaaS (histserv) instead of reduce-aggregate |
 | `full_run_haas_or_not.ipynb` | Runs `HistServProcessor` and `HistLocalProcessor` back-to-back and compares metrics plus bin-by-bin histogram outputs |
 | `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
