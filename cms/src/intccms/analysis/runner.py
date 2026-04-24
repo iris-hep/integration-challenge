@@ -7,7 +7,7 @@ path (for iterating on statistical models without re-processing).
 
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from lzma import LZMAError
 from cramjam import DecompressionError
 from collections import defaultdict
@@ -31,6 +31,10 @@ from intccms.schema import Config
 logger = logging.getLogger(__name__)
 
 
+DEFAULT_PROCESS_SKIPBADFILES: Tuple[Type[BaseException], ...] = (
+    OSError, LZMAError, UprootMissTreeError, DeserializationError, DecompressionError, AssertionError,
+)
+
 
 def run_processor_workflow(
     config: Config,
@@ -43,6 +47,7 @@ def run_processor_workflow(
     chunksize: Optional[int] = None,
     preload: bool = False,
     post: Optional[Callable] = None,
+    skipbadfiles: Union[bool, Tuple[Type[BaseException], ...]] = DEFAULT_PROCESS_SKIPBADFILES,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Execute processor workflow or load saved histograms.
 
@@ -83,6 +88,10 @@ def run_processor_workflow(
         If not None, this is a post-processing function that runs over the output from
         the coffea processor. The function must accept the processor and its output (in order)
         and return and updated output dictionary/accumlator.
+    skipbadfiles : bool or tuple of exception types, optional
+        Forwarded to coffea's Runner. Defaults to DEFAULT_PROCESS_SKIPBADFILES.
+        Pass False to hard-fail on any bad file, True for coffea's built-in
+        OSError-only behavior, or a custom tuple of exception types.
 
     Returns
     -------
@@ -202,7 +211,7 @@ def run_processor_workflow(
             schema=schema,
             chunksize=chunksize,
             savemetrics=True,
-            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, DeserializationError, DecompressionError, AssertionError),
+            skipbadfiles=skipbadfiles,
             **runner_kwargs,
         )
 
