@@ -18,6 +18,7 @@ A coffea-based distributed analysis framework for the CMS Z' → tt̄ single-lep
 - [Metrics and profiling](#metrics-and-profiling)
 - [Inspecting inputs](#inspecting-inputs)
 - [Notebooks](#notebooks)
+- [Hacks](#hacks)
 - [Credentials](#credentials)
 
 ## Setup
@@ -675,6 +676,21 @@ To use it, edit the `SKIM_REDIRECTOR` and `SKIM_BASE` variables in the config ce
 | `full_run_haas_or_not.ipynb` | Runs `HistServProcessor` and `HistLocalProcessor` back-to-back and compares metrics plus bin-by-bin histogram outputs |
 | `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
 | `skim_inspector.ipynb` | Inspect skimmed output files on XRootD or other remote storage |
+
+## Hacks
+
+Things that should work but might break, which we are working on. Temporary workarounds until each is fixed upstream.
+
+### Roastcoffea metrics can crash the 200gbps run at large read fractions
+
+At large `TARGET_FRACTION` values in `full_run_200gbps.ipynb`, the run can crash while `MetricsCollector` pulls Dask span data back to the client. Fix pending in roastcoffea.
+
+To run without metrics, comment out:
+
+1. In the processor-run cell, the `with MetricsCollector(...) as collector:` block and every `collector.*` line (inside and after). De-indent the `run_processor_workflow(...)` call so it runs directly under `acquire_client`, and keep the `t0` / `t1` timers.
+2. The cells below "Performance Metrics" that reference `metrics`, `tracking_data`, or `span_metrics` ("Timeline Plots" and "Task and Processor Breakdown").
+
+The Dask profile via `profile_output_dir` on `acquire_client` is separate and still works.
 
 ## Credentials
 
