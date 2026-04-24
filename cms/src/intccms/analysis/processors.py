@@ -11,13 +11,12 @@ import uuid
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List
+from warnings import warn
 
 import awkward as ak
 from coffea.processor import ProcessorABC
 from roastcoffea import track_memory, track_metrics, track_time
 
-from intccms.analysis.cms import CMSAnalysis
-from intccms.analysis.histserv import HistServAnalysis
 from intccms.skimming.io.writers import get_writer
 from intccms.skimming.pipeline.stages import (
     build_column_list,
@@ -32,7 +31,19 @@ from intccms.utils.output import (
 )
 from intccms.schema import Config
 from intccms.utils.functors import SelectionExecutor
-
+from intccms.analysis.cms import CMSAnalysis
+try:
+    from intccms.analysis.histserv import HistServAnalysis
+except ImportError as ie:
+    warn(f"Cannot import histserv, HaaS setup will not be available: {ie}")
+    class HistServAnalysis:  # type: ignore[no-redef]
+        """Fallback placeholder when optional histserv dependency is unavailable."""
+        def __init__(self, *args, **kwargs):
+            raise ImportError(
+                "HistServAnalysis is unavailable, likely because " \
+                "histserv is not available"
+            ) from ie
+    
 logger = logging.getLogger(__name__)
 
 
