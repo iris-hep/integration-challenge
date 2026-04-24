@@ -228,13 +228,32 @@ config["datasets"]["skip_files"] = [
 
 ### Tolerating bad files during processing
 
-Both the metadata extractor and the processor runner use coffea's `skipbadfiles` parameter to catch and skip files that fail at read time. The errors caught include `OSError`, `LZMAError`, `DecompressionError`, `DeserializationError`, and `AssertionError`.
+Both the metadata extractor and the processor runner use coffea's `skipbadfiles` parameter to catch and skip files that fail at read time. Pass `skipbadfiles=` to `DatasetMetadataManager.run(...)` (preprocessing) or to `run_processor_workflow(...)` (processing) to override. Accepts `False` (hard-fail on any bad file), `True` (coffea's built-in `OSError`-only behavior), or a tuple of exception types.
 
-This is configured in:
-- `src/intccms/metadata_extractor/extractor.py` (preprocessing)
-- `src/intccms/analysis/runner.py` (processing)
+The defaults are exposed as `DEFAULT_PREPROCESS_SKIPBADFILES` in `src/intccms/metadata_extractor/manager.py` and `DEFAULT_PROCESS_SKIPBADFILES` in `src/intccms/analysis/runner.py`, so users can extend them:
 
-To change which errors are tolerated, edit the `skipbadfiles` tuple in the `Runner(...)` constructor call in those files. Setting `skipbadfiles=False` disables this and makes any bad file a hard failure.
+```python
+from intccms.analysis.runner import DEFAULT_PROCESS_SKIPBADFILES, run_processor_workflow
+
+output, report = run_processor_workflow(
+    ...,
+    skipbadfiles=(*DEFAULT_PROCESS_SKIPBADFILES, ValueError),
+)
+```
+
+### Why do I get `ValueError: Empty list provided to reduction`?
+
+If many files hit the same exception type and that exception is in `skipbadfiles`, every affected chunk returns an empty accumulator. Coffea's reduce step then fails with a stack trace ending in:
+
+```
+File ".../coffea/processor/executor.py", line 253, in __call__
+    raise ValueError("Empty list provided to reduction")
+ValueError: Empty list provided to reduction
+```
+
+The root cause is that multiple task-graph nodes feeding into the reduce step are all producing empty accumulators, so the reduction has nothing to combine.
+
+To debug, narrow `skipbadfiles` so the underlying error surfaces. Drop suspect exception types from the tuple (e.g. remove `AssertionError` or `DeserializationError`) and re-run; the real failure will now raise from the worker and you can diagnose it.
 
 ## Workflow modes
 
