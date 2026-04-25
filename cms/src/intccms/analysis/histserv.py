@@ -9,9 +9,10 @@ import cloudpickle
 import grpc
 
 from histserv import Client
-from intccms.analysis.cms import CMSAnalysis                                                                                                                                          
-from intccms.utils.functors import ObservableExecutor, SelectionExecutor                                                                                                              
-from intccms.utils.logging import setup_logging 
+from intccms.analysis.cms import CMSAnalysis
+from intccms.utils.functors import ObservableExecutor, SelectionExecutor
+from intccms.utils.logging import setup_logging
+from intccms.utils.output import OutputDirectoryManager
 
 # -----------------------------
 # Logging Configuration
@@ -29,6 +30,27 @@ class HistServAnalysis(CMSAnalysis):
     The processor should call process() method per-chunk.
     """
 
+    def __init__(
+        self,
+        config: dict[str, Any],
+        output_manager: OutputDirectoryManager,
+        histserv_address: str,
+    ) -> None:
+        """
+        Initialize HistServAnalysis.
+
+        Parameters
+        ----------
+        config : dict
+            Configuration dictionary (same as CMSAnalysis).
+        output_manager : OutputDirectoryManager
+            Centralized output directory manager.
+        histserv_address : str
+            Address (host:port) of the histserv server. Required.
+        """
+        self.histserv_address = histserv_address
+        super().__init__(config, output_manager)
+
     def _init_histograms(self) -> dict[str, dict[str, hist.Hist]]:
         """
         Initialize histograms for each analysis channel based on configuration.
@@ -38,7 +60,7 @@ class HistServAnalysis(CMSAnalysis):
         dict
             Dictionary of channel name to hist.Hist object.
         """
-        histserv_client = Client(address="oksana-2eshadura-40cern-2ech.dask-worker.cmsaf-dev.flatiron.hollandhpc.org:8788")
+        histserv_client = Client(address=self.histserv_address)
         histograms = defaultdict(dict)
         for channel in self.channels:
             channel_name = channel.name

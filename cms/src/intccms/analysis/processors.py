@@ -10,7 +10,7 @@ import logging
 import uuid
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from warnings import warn
 
 import awkward as ak
@@ -500,6 +500,9 @@ class SkimAndAnalyseProcessor(ProcessorABC):
         return accumulator
 
 
+DEFAULT_HISTSERV_ADDRESS = "oksana-2eshadura-40cern-2ech.dask-worker.cmsaf-dev.flatiron.hollandhpc.org:8788"
+
+
 class HistServProcessor(ProcessorABC):
     """Simplified coffea processor that fills histograms via HaaS (histserv).
 
@@ -525,6 +528,7 @@ class HistServProcessor(ProcessorABC):
         config: Config,
         output_manager: OutputDirectoryManager,
         metadata_lookup: Dict[str, Dict[str, Any]],
+        histserv_address: Optional[str] = None,
     ):
         """Initialize HistServProcessor.
 
@@ -537,17 +541,24 @@ class HistServProcessor(ProcessorABC):
         metadata_lookup : Dict[str, Dict[str, Any]]
             Pre-built metadata lookup from NanoAODMetadataGenerator.build_metadata_lookup()
             Maps fileset_key -> {process, variation, xsec, nevts, is_data, dataset}
+        histserv_address : str, optional
+            Address (host:port) of the histserv server. If None, falls back to
+            DEFAULT_HISTSERV_ADDRESS.
         """
         self.config = config
         self.output_manager = output_manager
         self.metadata_lookup = metadata_lookup
         self.skim_config = config.preprocess.skimming
 
+        if histserv_address is None:
+            histserv_address = DEFAULT_HISTSERV_ADDRESS
+
         # Always create HistServAnalysis instance
         # The run_analysis flag controls whether we execute its methods
         self.analysis = HistServAnalysis(
             config=config,
             output_manager=output_manager,
+            histserv_address=histserv_address,
         )
 
         logger.info(
