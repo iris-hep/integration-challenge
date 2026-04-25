@@ -3,23 +3,111 @@
 A coffea-based distributed analysis framework for the CMS Z' → tt̄ single-lepton search on Run 2 NanoAOD.
 
 **Contents**
-- [Setup](#setup)
-- [Configuration](#configuration)
-- [Datasets](#datasets)
-- [Dask client](#dask-client)
-- [Metadata generation](#metadata-generation)
-- [Handling bad files](#handling-bad-files)
-- [Workflow modes](#workflow-modes)
-- [Skimming](#skimming)
-- [The processor](#the-processor)
-- [Histogramming](#histogramming)
-- [Histogramming as a Service (HaaS)](#histogramming-as-a-service-haas)
-- [Corrections and systematics](#corrections-and-systematics)
-- [Metrics and profiling](#metrics-and-profiling)
-- [Inspecting inputs](#inspecting-inputs)
-- [Notebooks](#notebooks)
-- [Hacks](#hacks)
-- [Credentials](#credentials)
+
+<details><summary><a href="#setup">Setup</a></summary></details>
+<details><summary><a href="#notebooks">Notebooks</a></summary></details>
+<details><summary><a href="#configuration">Configuration</a></summary>
+
+- [How is the master config structured?](#how-is-the-master-config-structured)
+- [How do I modify config in a notebook?](#how-do-i-modify-config-in-a-notebook)
+
+</details>
+<details><summary><a href="#datasets">Datasets</a></summary>
+
+- [How are datasets defined?](#how-are-datasets-defined)
+- [How do I change the redirector?](#how-do-i-change-the-redirector)
+
+</details>
+<details><summary><a href="#dask-client">Dask client</a></summary>
+
+- [How do I connect to a Dask cluster?](#how-do-i-connect-to-a-dask-cluster)
+- [Which facilities are supported?](#which-facilities-are-supported)
+- [What options does `acquire_client` take?](#what-options-does-acquire_client-take)
+- [What are `WORKER_DEPENDENCIES` for?](#what-are-worker_dependencies-for)
+- [Where is the client used?](#where-is-the-client-used)
+- [Where do I add support for a new facility?](#where-do-i-add-support-for-a-new-facility)
+
+</details>
+<details><summary><a href="#metadata-generation">Metadata generation</a></summary>
+
+- [What is it and when do I need to re-run it?](#what-is-it-and-when-do-i-need-to-re-run-it)
+- [\[Advanced\] What are the components of the preprocessing workflow?](#advanced-what-are-the-components-of-the-preprocessing-workflow)
+
+</details>
+<details><summary><a href="#handling-bad-files">Handling bad files</a></summary>
+
+- [Skipping known bad files before processing](#skipping-known-bad-files-before-processing)
+- [Tolerating bad files during processing](#tolerating-bad-files-during-processing)
+- [Why do I get `ValueError: Empty list provided to reduction`?](#why-do-i-get-valueerror-empty-list-provided-to-reduction)
+
+</details>
+<details><summary><a href="#workflow-modes">Workflow modes</a></summary></details>
+<details><summary><a href="#skimming">Skimming</a></summary>
+
+- [How do I skim events?](#how-do-i-skim-events)
+- [What output formats are available?](#what-output-formats-are-available)
+- [How do I read back skimmed files?](#how-do-i-read-back-skimmed-files)
+
+</details>
+<details><summary><a href="#the-processor">The processor</a></summary>
+
+- [How is the analysis code organized?](#how-is-the-analysis-code-organized)
+- [Where does the processor live?](#where-does-the-processor-live)
+- [How do I write a custom processor?](#how-do-i-write-a-custom-processor)
+- [How do I pick which branches `TwoHundredGbpsProcessor` reads?](#how-do-i-pick-which-branches-twohundredgbpsprocessor-reads)
+- [How do I preload only the branches the processor accesses?](#how-do-i-preload-only-the-branches-the-processor-accesses)
+- [How do I post-process the processor output?](#how-do-i-post-process-the-processor-output)
+
+</details>
+<details><summary><a href="#histogramming">Histogramming</a></summary>
+
+- [How are histograms configured?](#how-are-histograms-configured)
+- [How are histograms initialized?](#how-are-histograms-initialized)
+- [Where does histogramming happen?](#where-does-histogramming-happen)
+- [Where are histograms saved?](#where-are-histograms-saved)
+
+</details>
+<details><summary><a href="#histogramming-as-a-service-haas">Histogramming as a Service (HaaS)</a></summary>
+
+- [When would I use this?](#when-would-i-use-this)
+- [How do I run it?](#how-do-i-run-it)
+- [Is there a local-histogramming counterpart?](#is-there-a-local-histogramming-counterpart)
+- [How does `HistServAnalysis` differ from `CMSAnalysis`?](#how-does-histservanalysis-differ-from-cmsanalysis)
+- [Where is the histserv server address set?](#where-is-the-histserv-server-address-set)
+- [How do I read back the final histograms?](#how-do-i-read-back-the-final-histograms)
+
+</details>
+<details><summary><a href="#corrections-and-systematics">Corrections and systematics</a></summary>
+
+- [How are corrections configured?](#how-are-corrections-configured)
+- [What corrections are implemented?](#what-corrections-are-implemented)
+- [How do I add a new correction?](#how-do-i-add-a-new-correction)
+
+</details>
+<details><summary><a href="#metrics-and-profiling">Metrics and profiling</a></summary>
+
+- [How do I collect performance metrics?](#how-do-i-collect-performance-metrics)
+- [How do I pre-warm xcache before a run?](#how-do-i-pre-warm-xcache-before-a-run)
+- [How do I profile worker activity?](#how-do-i-profile-worker-activity)
+
+</details>
+<details><summary><a href="#inspecting-inputs">Inspecting inputs</a></summary>
+
+- [How do I inspect NanoAOD input files?](#how-do-i-inspect-nanoaod-input-files)
+- [How do I inspect skimmed output files?](#how-do-i-inspect-skimmed-output-files)
+
+</details>
+<details><summary><a href="#hacks">Hacks</a></summary>
+
+- [Roastcoffea metrics can crash the 200gbps run at large read fractions](#roastcoffea-metrics-can-crash-the-200gbps-run-at-large-read-fractions)
+
+</details>
+<details><summary><a href="#credentials">Credentials</a></summary>
+
+- [VOMS proxy (CMS data access)](#voms-proxy-cms-data-access)
+- [S3 storage credentials](#s3-storage-credentials)
+
+</details>
 
 ## Setup
 
@@ -29,6 +117,22 @@ pixi run lab   # starts JupyterLab
 ```
 
 On an analysis facility (AF), use the notebooks directly &mdash; they install dependencies (`coffea`, `roastcoffea`, `omegaconf`) into the AF environment at runtime.
+
+## Notebooks
+
+| Notebook | Purpose |
+|----------|---------|
+| `full_run.ipynb` | Standard analysis workflow (metadata &rarr; processing &rarr; histograms) |
+| `full_run_with_metrics.ipynb` | Same workflow with roastcoffea performance dashboards |
+| `full_run_workflow_modes.ipynb` | Runs all four workflow modes (skim+analysis, analysis only, skim only, analysis on skims) with per-mode metrics comparison |
+| `full_run_skim_formats.ipynb` | Tests skimming output formats (Parquet/S3, TTree/XRootD, RNTuple/XRootD) with read-back verification |
+| `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
+| `full_run_200gbps_preload_vs_not.ipynb` | Compares the 200gbps workflow with and without `preload=True` |
+| `full_run_200gbps_replicate_legacy.ipynb` | 200gbps run with the branch list hardcoded to the idap-200gbps legacy benchmark (via `prepare_branches_from_list`) for direct comparison |
+| `full_run_histserv.ipynb` | Standard workflow with histograms filled via HaaS (histserv) instead of reduce-aggregate |
+| `full_run_haas_or_not.ipynb` | Runs `HistServProcessor` and `HistLocalProcessor` back-to-back and compares metrics plus bin-by-bin histogram outputs |
+| `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
+| `skim_inspector.ipynb` | Inspect skimmed output files on XRootD or other remote storage |
 
 ## Configuration
 
@@ -690,22 +794,6 @@ The inspector produces rich tables (via `rich`) and matplotlib visualizations (e
 3. Runs the same distributed inspection and visualization pipeline
 
 To use it, edit the `SKIM_REDIRECTOR` and `SKIM_BASE` variables in the config cell to point at your skimmed file location.
-
-## Notebooks
-
-| Notebook | Purpose |
-|----------|---------|
-| `full_run.ipynb` | Standard analysis workflow (metadata &rarr; processing &rarr; histograms) |
-| `full_run_with_metrics.ipynb` | Same workflow with roastcoffea performance dashboards |
-| `full_run_workflow_modes.ipynb` | Runs all four workflow modes (skim+analysis, analysis only, skim only, analysis on skims) with per-mode metrics comparison |
-| `full_run_skim_formats.ipynb` | Tests skimming output formats (Parquet/S3, TTree/XRootD, RNTuple/XRootD) with read-back verification |
-| `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
-| `full_run_200gbps_preload_vs_not.ipynb` | Compares the 200gbps workflow with and without `preload=True` |
-| `full_run_200gbps_replicate_legacy.ipynb` | 200gbps run with the branch list hardcoded to the idap-200gbps legacy benchmark (via `prepare_branches_from_list`) for direct comparison |
-| `full_run_histserv.ipynb` | Standard workflow with histograms filled via HaaS (histserv) instead of reduce-aggregate |
-| `full_run_haas_or_not.ipynb` | Runs `HistServProcessor` and `HistLocalProcessor` back-to-back and compares metrics plus bin-by-bin histogram outputs |
-| `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
-| `skim_inspector.ipynb` | Inspect skimmed output files on XRootD or other remote storage |
 
 ## Hacks
 
