@@ -28,7 +28,10 @@ from typing import Any, Mapping, Sequence
 from urllib.parse import urlparse
 
 import cloudpickle
+from dask.distributed import as_completed
 from tqdm.auto import tqdm
+
+from intccms.utils.repack import root_repack as _rr
 
 cloudpickle.register_pickle_by_value(sys.modules[__name__])
 
@@ -310,14 +313,21 @@ def repack_chunk(
     max_scratch_gb: float,
     overwrite: bool = False,
 ) -> str:
-    """Stage inputs, repack into one local file, upload to XRootD.
+    """Stream inputs from XRootD, merge directly back to XRootD.
+
+    No ``xrdcp`` step on the input side: ``TFile``/``TFileMerger`` read
+    the source URLs over the network. Whole-file pass-through segments
+    feed their URL straight to ``TFileMerger.AddFile``; sliced or
+    re-basketed segments write a local temp file under ``scratch_root``.
+    The merged output is written directly to ``<chunk.output_url>.tmp``
+    on XRootD, then renamed into place via ``xrdfs mv``. Local scratch
+    only ever holds slice-temps, so peak usage is the sum of slice sizes
+    for the chunk.
 
     Returns the final XRootD URL on success. Raises on any failure;
     the ``.tmp`` upload is best-effort cleaned before re-raising so a
-    retried task does not collide with a stale partial upload.
+    retried task does not collide with a stale partial write.
     """
-
-    from intccms.utils.repack import root_repack as _rr
 
     if not chunk.segments:
         raise ValueError(f"empty chunk: {chunk.output_url}")
@@ -326,7 +336,6 @@ def repack_chunk(
     scratch_root_path.mkdir(parents=True, exist_ok=True)
 
     budget_bytes = int(max_scratch_gb * 1024**3)
-    input_budget_bytes = int(budget_bytes * 0.4)
 
     event_tree = repack_kwargs.get("event_tree", "Events")
     merge_opts = _rr.MergeOptions(
@@ -349,71 +358,66 @@ def repack_chunk(
 
     prefix = f"repack_{chunk.dataset}_{chunk.systematic}_{chunk.index:03d}_"
     with TemporaryDirectory(prefix=prefix, dir=str(scratch_root_path)) as tmpdir:
-        tmp = Path(tmpdir)
-        inputs_dir = tmp / "inputs"
-        staging_dir = tmp / "staging"
-        output_dir = tmp / "output"
-        inputs_dir.mkdir()
+        staging_dir = Path(tmpdir) / "staging"
         staging_dir.mkdir()
-        output_dir.mkdir()
 
-        # 1. Download each distinct source URL once.
-        url_to_local: dict[str, Path] = {}
-        for url in chunk.unique_sources:
-            local = _unique_local_path(inputs_dir, url)
-            LOGGER.info("xrdcp %s -> %s", url, local)
-            _xrdcp(url, str(local))
-            url_to_local[url] = local
-            _enforce_budget(inputs_dir, input_budget_bytes, phase="input staging")
-
-        # 2. Translate remote segments into library EventSegments.
-        local_segments = [
-            _rr.EventSegment(
-                url_to_local[seg.source_url],
-                seg.start,
-                seg.count,
-                seg.total_entries,
-            )
-            for seg in chunk.segments
-        ]
-
-        # 3. Slice / re-basket each segment as needed.
-        staged_paths = _rr._stage_segment_files(
-            local_segments, event_tree, staging_dir, tree_opts
+        staged_inputs = _stage_streaming_segments(
+            chunk.segments, event_tree, staging_dir, tree_opts
         )
-        _enforce_budget(tmp, budget_bytes, phase="segment staging")
+        _enforce_budget(staging_dir, budget_bytes, phase="segment staging")
 
-        # 4. Merge into one local output.
-        local_output = output_dir / Path(chunk.output_url).name
-        _rr._atomic_merge_root_files(
-            local_output,
-            staged_paths,
-            overwrite=True,  # writing to our own scratch
-            merge_options=merge_opts,
-        )
-        _enforce_budget(tmp, budget_bytes, phase="local merge")
-
-        # 5. Upload to XRootD as <dst>.tmp, then rename into place.
         try:
-            _xrdcp(str(local_output), tmp_remote, force=True)
+            _rr._merge_root_files(tmp_remote, staged_inputs, merge_opts)
             _xrdfs_mv(tmp_remote, chunk.output_url)
-        except Exception:
+        except BaseException:
             _xrdfs_rm(tmp_remote, missing_ok=True)
             raise
 
     return chunk.output_url
 
 
-def _unique_local_path(inputs_dir: Path, url: str) -> Path:
-    base = Path(url).name or "input.root"
-    candidate = inputs_dir / base
-    if not candidate.exists():
-        return candidate
-    for i in range(1, 10_000):
-        candidate = inputs_dir / f"{i:04d}_{base}"
-        if not candidate.exists():
-            return candidate
-    raise RuntimeError(f"could not find free local name for {url}")
+def _stage_streaming_segments(
+    segments: Sequence[ChunkSegment],
+    event_tree: str,
+    staging_dir: Path,
+    tree_options: Any,
+) -> list:
+    """Produce one entry per segment for ``TFileMerger.AddFile``.
+
+    Pass-through segments (whole file, no rewrite) yield their original
+    XRootD URL string and are streamed by the merger directly. Sliced
+    or re-basketed segments are written to ``staging_dir`` as local
+    temp files; their local ``Path`` is yielded.
+    """
+
+    staged: list = []
+    for index, seg in enumerate(segments):
+        if (
+            not tree_options.requires_rewrite
+            and seg.start == 0
+            and seg.count == seg.total_entries
+        ):
+            staged.append(seg.source_url)
+            continue
+
+        staged_path = staging_dir / f"segment_{index:03d}.root"
+        LOGGER.info(
+            "slicing %s [%d:%d] -> %s",
+            seg.source_url,
+            seg.start,
+            seg.start + seg.count,
+            staged_path,
+        )
+        _rr._copy_tree_range(
+            seg.source_url,
+            staged_path,
+            event_tree,
+            seg.start,
+            seg.count,
+            tree_options,
+        )
+        staged.append(staged_path)
+    return staged
 
 
 # ---------------------------------------------------------------------------
@@ -452,8 +456,6 @@ def run_repack(
     ``max_scratch_gb``, ``progress`` and ``raise_on_error`` mirror the
     ``root_repack`` / CLI options.
     """
-
-    from dask.distributed import as_completed
 
     repack_kwargs = {
         "event_tree": event_tree,

@@ -12,7 +12,7 @@ import sys
 
 import cloudpickle
 
-from intccms.utils.repack import distributed, root_repack
+from intccms.utils.repack import root_repack, distributed
 from intccms.utils.repack.distributed import (
     ChunkPlan,
     ChunkSegment,
