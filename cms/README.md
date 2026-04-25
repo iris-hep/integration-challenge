@@ -525,13 +525,24 @@ A third method, `_flush_fills()`, is called at the end of each chunk's `process(
 
 ### Where is the histserv server address set?
 
-Currently hardcoded in `src/intccms/analysis/histserv.py`:
+Pass `histserv_address=` when constructing `HistServProcessor`. If omitted, it falls back to `DEFAULT_HISTSERV_ADDRESS` defined in `src/intccms/analysis/processors.py`, which is currently:
 
-```python
-histserv_client = Client(address="...:8788")
+```
+oksana-2eshadura-40cern-2ech.dask-worker.cmsaf-dev.flatiron.hollandhpc.org:8788
 ```
 
-Edit this line to point at your own `histserv` instance.
+To point at your own histserv instance:
+
+```python
+from intccms.analysis import HistServProcessor
+
+processor = HistServProcessor(
+    config=validated_config,
+    output_manager=output_manager,
+    metadata_lookup=metadata_lookup,
+    histserv_address="my.histserv.host:8788",
+)
+```
 
 ### How do I read back the final histograms?
 
