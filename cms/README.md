@@ -425,12 +425,14 @@ The flow per chunk: `SkimAndAnalyseProcessor.process()` → skim selection → o
 
 ### Where does the processor live?
 
-`src/intccms/analysis/processors.py` has two processors:
+`src/intccms/analysis/processors.py` has four processors:
 
 - **`SkimAndAnalyseProcessor`**: The main processor. Per chunk, it: (1) applies skim selection, (2) saves filtered events to disk if enabled, (3) calls `CMSAnalysis.process()` for corrections and histogramming if enabled. All controlled by the config flags above.
 - **`TwoHundredGbpsProcessor`**: Minimal I/O benchmark. Reads and materializes configured branches, returns event count only.
+- **`HistServProcessor`**: HaaS variant. Applies the skim selection and fills histograms via a remote histserv server instead of coffea's reduce step. See [Histogramming as a Service (HaaS)](#histogramming-as-a-service-haas).
+- **`HistLocalProcessor`**: Local-reduce sibling of `HistServProcessor`, kept for HaaS-vs-local comparisons. See same section.
 
-Both are passed to `run_processor_workflow()` in `src/intccms/analysis/runner.py`.
+All four are passed to `run_processor_workflow()` in `src/intccms/analysis/runner.py`.
 
 ### How do I write a custom processor?
 
