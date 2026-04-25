@@ -3,21 +3,111 @@
 A coffea-based distributed analysis framework for the CMS Z' → tt̄ single-lepton search on Run 2 NanoAOD.
 
 **Contents**
-- [Setup](#setup)
-- [Configuration](#configuration)
-- [Datasets](#datasets)
-- [Metadata generation](#metadata-generation)
-- [Handling bad files](#handling-bad-files)
-- [Workflow modes](#workflow-modes)
-- [Skimming](#skimming)
-- [The processor](#the-processor)
-- [Histogramming](#histogramming)
-- [Histogramming as a Service (HaaS)](#histogramming-as-a-service-haas)
-- [Corrections and systematics](#corrections-and-systematics)
-- [Metrics and profiling](#metrics-and-profiling)
-- [Inspecting inputs](#inspecting-inputs)
-- [Notebooks](#notebooks)
-- [Credentials](#credentials)
+
+<details><summary><a href="#setup">Setup</a></summary></details>
+<details><summary><a href="#notebooks">Notebooks</a></summary></details>
+<details><summary><a href="#configuration">Configuration</a></summary>
+
+- [How is the master config structured?](#how-is-the-master-config-structured)
+- [How do I modify config in a notebook?](#how-do-i-modify-config-in-a-notebook)
+
+</details>
+<details><summary><a href="#datasets">Datasets</a></summary>
+
+- [How are datasets defined?](#how-are-datasets-defined)
+- [How do I change the redirector?](#how-do-i-change-the-redirector)
+
+</details>
+<details><summary><a href="#dask-client">Dask client</a></summary>
+
+- [How do I connect to a Dask cluster?](#how-do-i-connect-to-a-dask-cluster)
+- [Which facilities are supported?](#which-facilities-are-supported)
+- [What options does `acquire_client` take?](#what-options-does-acquire_client-take)
+- [What are `WORKER_DEPENDENCIES` for?](#what-are-worker_dependencies-for)
+- [Where is the client used?](#where-is-the-client-used)
+- [Where do I add support for a new facility?](#where-do-i-add-support-for-a-new-facility)
+
+</details>
+<details><summary><a href="#metadata-generation">Metadata generation</a></summary>
+
+- [What is it and when do I need to re-run it?](#what-is-it-and-when-do-i-need-to-re-run-it)
+- [\[Advanced\] What are the components of the preprocessing workflow?](#advanced-what-are-the-components-of-the-preprocessing-workflow)
+
+</details>
+<details><summary><a href="#handling-bad-files">Handling bad files</a></summary>
+
+- [Skipping known bad files before processing](#skipping-known-bad-files-before-processing)
+- [Tolerating bad files during processing](#tolerating-bad-files-during-processing)
+- [Why do I get `ValueError: Empty list provided to reduction`?](#why-do-i-get-valueerror-empty-list-provided-to-reduction)
+
+</details>
+<details><summary><a href="#workflow-modes">Workflow modes</a></summary></details>
+<details><summary><a href="#skimming">Skimming</a></summary>
+
+- [How do I skim events?](#how-do-i-skim-events)
+- [What output formats are available?](#what-output-formats-are-available)
+- [How do I read back skimmed files?](#how-do-i-read-back-skimmed-files)
+
+</details>
+<details><summary><a href="#the-processor">The processor</a></summary>
+
+- [How is the analysis code organized?](#how-is-the-analysis-code-organized)
+- [Where does the processor live?](#where-does-the-processor-live)
+- [How do I write a custom processor?](#how-do-i-write-a-custom-processor)
+- [How do I pick which branches `TwoHundredGbpsProcessor` reads?](#how-do-i-pick-which-branches-twohundredgbpsprocessor-reads)
+- [How do I preload only the branches the processor accesses?](#how-do-i-preload-only-the-branches-the-processor-accesses)
+- [How do I post-process the processor output?](#how-do-i-post-process-the-processor-output)
+
+</details>
+<details><summary><a href="#histogramming">Histogramming</a></summary>
+
+- [How are histograms configured?](#how-are-histograms-configured)
+- [How are histograms initialized?](#how-are-histograms-initialized)
+- [Where does histogramming happen?](#where-does-histogramming-happen)
+- [Where are histograms saved?](#where-are-histograms-saved)
+
+</details>
+<details><summary><a href="#histogramming-as-a-service-haas">Histogramming as a Service (HaaS)</a></summary>
+
+- [When would I use this?](#when-would-i-use-this)
+- [How do I run it?](#how-do-i-run-it)
+- [Is there a local-histogramming counterpart?](#is-there-a-local-histogramming-counterpart)
+- [How does `HistServAnalysis` differ from `CMSAnalysis`?](#how-does-histservanalysis-differ-from-cmsanalysis)
+- [Where is the histserv server address set?](#where-is-the-histserv-server-address-set)
+- [How do I read back the final histograms?](#how-do-i-read-back-the-final-histograms)
+
+</details>
+<details><summary><a href="#corrections-and-systematics">Corrections and systematics</a></summary>
+
+- [How are corrections configured?](#how-are-corrections-configured)
+- [What corrections are implemented?](#what-corrections-are-implemented)
+- [How do I add a new correction?](#how-do-i-add-a-new-correction)
+
+</details>
+<details><summary><a href="#metrics-and-profiling">Metrics and profiling</a></summary>
+
+- [How do I collect performance metrics?](#how-do-i-collect-performance-metrics)
+- [How do I pre-warm xcache before a run?](#how-do-i-pre-warm-xcache-before-a-run)
+- [How do I profile worker activity?](#how-do-i-profile-worker-activity)
+
+</details>
+<details><summary><a href="#inspecting-inputs">Inspecting inputs</a></summary>
+
+- [How do I inspect NanoAOD input files?](#how-do-i-inspect-nanoaod-input-files)
+- [How do I inspect skimmed output files?](#how-do-i-inspect-skimmed-output-files)
+
+</details>
+<details><summary><a href="#hacks">Hacks</a></summary>
+
+- [Roastcoffea metrics can crash the 200gbps run at large read fractions](#roastcoffea-metrics-can-crash-the-200gbps-run-at-large-read-fractions)
+
+</details>
+<details><summary><a href="#credentials">Credentials</a></summary>
+
+- [VOMS proxy (CMS data access)](#voms-proxy-cms-data-access)
+- [S3 storage credentials](#s3-storage-credentials)
+
+</details>
 
 ## Setup
 
@@ -27,6 +117,22 @@ pixi run lab   # starts JupyterLab
 ```
 
 On an analysis facility (AF), use the notebooks directly &mdash; they install dependencies (`coffea`, `roastcoffea`, `omegaconf`) into the AF environment at runtime.
+
+## Notebooks
+
+| Notebook | Purpose |
+|----------|---------|
+| `full_run.ipynb` | Standard analysis workflow (metadata &rarr; processing &rarr; histograms) |
+| `full_run_with_metrics.ipynb` | Same workflow with roastcoffea performance dashboards |
+| `full_run_workflow_modes.ipynb` | Runs all four workflow modes (skim+analysis, analysis only, skim only, analysis on skims) with per-mode metrics comparison |
+| `full_run_skim_formats.ipynb` | Tests skimming output formats (Parquet/S3, TTree/XRootD, RNTuple/XRootD) with read-back verification |
+| `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
+| `full_run_200gbps_preload_vs_not.ipynb` | Compares the 200gbps workflow with and without `preload=True` |
+| `full_run_200gbps_replicate_legacy.ipynb` | 200gbps run with the branch list hardcoded to the idap-200gbps legacy benchmark (via `prepare_branches_from_list`) for direct comparison |
+| `full_run_histserv.ipynb` | Standard workflow with histograms filled via HaaS (histserv) instead of reduce-aggregate |
+| `full_run_haas_or_not.ipynb` | Runs `HistServProcessor` and `HistLocalProcessor` back-to-back and compares metrics plus bin-by-bin histogram outputs |
+| `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
+| `skim_inspector.ipynb` | Inspect skimmed output files on XRootD or other remote storage |
 
 ## Configuration
 
@@ -109,6 +215,74 @@ for dataset in validated_config.datasets.datasets:
     dataset.redirector = "root://xcache/"
 ```
 
+## Dask client
+
+### How do I connect to a Dask cluster?
+
+Use `acquire_client` from `intccms.utils.dask_client`. It is a context manager that handles the facility-specific connection logic, registers a few useful worker plugins, and cleans up on exit:
+
+```python
+from intccms.utils.dask_client import acquire_client
+
+AF = "coffeacasa-condor"   # or coffeacasa-gateway, purdue-af-k8s, purdue-af-slurm
+AUTO_CLOSE_CLIENT = False
+WORKER_DEPENDENCIES = [COFFEA_PIP, "roastcoffea==0.1.2", "histserv==0.1.3"]
+
+with acquire_client(AF, close_after=AUTO_CLOSE_CLIENT, pip_packages=WORKER_DEPENDENCIES) as (client, cluster):
+    output, report = run_processor_workflow(..., executor=DaskExecutor(client=client))
+```
+
+It yields `(client, cluster)`. `cluster` is `None` for `coffeacasa-condor`, else it is the gateway cluster object.
+
+### Which facilities are supported?
+
+| `af` | How it connects |
+|------|-----------------|
+| `coffeacasa-condor` | Direct connect to `tls://localhost:8786` |
+| `coffeacasa-gateway` | Via `dask_gateway.Gateway()`, with X509 proxy and access token uploaded to workers |
+| `purdue-af-k8s` | Via `dask_gateway.Gateway()` against Purdue's k8s dask-gateway |
+| `purdue-af-slurm` | Via `dask_gateway.Gateway()` against Purdue's slurm dask-gateway |
+
+### What options does `acquire_client` take?
+
+| Argument | Default | What it controls |
+|----------|---------|------------------|
+| `af` | required | Facility identifier from the table above |
+| `num_workers` | `None` | Scales the gateway cluster to this many workers and waits for them via `client.wait_for_workers`. Ignored for `coffeacasa-condor` |
+| `close_after` | `False` | Close the client on context exit. Leave `False` when you want to reuse the client for follow-up work (pulling metrics, inspecting state) |
+| `pip_packages` | `None` | List of pip specifiers to install on every worker via `PipInstall` (coffea, roastcoffea, histserv, etc.). Gateway facilities reject git URLs here |
+| `propagate_aws_env` | `False` | Captures `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` from the client environment and sets them on workers. Needed for S3 skim output |
+| `profile_output_dir` | `None` | If set, dumps a Dask profile HTML to `<dir>/<timestamp>/dask_profile[_<suffix>].html` on context exit |
+| `profile_suffix` | `None` | Suffix appended to the profile filename, e.g. `"200gbps_preload"` |
+
+### What are `WORKER_DEPENDENCIES` for?
+
+Client-side installed packages are not automatically present on workers. `pip_packages` triggers `dask.distributed.PipInstall`, which pip-installs the listed specs on every worker before any task runs. The notebooks pin this in sync with the client-side installs:
+
+```python
+COFFEA_PIP = COFFEA_VERSION if "git" in COFFEA_VERSION else f"coffea=={COFFEA_VERSION}"
+WORKER_DEPENDENCIES = [COFFEA_PIP, "roastcoffea==0.1.2", "histserv==0.1.3"]
+```
+
+### Where is the client used?
+
+- **Metadata generation**: `metadata_generator.run(executor=DaskExecutor(client=client))` preprocesses files on the cluster.
+- **Processing**: `run_processor_workflow(..., executor=DaskExecutor(client=client))` fans out processor chunks.
+- **Metrics and profiling**: `MetricsCollector(client=client, ...)` tracks per-worker time and memory; `client.profile(...)` dumps a flamegraph.
+- **xcache pre-warm**: `warm_xcache(dataset_manager, client)` pre-pulls files into xcache from inside the cluster.
+
+### Where do I add support for a new facility?
+
+All facility wiring lives in `acquire_client()` in `src/intccms/utils/dask_client.py`. Add a new branch to the `if/elif` chain that:
+
+1. Builds the connection (direct `Client(...)` or `dask_gateway.Gateway(...)`).
+2. Optionally scales the cluster and calls `client.wait_for_workers(num_workers)`.
+3. Uploads credentials or registers worker callbacks if the site needs custom env setup (see the `coffeacasa-gateway` branch for a proxy + token example).
+
+Then add the new identifier to the `NotImplementedError` message in the final `else` branch, to the docstring's supported-facilities list, and to the table above.
+
+Shared setup (`PrintForwarder`, AWS env, `PipInstall`, `forward_logging`, optional profile dump) runs after your branch, so as long as you assign `client` and (if relevant) `cluster`, you get those plugins and the cleanup path for free.
+
 ## Metadata generation
 
 ### What is it and when do I need to re-run it?
@@ -158,13 +332,32 @@ config["datasets"]["skip_files"] = [
 
 ### Tolerating bad files during processing
 
-Both the metadata extractor and the processor runner use coffea's `skipbadfiles` parameter to catch and skip files that fail at read time. The errors caught include `OSError`, `LZMAError`, `DecompressionError`, `DeserializationError`, and `AssertionError`.
+Both the metadata extractor and the processor runner use coffea's `skipbadfiles` parameter to catch and skip files that fail at read time. Pass `skipbadfiles=` to `DatasetMetadataManager.run(...)` (preprocessing) or to `run_processor_workflow(...)` (processing) to override. Accepts `False` (hard-fail on any bad file), `True` (coffea's built-in `OSError`-only behavior), or a tuple of exception types.
 
-This is configured in:
-- `src/intccms/metadata_extractor/extractor.py` (preprocessing)
-- `src/intccms/analysis/runner.py` (processing)
+The defaults are exposed as `DEFAULT_PREPROCESS_SKIPBADFILES` in `src/intccms/metadata_extractor/manager.py` and `DEFAULT_PROCESS_SKIPBADFILES` in `src/intccms/analysis/runner.py`, so users can extend them:
 
-To change which errors are tolerated, edit the `skipbadfiles` tuple in the `Runner(...)` constructor call in those files. Setting `skipbadfiles=False` disables this and makes any bad file a hard failure.
+```python
+from intccms.analysis.runner import DEFAULT_PROCESS_SKIPBADFILES, run_processor_workflow
+
+output, report = run_processor_workflow(
+    ...,
+    skipbadfiles=(*DEFAULT_PROCESS_SKIPBADFILES, ValueError),
+)
+```
+
+### Why do I get `ValueError: Empty list provided to reduction`?
+
+If many files hit the same exception type and that exception is in `skipbadfiles`, every affected chunk returns an empty accumulator. Coffea's reduce step then fails with a stack trace ending in:
+
+```
+File ".../coffea/processor/executor.py", line 253, in __call__
+    raise ValueError("Empty list provided to reduction")
+ValueError: Empty list provided to reduction
+```
+
+The root cause is that multiple task-graph nodes feeding into the reduce step are all producing empty accumulators, so the reduction has nothing to combine.
+
+To debug, narrow `skipbadfiles` so the underlying error surfaces. Drop suspect exception types from the tuple (e.g. remove `AssertionError` or `DeserializationError`) and re-run; the real failure will now raise from the worker and you can diagnose it.
 
 ## Workflow modes
 
@@ -232,12 +425,14 @@ The flow per chunk: `SkimAndAnalyseProcessor.process()` → skim selection → o
 
 ### Where does the processor live?
 
-`src/intccms/analysis/processors.py` has two processors:
+`src/intccms/analysis/processors.py` has four processors:
 
 - **`SkimAndAnalyseProcessor`**: The main processor. Per chunk, it: (1) applies skim selection, (2) saves filtered events to disk if enabled, (3) calls `CMSAnalysis.process()` for corrections and histogramming if enabled. All controlled by the config flags above.
 - **`TwoHundredGbpsProcessor`**: Minimal I/O benchmark. Reads and materializes configured branches, returns event count only.
+- **`HistServProcessor`**: HaaS variant. Applies the skim selection and fills histograms via a remote histserv server instead of coffea's reduce step. See [Histogramming as a Service (HaaS)](#histogramming-as-a-service-haas).
+- **`HistLocalProcessor`**: Local-reduce sibling of `HistServProcessor`, kept for HaaS-vs-local comparisons. See same section.
 
-Both are passed to `run_processor_workflow()` in `src/intccms/analysis/runner.py`.
+All four are passed to `run_processor_workflow()` in `src/intccms/analysis/runner.py`.
 
 ### How do I write a custom processor?
 
@@ -436,13 +631,24 @@ A third method, `_flush_fills()`, is called at the end of each chunk's `process(
 
 ### Where is the histserv server address set?
 
-Currently hardcoded in `src/intccms/analysis/histserv.py`:
+Pass `histserv_address=` when constructing `HistServProcessor`. If omitted, it falls back to `DEFAULT_HISTSERV_ADDRESS` defined in `src/intccms/analysis/processors.py`, which is currently:
 
-```python
-histserv_client = Client(address="...:8788")
+```
+oksana-2eshadura-40cern-2ech.dask-worker.cmsaf-dev.flatiron.hollandhpc.org:8788
 ```
 
-Edit this line to point at your own `histserv` instance.
+To point at your own histserv instance:
+
+```python
+from intccms.analysis import HistServProcessor
+
+processor = HistServProcessor(
+    config=validated_config,
+    output_manager=output_manager,
+    metadata_lookup=metadata_lookup,
+    histserv_address="my.histserv.host:8788",
+)
+```
 
 ### How do I read back the final histograms?
 
@@ -591,23 +797,38 @@ The inspector produces rich tables (via `rich`) and matplotlib visualizations (e
 
 To use it, edit the `SKIM_REDIRECTOR` and `SKIM_BASE` variables in the config cell to point at your skimmed file location.
 
-## Notebooks
+## Hacks
 
-| Notebook | Purpose |
-|----------|---------|
-| `full_run.ipynb` | Standard analysis workflow (metadata &rarr; processing &rarr; histograms) |
-| `full_run_with_metrics.ipynb` | Same workflow with roastcoffea performance dashboards |
-| `full_run_workflow_modes.ipynb` | Runs all four workflow modes (skim+analysis, analysis only, skim only, analysis on skims) with per-mode metrics comparison |
-| `full_run_skim_formats.ipynb` | Tests skimming output formats (Parquet/S3, TTree/XRootD, RNTuple/XRootD) with read-back verification |
-| `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
-| `full_run_200gbps_preload_vs_not.ipynb` | Compares the 200gbps workflow with and without `preload=True` |
-| `full_run_200gbps_replicate_legacy.ipynb` | 200gbps run with the branch list hardcoded to the idap-200gbps legacy benchmark (via `prepare_branches_from_list`) for direct comparison |
-| `full_run_histserv.ipynb` | Standard workflow with histograms filled via HaaS (histserv) instead of reduce-aggregate |
-| `full_run_haas_or_not.ipynb` | Runs `HistServProcessor` and `HistLocalProcessor` back-to-back and compares metrics plus bin-by-bin histogram outputs |
-| `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
-| `skim_inspector.ipynb` | Inspect skimmed output files on XRootD or other remote storage |
+Things that should work but might break, which we are working on. Temporary workarounds until each is fixed upstream.
+
+### Roastcoffea metrics can crash the 200gbps run at large read fractions
+
+At large `TARGET_FRACTION` values in `full_run_200gbps.ipynb`, the run can crash while `MetricsCollector` pulls Dask span data back to the client. Fix pending in roastcoffea.
+
+To run without metrics, comment out:
+
+1. In the processor-run cell, the `with MetricsCollector(...) as collector:` block and every `collector.*` line (inside and after). De-indent the `run_processor_workflow(...)` call so it runs directly under `acquire_client`, and keep the `t0` / `t1` timers.
+2. The cells below "Performance Metrics" that reference `metrics`, `tracking_data`, or `span_metrics` ("Timeline Plots" and "Task and Processor Breakdown").
+
+The Dask profile via `profile_output_dir` on `acquire_client` is separate and still works.
 
 ## Credentials
+
+### VOMS proxy (CMS data access)
+
+To read CMS internal data over xrootd, initialize a VOMS proxy:
+
+```sh
+voms-proxy-init -voms cms -vomses /etc/vomses
+```
+
+This writes the proxy to `/tmp/x509up_u<uid>` and sets `X509_USER_PROXY` for the current shell.
+
+**Caveat for `coffeacasa-condor`**: the Dask cluster inherits the proxy location from the environment at the time it was started. If you run `voms-proxy-init` after the cluster is already up, the refreshed proxy does not reach workers, and any xrootd access from workers (reads or writes) will fail. Restart the Dask cluster after refreshing the proxy.
+
+**`coffeacasa-gateway`**: `acquire_client` uploads the proxy file from `/tmp/x509up_u<uid>` to every worker and points `X509_USER_PROXY` at the uploaded file via a worker callback, so a refreshed proxy is picked up on the next `acquire_client` context. No cluster restart needed.
+
+### S3 storage credentials
 
 Storage credentials (AWS keys for S3) go in an untracked `.env` file at the repo root (`cms/.env`). See `.env.example` for the expected variable names. Copy it and fill in your values:
 
