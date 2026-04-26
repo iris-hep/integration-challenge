@@ -10,9 +10,10 @@ Thin driver/worker layer on top of the vendored :mod:`root_repack`:
   fed to ``TFileMerger`` by URL; sliced or re-basketed segments go to
   local scratch first. The merged output is written to local scratch
   (XRootD does not support the random-access writes ``TFileMerger``
-  needs to finalise a file), then ``xrdcp``'d to ``<dst>.tmp`` and
-  renamed via ``xrdfs mv``. Local scratch is bounded by
-  ``max_scratch_gb`` and cleaned up at task exit.
+  needs to finalise a file), then ``xrdcp``'d straight to the final
+  XRootD URL. We do not write to a ``.tmp`` and rename, because most
+  CMS SEs disable user-level ``mv`` and ``rm``. Local scratch is
+  bounded by ``max_scratch_gb`` and cleaned up at task exit.
 - Runner: :func:`run_repack` submits one task per chunk through a
   :class:`dask.distributed.Client`.
 """
@@ -325,12 +326,13 @@ def repack_chunk(
     re-basketed segments write a local temp file under ``scratch_root``.
     The merged output is written to local scratch (XRootD does not
     support the random-access writes ``TFileMerger`` needs to finalise
-    a file), then ``xrdcp``'d to ``<chunk.output_url>.tmp`` and renamed
-    into place via ``xrdfs mv``.
+    a file), then ``xrdcp``'d directly to ``chunk.output_url`` with
+    ``-f`` if ``overwrite`` is set. We do not write to a ``.tmp`` and
+    rename, because most CMS SEs disable user-level ``mv`` and ``rm``;
+    a partial ``xrdcp`` from a crashed worker leaves a partial file
+    that the next run will overwrite.
 
-    Returns the final XRootD URL on success. Raises on any failure;
-    the remote ``.tmp`` upload is best-effort cleaned before re-raising
-    so a retried task does not collide with a stale partial write.
+    Returns the final XRootD URL on success.
     """
 
     if not chunk.segments:
@@ -358,8 +360,6 @@ def repack_chunk(
         auto_flush=_rr._parse_auto_flush(repack_kwargs.get("auto_flush")),
     )
 
-    tmp_remote = chunk.output_url + ".tmp"
-
     prefix = f"repack_{chunk.dataset}_{chunk.systematic}_{chunk.index:03d}_"
     with TemporaryDirectory(prefix=prefix, dir=str(scratch_root_path)) as tmpdir:
         tmp = Path(tmpdir)
@@ -377,12 +377,7 @@ def repack_chunk(
         _rr._merge_root_files(local_output, staged_inputs, merge_opts)
         _enforce_budget(tmp, budget_bytes, phase="local merge")
 
-        try:
-            _xrdcp(str(local_output), tmp_remote, force=True)
-            _xrdfs_mv(tmp_remote, chunk.output_url)
-        except BaseException:
-            _xrdfs_rm(tmp_remote, missing_ok=True)
-            raise
+        _xrdcp(str(local_output), chunk.output_url, force=overwrite)
 
     return chunk.output_url
 
