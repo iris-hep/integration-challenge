@@ -5,10 +5,14 @@ Thin driver/worker layer on top of the vendored :mod:`root_repack`:
 - Planner: takes a JSON fileset with pre-computed ``nevts`` per file and
   produces one :class:`ChunkPlan` per output file. Runs on the driver
   without opening remote files.
-- Worker: :func:`repack_chunk` stages segment inputs to local scratch via
-  ``xrdcp``, reuses :mod:`root_repack` internals to slice/merge/re-basket,
-  uploads the result to XRootD as ``<dst>.tmp`` and renames into place.
-  Scratch is bounded by ``max_scratch_gb`` and cleaned up at task exit.
+- Worker: :func:`repack_chunk` streams source files straight from XRootD
+  through ROOT's native client. Whole-file pass-through segments are
+  fed to ``TFileMerger`` by URL; sliced or re-basketed segments go to
+  local scratch first. The merged output is written to local scratch
+  (XRootD does not support the random-access writes ``TFileMerger``
+  needs to finalise a file), then ``xrdcp``'d to ``<dst>.tmp`` and
+  renamed via ``xrdfs mv``. Local scratch is bounded by
+  ``max_scratch_gb`` and cleaned up at task exit.
 - Runner: :func:`run_repack` submits one task per chunk through a
   :class:`dask.distributed.Client`.
 """
@@ -313,20 +317,20 @@ def repack_chunk(
     max_scratch_gb: float,
     overwrite: bool = False,
 ) -> str:
-    """Stream inputs from XRootD, merge directly back to XRootD.
+    """Stream inputs from XRootD; merge to local scratch; xrdcp out.
 
     No ``xrdcp`` step on the input side: ``TFile``/``TFileMerger`` read
     the source URLs over the network. Whole-file pass-through segments
     feed their URL straight to ``TFileMerger.AddFile``; sliced or
     re-basketed segments write a local temp file under ``scratch_root``.
-    The merged output is written directly to ``<chunk.output_url>.tmp``
-    on XRootD, then renamed into place via ``xrdfs mv``. Local scratch
-    only ever holds slice-temps, so peak usage is the sum of slice sizes
-    for the chunk.
+    The merged output is written to local scratch (XRootD does not
+    support the random-access writes ``TFileMerger`` needs to finalise
+    a file), then ``xrdcp``'d to ``<chunk.output_url>.tmp`` and renamed
+    into place via ``xrdfs mv``.
 
     Returns the final XRootD URL on success. Raises on any failure;
-    the ``.tmp`` upload is best-effort cleaned before re-raising so a
-    retried task does not collide with a stale partial write.
+    the remote ``.tmp`` upload is best-effort cleaned before re-raising
+    so a retried task does not collide with a stale partial write.
     """
 
     if not chunk.segments:
@@ -358,16 +362,23 @@ def repack_chunk(
 
     prefix = f"repack_{chunk.dataset}_{chunk.systematic}_{chunk.index:03d}_"
     with TemporaryDirectory(prefix=prefix, dir=str(scratch_root_path)) as tmpdir:
-        staging_dir = Path(tmpdir) / "staging"
+        tmp = Path(tmpdir)
+        staging_dir = tmp / "staging"
+        output_dir = tmp / "output"
         staging_dir.mkdir()
+        output_dir.mkdir()
 
         staged_inputs = _stage_streaming_segments(
             chunk.segments, event_tree, staging_dir, tree_opts
         )
-        _enforce_budget(staging_dir, budget_bytes, phase="segment staging")
+        _enforce_budget(tmp, budget_bytes, phase="segment staging")
+
+        local_output = output_dir / Path(chunk.output_url).name
+        _rr._merge_root_files(local_output, staged_inputs, merge_opts)
+        _enforce_budget(tmp, budget_bytes, phase="local merge")
 
         try:
-            _rr._merge_root_files(tmp_remote, staged_inputs, merge_opts)
+            _xrdcp(str(local_output), tmp_remote, force=True)
             _xrdfs_mv(tmp_remote, chunk.output_url)
         except BaseException:
             _xrdfs_rm(tmp_remote, missing_ok=True)
