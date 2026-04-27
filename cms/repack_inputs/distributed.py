@@ -1,28 +1,27 @@
-"""Distributed ROOT file repacking over Dask + XRootD.
+"""Distributed Dask + XRootD layer for ROOT file repacking.
 
-Thin driver/worker layer on top of the vendored :mod:`root_repack`:
+Driver-side (this module on the local Python process):
 
-- Planner: takes a JSON fileset with pre-computed ``nevts`` per file and
-  produces one :class:`ChunkPlan` per output file. Runs on the driver
-  without opening remote files.
-- Worker: :func:`repack_chunk` streams source files straight from XRootD
-  through ROOT's native client. Whole-file pass-through segments are
-  fed to ``TFileMerger`` by URL; sliced or re-basketed segments go to
-  local scratch first. The merged output is written to local scratch
-  (XRootD does not support the random-access writes ``TFileMerger``
-  needs to finalise a file), then ``xrdcp``'d straight to the final
-  XRootD URL. We do not write to a ``.tmp`` and rename, because most
-  CMS SEs disable user-level ``mv`` and ``rm``. Local scratch is
-  bounded by ``max_scratch_gb`` and cleaned up at task exit.
-- Runner: :func:`run_repack` submits one task per chunk through a
-  :class:`dask.distributed.Client`.
+- :class:`FileRecord` / :class:`ChunkSegment` / :class:`ChunkPlan` dataclasses
+- :func:`load_fileset` reads the input JSON
+- :func:`plan_chunks` builds chunks from the fileset using ``nevts`` from JSON
+- :func:`prepare_output_dirs` ``mkdir -p``s the XRootD output directories
+- :func:`upload_package` zips this package and ships it to scheduler + workers
+- :func:`run_repack` submits one task per chunk, gathers with tqdm progress
+- :func:`write_output_fileset` mirrors the input JSON shape with output URLs
+
+Worker-side (executed on Dask workers):
+
+- :func:`repack_chunk` ``xrdcp``s the chunk's input files into local scratch,
+  slices / re-baskets via :mod:`root_repack`, merges into one local file, and
+  ``xrdcp``s the merged file to the final XRootD URL.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
+import shutil
 import subprocess
 import sys
 from collections import defaultdict
@@ -32,13 +31,10 @@ from tempfile import TemporaryDirectory
 from typing import Any, Mapping, Sequence
 from urllib.parse import urlparse
 
-import cloudpickle
 from dask.distributed import as_completed
 from tqdm.auto import tqdm
 
-from intccms.utils.repack import root_repack as _rr
-
-cloudpickle.register_pickle_by_value(sys.modules[__name__])
+from repack_inputs import root_repack as _rr
 
 LOGGER = logging.getLogger(__name__)
 
@@ -91,12 +87,12 @@ class ChunkPlan:
 
 
 # ---------------------------------------------------------------------------
-# Fileset loading + planning
+# Fileset JSON
 # ---------------------------------------------------------------------------
 
 
-def load_fileset(json_path: str | os.PathLike[str]) -> list[FileRecord]:
-    """Flatten the nanoaods-style JSON into one record per input file."""
+def load_fileset(json_path: str | Path) -> list[FileRecord]:
+    """Flatten the fileset JSON into one record per input file."""
 
     data = json.loads(Path(json_path).expanduser().read_text())
     records: list[FileRecord] = []
@@ -124,10 +120,8 @@ def plan_chunks(
     """Produce one :class:`ChunkPlan` per output file.
 
     Files are grouped by ``(dataset, systematic)``. Within each group the
-    inputs are scanned in the order they appear in ``files`` and split
-    into chunks of up to ``n_events`` entries (using the same algorithm
-    as :func:`root_repack._event_chunks` but reading counts from the
-    JSON instead of opening files).
+    inputs are scanned in their JSON order and split into chunks of up to
+    ``n_events`` entries each.
     """
 
     if n_events is not None and n_events <= 0:
@@ -140,9 +134,9 @@ def plan_chunks(
     base = output_dir_url.rstrip("/")
     plans: list[ChunkPlan] = []
     for (dataset, syst), group in grouped.items():
-        segments_per_chunk = _chunk_by_events(group, n_events)
+        chunks = _chunk_by_events(group, n_events)
         subdir = output_subdir.format(dataset=dataset, systematic=syst)
-        for idx, segments in enumerate(segments_per_chunk, start=1):
+        for idx, segments in enumerate(chunks, start=1):
             if not segments:
                 continue
             plans.append(
@@ -161,8 +155,6 @@ def _chunk_by_events(
     files: Sequence[FileRecord],
     n_events: int | None,
 ) -> list[list[ChunkSegment]]:
-    """Pure-bookkeeping port of ``root_repack._event_chunks`` using JSON counts."""
-
     if n_events is None:
         segments = [
             ChunkSegment(f.url, 0, f.nevts, f.nevts) for f in files if f.nevts > 0
@@ -172,7 +164,6 @@ def _chunk_by_events(
     chunks: list[list[ChunkSegment]] = []
     current: list[ChunkSegment] = []
     current_count = 0
-
     for f in files:
         if f.nevts <= 0:
             continue
@@ -187,25 +178,46 @@ def _chunk_by_events(
                 chunks.append(current)
                 current = []
                 current_count = 0
-
     if current:
         chunks.append(current)
     return chunks
 
 
+def write_output_fileset(
+    plans: Sequence[ChunkPlan],
+    results: Mapping[str, str | BaseException],
+    out_json_path: str | Path,
+) -> Path:
+    """Write a JSON listing only the successfully-written outputs.
+
+    The structure mirrors the input fileset:
+    ``{dataset: {systematic: {"files": [{path, nevts}], "nevts_total"}}}``.
+    """
+
+    nested: dict[str, dict[str, dict[str, Any]]] = {}
+    for plan in plans:
+        outcome = results.get(plan.output_url)
+        if not isinstance(outcome, str):
+            continue
+        entry = nested.setdefault(plan.dataset, {}).setdefault(
+            plan.systematic, {"files": [], "nevts_total": 0}
+        )
+        entry["files"].append({"path": outcome, "nevts": plan.total_events})
+        entry["nevts_total"] += plan.total_events
+
+    out_path = Path(out_json_path).expanduser()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(nested, indent=2) + "\n")
+    return out_path
+
+
 # ---------------------------------------------------------------------------
-# XRootD helpers (subprocess-based; relies on xrdcp / xrdfs on worker PATH)
+# XRootD helpers (subprocess; needs xrdcp + xrdfs in PATH)
 # ---------------------------------------------------------------------------
 
 
 def _split_xrootd_url(url: str) -> tuple[str, str]:
-    """Split ``root://host[:port]//path`` into ``("root://host", "/path")``.
-
-    XRootD uses a double-slash to separate host from path, so ``urlparse``
-    alone is not enough — the path component of ``root://host//store/x``
-    ends up as ``/store/x`` which we keep, but we must also handle the
-    bare ``root://host/store/x`` form.
-    """
+    """Split ``root://host[:port]//path`` into ``("root://host", "/path")``."""
 
     parsed = urlparse(url)
     if parsed.scheme != "root":
@@ -222,19 +234,16 @@ def _xrdcp(src: str, dst: str, *, force: bool = False, timeout: float | None = N
     if force:
         cmd.append("-f")
     cmd.extend([src, dst])
-    result = subprocess.run(
-        cmd, capture_output=True, text=True, timeout=timeout
-    )
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     if result.returncode != 0:
         raise RuntimeError(
-            f"xrdcp failed ({src} -> {dst}): {result.stderr.strip() or result.stdout.strip()}"
+            f"xrdcp failed ({src} -> {dst}): "
+            f"{result.stderr.strip() or result.stdout.strip()}"
         )
 
 
 def _xrdfs(host: str, *args: str, check: bool = True) -> subprocess.CompletedProcess:
-    result = subprocess.run(
-        ["xrdfs", host, *args], capture_output=True, text=True
-    )
+    result = subprocess.run(["xrdfs", host, *args], capture_output=True, text=True)
     if check and result.returncode != 0:
         raise RuntimeError(
             f"xrdfs {' '.join(args)} failed on {host}: "
@@ -248,28 +257,8 @@ def _xrdfs_mkdir_p(url: str) -> None:
     _xrdfs(host, "mkdir", "-p", path)
 
 
-def _xrdfs_mv(src_url: str, dst_url: str) -> None:
-    src_host, src_path = _split_xrootd_url(src_url)
-    dst_host, dst_path = _split_xrootd_url(dst_url)
-    if src_host != dst_host:
-        raise ValueError(
-            f"xrdfs mv requires same host, got {src_host} and {dst_host}"
-        )
-    _xrdfs(src_host, "mv", src_path, dst_path)
-
-
-def _xrdfs_rm(url: str, *, missing_ok: bool = True) -> None:
-    host, path = _split_xrootd_url(url)
-    result = _xrdfs(host, "rm", path, check=False)
-    if result.returncode != 0 and not missing_ok:
-        raise RuntimeError(
-            f"xrdfs rm failed ({url}): "
-            f"{result.stderr.strip() or result.stdout.strip()}"
-        )
-
-
 def prepare_output_dirs(plans: Sequence[ChunkPlan]) -> None:
-    """Driver-side: mkdir -p each distinct output parent on XRootD once."""
+    """Driver-side: ``mkdir -p`` each distinct output parent on XRootD."""
 
     seen: set[str] = set()
     for plan in plans:
@@ -281,7 +270,7 @@ def prepare_output_dirs(plans: Sequence[ChunkPlan]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Scratch accounting
+# Scratch helpers
 # ---------------------------------------------------------------------------
 
 
@@ -305,6 +294,18 @@ def _enforce_budget(path: Path, budget_bytes: int, *, phase: str) -> None:
         )
 
 
+def _unique_local_path(inputs_dir: Path, url: str) -> Path:
+    base = Path(url).name or "input.root"
+    candidate = inputs_dir / base
+    if not candidate.exists():
+        return candidate
+    for i in range(1, 10_000):
+        candidate = inputs_dir / f"{i:04d}_{base}"
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError(f"could not find free local name for {url}")
+
+
 # ---------------------------------------------------------------------------
 # Worker entry point
 # ---------------------------------------------------------------------------
@@ -318,19 +319,15 @@ def repack_chunk(
     max_scratch_gb: float,
     overwrite: bool = False,
 ) -> str:
-    """Stream inputs from XRootD; merge to local scratch; xrdcp out.
+    """``xrdcp`` inputs to local scratch, slice / merge, ``xrdcp`` out.
 
-    No ``xrdcp`` step on the input side: ``TFile``/``TFileMerger`` read
-    the source URLs over the network. Whole-file pass-through segments
-    feed their URL straight to ``TFileMerger.AddFile``; sliced or
-    re-basketed segments write a local temp file under ``scratch_root``.
-    The merged output is written to local scratch (XRootD does not
-    support the random-access writes ``TFileMerger`` needs to finalise
-    a file), then ``xrdcp``'d directly to ``chunk.output_url`` with
-    ``-f`` if ``overwrite`` is set. We do not write to a ``.tmp`` and
-    rename, because most CMS SEs disable user-level ``mv`` and ``rm``;
-    a partial ``xrdcp`` from a crashed worker leaves a partial file
-    that the next run will overwrite.
+    The full input file is downloaded for every unique source URL in the
+    chunk, even when only a slice is needed. Slicing / re-basketing uses
+    :mod:`root_repack` internals against the local copies, then
+    :func:`root_repack._merge_root_files` produces one merged local file.
+    The merged file is ``xrdcp``-ed straight to ``chunk.output_url`` with
+    ``-f`` when ``overwrite`` is set. We do not write to a ``.tmp`` and
+    rename, because most CMS SEs disable user-level ``mv`` and ``rm``.
 
     Returns the final XRootD URL on success.
     """
@@ -340,7 +337,6 @@ def repack_chunk(
 
     scratch_root_path = Path(scratch_root)
     scratch_root_path.mkdir(parents=True, exist_ok=True)
-
     budget_bytes = int(max_scratch_gb * 1024**3)
 
     event_tree = repack_kwargs.get("event_tree", "Events")
@@ -363,18 +359,38 @@ def repack_chunk(
     prefix = f"repack_{chunk.dataset}_{chunk.systematic}_{chunk.index:03d}_"
     with TemporaryDirectory(prefix=prefix, dir=str(scratch_root_path)) as tmpdir:
         tmp = Path(tmpdir)
+        inputs_dir = tmp / "inputs"
         staging_dir = tmp / "staging"
         output_dir = tmp / "output"
+        inputs_dir.mkdir()
         staging_dir.mkdir()
         output_dir.mkdir()
 
-        staged_inputs = _stage_streaming_segments(
-            chunk.segments, event_tree, staging_dir, tree_opts
+        url_to_local: dict[str, Path] = {}
+        for url in chunk.unique_sources:
+            local = _unique_local_path(inputs_dir, url)
+            LOGGER.info("xrdcp %s -> %s", url, local)
+            _xrdcp(url, str(local))
+            url_to_local[url] = local
+            _enforce_budget(tmp, budget_bytes, phase="input download")
+
+        local_segments = [
+            _rr.EventSegment(
+                url_to_local[seg.source_url],
+                seg.start,
+                seg.count,
+                seg.total_entries,
+            )
+            for seg in chunk.segments
+        ]
+
+        staged_paths = _rr._stage_segment_files(
+            local_segments, event_tree, staging_dir, tree_opts
         )
         _enforce_budget(tmp, budget_bytes, phase="segment staging")
 
         local_output = output_dir / Path(chunk.output_url).name
-        _rr._merge_root_files(local_output, staged_inputs, merge_opts)
+        _rr._merge_root_files(local_output, staged_paths, merge_opts)
         _enforce_budget(tmp, budget_bytes, phase="local merge")
 
         _xrdcp(str(local_output), chunk.output_url, force=overwrite)
@@ -382,61 +398,38 @@ def repack_chunk(
     return chunk.output_url
 
 
-def _stage_streaming_segments(
-    segments: Sequence[ChunkSegment],
-    event_tree: str,
-    staging_dir: Path,
-    tree_options: Any,
-) -> list:
-    """Produce one entry per segment for ``TFileMerger.AddFile``.
+# ---------------------------------------------------------------------------
+# Driver: shipping + runner
+# ---------------------------------------------------------------------------
 
-    Pass-through segments (whole file, no rewrite) yield their original
-    XRootD URL string and are streamed by the merger directly. Sliced
-    or re-basketed segments are written to ``staging_dir`` as local
-    temp files; their local ``Path`` is yielded.
+
+def upload_package(client) -> Path:
+    """Zip this package and upload to scheduler + workers via Dask.
+
+    Call once per :class:`~dask.distributed.Client` lifetime, before any
+    :meth:`Client.submit`. Puts ``repack_inputs`` on the scheduler's and
+    each worker's ``sys.path`` so deserialization of the task graph and
+    execution of :func:`repack_chunk` both work without the package being
+    pre-installed on the cluster image.
     """
 
-    staged: list = []
-    for index, seg in enumerate(segments):
-        if (
-            not tree_options.requires_rewrite
-            and seg.start == 0
-            and seg.count == seg.total_entries
-        ):
-            staged.append(seg.source_url)
-            continue
-
-        staged_path = staging_dir / f"segment_{index:03d}.root"
-        LOGGER.info(
-            "slicing %s [%d:%d] -> %s",
-            seg.source_url,
-            seg.start,
-            seg.start + seg.count,
-            staged_path,
-        )
-        _rr._copy_tree_range(
-            seg.source_url,
-            staged_path,
-            event_tree,
-            seg.start,
-            seg.count,
-            tree_options,
-        )
-        staged.append(staged_path)
-    return staged
-
-
-# ---------------------------------------------------------------------------
-# Runner
-# ---------------------------------------------------------------------------
+    pkg_dir = Path(__file__).resolve().parent
+    zip_path = shutil.make_archive(
+        "/tmp/repack_inputs_pkg",
+        "zip",
+        root_dir=str(pkg_dir.parent),
+        base_dir=pkg_dir.name,
+    )
+    client.upload_file(zip_path)
+    return Path(zip_path)
 
 
 def run_repack(
     client,
     plans: Sequence[ChunkPlan],
     *,
-    scratch_root: str = "/tmp/intccms_repack",
-    max_scratch_gb: float = 4.0,
+    scratch_root: str = "/tmp/repack_inputs",
+    max_scratch_gb: float = 7.0,
     overwrite: bool = False,
     event_tree: str = "Events",
     basket_size: int | str | None = None,
@@ -451,16 +444,12 @@ def run_repack(
     progress: bool = True,
     raise_on_error: bool = True,
 ) -> dict[str, str | BaseException]:
-    """Submit one task per plan and collect results as they finish.
+    """Submit one task per :class:`ChunkPlan`; gather results as they finish.
 
     Returns a dict keyed by each plan's output URL. Successful values are
-    the written URL (same as the key). Failed values are the raised
-    exception when ``raise_on_error=False``; otherwise the first failure
-    re-raises after in-flight work is cancelled.
-
-    All keyword arguments other than ``client``, ``plans``, ``scratch_root``,
-    ``max_scratch_gb``, ``progress`` and ``raise_on_error`` mirror the
-    ``root_repack`` / CLI options.
+    the written URL. Failed values are the raised exception when
+    ``raise_on_error=False``; otherwise the first failure re-raises after
+    in-flight work is cancelled.
     """
 
     repack_kwargs = {
@@ -511,34 +500,3 @@ def run_repack(
                 raise
             results[plan.output_url] = err
     return results
-
-
-def write_output_fileset(
-    plans: Sequence[ChunkPlan],
-    results: Mapping[str, str | BaseException],
-    out_json_path: str | os.PathLike[str],
-) -> Path:
-    """Write an input-compatible JSON listing the outputs that succeeded.
-
-    The structure mirrors the input ``nanoaods.json``:
-    ``{dataset: {systematic: {"files": [{"path", "nevts"}], "nevts_total"}}}``.
-    Only plans whose ``output_url`` appears as a string value in
-    ``results`` are included. Failed chunks (values that are exceptions)
-    are skipped.
-    """
-
-    nested: dict[str, dict[str, dict[str, Any]]] = {}
-    for plan in plans:
-        outcome = results.get(plan.output_url)
-        if not isinstance(outcome, str):
-            continue
-        entry = nested.setdefault(plan.dataset, {}).setdefault(
-            plan.systematic, {"files": [], "nevts_total": 0}
-        )
-        entry["files"].append({"path": outcome, "nevts": plan.total_events})
-        entry["nevts_total"] += plan.total_events
-
-    out_path = Path(out_json_path).expanduser()
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(nested, indent=2) + "\n")
-    return out_path
