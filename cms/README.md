@@ -178,7 +178,34 @@ Two flags control what the processor does:
 
 ## Skimming
 
-### How do I skim events?
+There are currently two ways to do skimming:
+1. Using ServiceX to skim the input dataset before it is passed to Coffea preprocessing, OR
+2. Running Coffea processor twice: first time to skim events and save intermediate outputs, second time to process the skimmed outputs.
+
+In both cases, branch selection is controlled by `config["preprocess"]["branches"]` and `config["preprocess"]["mc_branches"]`. Only listed branches are saved to disk.
+
+### How do I skim events with ServiceX?
+
+ServiceX skimming works by taking the input fileset, processing it using an existing ServiceX deployment, saving intermediate outputs, and returning an updated input fileset with paths to skimmed files replacing original paths. After that, all steps of Coffea processing proceed as usual.
+
+To use ServiceX skimming, the Python environment must have `servicex>=3.3.1`; if S3 is used for ServiceX ouptuts, Coffea version must be `>=2026.4.0`.
+
+ServiceX skimming is controlled by:
+
+```python
+config["general"]["servicex"] = {
+    "enable_preskim": True,  # run ServiceX skimming before coffea metadata preprocess
+    "deliver_kwargs": {       # forwarded to servicex.deliver(...)
+        "fail_if_incomplete": True,
+        "ignore_local_cache": False,
+    },
+    "use_s3": True,          # if using S3 for ServiceX outputs, we need to pass encoded=True to uproot.open() to read S3 URLs
+}
+```
+
+At the moment, ServiceX skimming implements branch/column skimming only (no event-level selection yet).
+
+### How do I skim events with Coffea processor?
 
 The selection function is defined in `skim.py`:
 
@@ -193,9 +220,7 @@ The selection function is defined in `skim.py`:
 }
 ```
 
-Branch selection is controlled by `config["preprocess"]["branches"]` and `config["preprocess"]["mc_branches"]`. Only listed branches are saved to disk.
-
-### What output formats are available?
+#### What output formats are available?
 
 | `format` | Writer | Destination examples | Notes |
 |----------|--------|---------------------|-------|
@@ -211,7 +236,7 @@ config["preprocess"]["skimming"]["output"]["output_dir"] = "s3://my-bucket/skims
 config["preprocess"]["skimming"]["output"]["to_kwargs"] = {"compression": "zstd"}
 ```
 
-### How do I read back skimmed files?
+#### How do I read back skimmed files?
 
 Set `use_skimmed_input=True` in the config. The runner auto-discovers skimmed files from the output directory and builds the fileset.
 
@@ -495,6 +520,7 @@ To use it, edit the `SKIM_REDIRECTOR` and `SKIM_BASE` variables in the config ce
 | `full_run_with_metrics.ipynb` | Same workflow with roastcoffea performance dashboards |
 | `full_run_workflow_modes.ipynb` | Runs all four workflow modes (skim+analysis, analysis only, skim only, analysis on skims) with per-mode metrics comparison |
 | `full_run_skim_formats.ipynb` | Tests skimming output formats (Parquet/S3, TTree/XRootD, RNTuple/XRootD) with read-back verification |
+| `full_run_servicex_preskim.ipynb` | Tests ServiceX pre-skimming |
 | `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
 | `full_run_200gbps_preload_vs_not.ipynb` | Compares the 200gbps workflow with and without `preload=True` |
 | `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
