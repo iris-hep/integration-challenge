@@ -5,15 +5,13 @@ to extract WorkItems from ROOT files.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
-from lzma import LZMAError
-from cramjam import DecompressionError
+from typing import Any, Dict, List, Tuple, Type, Union
 
 from coffea.processor.executor import WorkItem
-from coffea.processor.executor import UprootMissTreeError
 from coffea import processor
 from coffea.nanoevents import NanoAODSchema
-from uproot import DeserializationError
+
+from intccms.metadata_extractor.manager import DEFAULT_PREPROCESS_SKIPBADFILES
 
 
 logger = logging.getLogger(__name__)
@@ -32,7 +30,13 @@ class CoffeaMetadataExtractor:
         The coffea processor runner configured for preprocessing
     """
 
-    def __init__(self, executor: Any = None, schema: Any = None, chunksize: int = 100_000):
+    def __init__(
+        self,
+        executor: Any = None,
+        schema: Any = None,
+        chunksize: int = 100_000,
+        skipbadfiles: Union[bool, Tuple[Type[BaseException], ...]] = DEFAULT_PREPROCESS_SKIPBADFILES,
+    ):
         """
         Initialize CoffeaMetadataExtractor with configurable executor.
 
@@ -46,6 +50,10 @@ class CoffeaMetadataExtractor:
             If None, uses NanoAODSchema by default.
         chunksize : int, optional
             Number of events per chunk for WorkItem splitting, default 100_000
+        skipbadfiles : bool or tuple of exception types, optional
+            Forwarded to coffea's Runner. Defaults to DEFAULT_PREPROCESS_SKIPBADFILES.
+            Pass False to hard-fail on any bad file, True for coffea's built-in
+            OSError-only behavior, or a custom tuple of exception types.
         """
 
 
@@ -61,7 +69,7 @@ class CoffeaMetadataExtractor:
             schema=schema,
             savemetrics=True,
             chunksize=chunksize,
-            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, DeserializationError,DecompressionError)
+            skipbadfiles=skipbadfiles,
         )
 
         logger.debug(

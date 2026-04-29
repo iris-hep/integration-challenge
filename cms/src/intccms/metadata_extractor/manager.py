@@ -8,12 +8,20 @@ and core functions.
 import json
 import logging
 import sys
+from lzma import LZMAError
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, TypedDict, Union
 
+from cramjam import DecompressionError
 from rich.pretty import pretty_repr
-from coffea.processor.executor import WorkItem
+from coffea.processor.executor import WorkItem, UprootMissTreeError
 from coffea.nanoevents import NanoAODSchema
+from uproot import DeserializationError
+
+
+DEFAULT_PREPROCESS_SKIPBADFILES: Tuple[Type[BaseException], ...] = (
+    OSError, LZMAError, UprootMissTreeError, DeserializationError, DecompressionError,
+)
 
 
 from intccms.datasets import DatasetManager, Dataset
@@ -152,6 +160,7 @@ class DatasetMetadataManager:
         executor: Any = None,
         schema: Any = None,
         identifiers: Optional[Union[int, List[int]]] = None,
+        skipbadfiles: Union[bool, Tuple[Type[BaseException], ...]] = DEFAULT_PREPROCESS_SKIPBADFILES,
     ) -> None:
         """
         Generate or load metadata based on config settings.
@@ -168,6 +177,9 @@ class DatasetMetadataManager:
             Schema for parsing ROOT files. Defaults to NanoAODSchema.
         identifiers : int or list of ints, optional
             Specific listing file IDs to process. Only used when generating metadata.
+        skipbadfiles : bool or tuple of exception types, optional
+            Forwarded to CoffeaMetadataExtractor and coffea's Runner. Defaults to
+            DEFAULT_PREPROCESS_SKIPBADFILES.
 
         Raises
         ------
@@ -182,7 +194,7 @@ class DatasetMetadataManager:
                     "executor is required when run_metadata_generation=True. "
                     "Pass a DaskExecutor or FuturesExecutor."
                 )
-            self._generate_metadata(executor, schema, identifiers)
+            self._generate_metadata(executor, schema, identifiers, skipbadfiles)
         else:
             self._load_existing_metadata()
 
@@ -191,6 +203,7 @@ class DatasetMetadataManager:
         executor: Any,
         schema: Any,
         identifiers: Optional[Union[int, List[int]]],
+        skipbadfiles: Union[bool, Tuple[Type[BaseException], ...]] = DEFAULT_PREPROCESS_SKIPBADFILES,
     ) -> None:
         """
         Generate metadata workflow.
@@ -203,13 +216,18 @@ class DatasetMetadataManager:
             Schema for parsing ROOT files. If None, uses NanoAODSchema.
         identifiers : int or list of ints, optional
             Listing file IDs to process
+        skipbadfiles : bool or tuple of exception types, optional
+            Forwarded to CoffeaMetadataExtractor. Defaults to
+            DEFAULT_PREPROCESS_SKIPBADFILES.
         """
         logger.info("Starting metadata generation workflow...")
 
         # Create extractor on-demand with provided executor
         if schema is None:
             schema = NanoAODSchema
-        metadata_extractor = CoffeaMetadataExtractor(executor, schema, self.chunksize)
+        metadata_extractor = CoffeaMetadataExtractor(
+            executor, schema, self.chunksize, skipbadfiles=skipbadfiles,
+        )
 
         # Step 1: Build and save fileset and Dataset objects
         self.fileset, self.datasets = self.fileset_builder.build_fileset(

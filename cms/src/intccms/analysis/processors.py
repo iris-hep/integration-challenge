@@ -10,13 +10,13 @@ import logging
 import uuid
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+from warnings import warn
 
 import awkward as ak
 from coffea.processor import ProcessorABC
 from roastcoffea import track_memory, track_metrics, track_time
 
-from intccms.analysis.cms import CMSAnalysis
 from intccms.skimming.io.writers import get_writer
 from intccms.skimming.pipeline.stages import (
     build_column_list,
@@ -31,7 +31,19 @@ from intccms.utils.output import (
 )
 from intccms.schema import Config
 from intccms.utils.functors import SelectionExecutor
-
+from intccms.analysis.cms import CMSAnalysis
+try:
+    from intccms.analysis.histserv import HistServAnalysis
+except ImportError as ie:
+    warn(f"Cannot import histserv, HaaS setup will not be available: {ie}")
+    class HistServAnalysis:  # type: ignore[no-redef]
+        """Fallback placeholder when optional histserv dependency is unavailable."""
+        def __init__(self, *args, **kwargs):
+            raise ImportError(
+                "HistServAnalysis is unavailable, likely because " \
+                "histserv is not available"
+            ) from ie
+    
 logger = logging.getLogger(__name__)
 
 
@@ -485,6 +497,239 @@ class SkimAndAnalyseProcessor(ProcessorABC):
                     logger.error(f"Statistics failed: {e}", exc_info=True)
                     # Don't raise - allow workflow to complete
 
+        return accumulator
+
+
+DEFAULT_HISTSERV_ADDRESS = "oksana-2eshadura-40cern-2ech.dask-worker.cmsaf-dev.flatiron.hollandhpc.org:8788"
+
+
+class HistServProcessor(ProcessorABC):
+    """Simplified coffea processor that fills histograms via HaaS (histserv).
+
+    A stripped-down sibling of :class:`SkimAndAnalyseProcessor`: applies the
+    skim selection, runs :class:`HistServAnalysis`, and returns only an event
+    counter in the accumulator — histogram state lives on the histserv server.
+    No file saving, no manifests, no ROOT output, no statistics.
+
+    Pairs with :class:`HistLocalProcessor` for HaaS vs local-reduce comparisons.
+
+    Attributes
+    ----------
+    config : Config
+        Full analysis configuration
+    output_manager : OutputDirectoryManager
+        Manager for output directory paths
+    metadata_lookup : Dict[str, Dict[str, Any]]
+        Pre-built metadata lookup mapping fileset_key to metadata dict
+    """
+
+    def __init__(
+        self,
+        config: Config,
+        output_manager: OutputDirectoryManager,
+        metadata_lookup: Dict[str, Dict[str, Any]],
+        histserv_address: Optional[str] = None,
+    ):
+        """Initialize HistServProcessor.
+
+        Parameters
+        ----------
+        config : Config
+            Full analysis configuration with general.run_* flags
+        output_manager : OutputDirectoryManager
+            For resolving output paths
+        metadata_lookup : Dict[str, Dict[str, Any]]
+            Pre-built metadata lookup from NanoAODMetadataGenerator.build_metadata_lookup()
+            Maps fileset_key -> {process, variation, xsec, nevts, is_data, dataset}
+        histserv_address : str, optional
+            Address (host:port) of the histserv server. If None, falls back to
+            DEFAULT_HISTSERV_ADDRESS.
+        """
+        self.config = config
+        self.output_manager = output_manager
+        self.metadata_lookup = metadata_lookup
+        self.skim_config = config.preprocess.skimming
+
+        if histserv_address is None:
+            histserv_address = DEFAULT_HISTSERV_ADDRESS
+
+        # Always create HistServAnalysis instance
+        # The run_analysis flag controls whether we execute its methods
+        self.analysis = HistServAnalysis(
+            config=config,
+            output_manager=output_manager,
+            histserv_address=histserv_address,
+        )
+
+        logger.info(
+            f"Initialized HistServProcessor: "
+            f"analysis={config.general.run_analysis}, "
+            f"histogramming={config.general.run_histogramming}, "
+            f"systematics={config.general.run_systematics}"
+        )
+
+
+    @property
+    def accumulator(self):
+        """Define accumulator structure based on enabled stages.
+
+        Returns
+        -------
+        dict
+            Accumulator dict with histograms, counters, etc.
+        """
+        acc = {"processed_events": 0}
+        return acc
+
+    @track_metrics
+    def process(self, events: ak.Array) -> Dict[str, Any]:
+        """Process a single chunk of events.
+
+        This is called by coffea's Runner for each chunk from the fileset.
+
+        Parameters
+        ----------
+        events : ak.Array
+            NanoEvents array from coffea (has NanoAODSchema applied)
+
+        Returns
+        -------
+        dict
+            Accumulator dict with histograms, counters, etc.
+        """
+        # Initialize output accumulator
+        output = self.accumulator
+
+        # Get chunk metadata
+        dataset_name = events.metadata["dataset"]
+        metadata = self.metadata_lookup.get(dataset_name)
+
+        if not metadata:
+            logger.warning(f"No metadata found for dataset {dataset_name}, skipping chunk")
+            output["processed_events"] = 0
+            return output
+
+        # Track total input events
+        input_events_count = len(events)
+
+        # Apply skim selection (filter always applies)
+        with track_time(self, "skim_selection"):
+            executor = SelectionExecutor(self.skim_config)
+            events = events[executor.execute(events)]
+
+        # Run analysis
+        if self.config.general.run_analysis and len(events) > 0:
+            # HistServAnalysis.process() handles:
+            # - Object selection and corrections
+            # - Histogram filling (if run_histogramming=True)
+            # - Systematics (if run_systematics=True)
+            with track_time(self, "analysis"):
+                self.analysis.process(events=events, metadata=metadata)
+
+
+        # Track total events processed (input events, not after filtering)
+        output["processed_events"] = input_events_count
+        return output
+
+
+    def postprocess(self, accumulator: Dict) -> Dict:
+        """Finalize accumulator after all chunks processed.
+        """
+        return accumulator
+
+
+class HistLocalProcessor(ProcessorABC):
+    """Simplified coffea processor that fills histograms locally and reduces them.
+
+    Mirrors :class:`HistServProcessor` but uses :class:`CMSAnalysis` (in-process
+    ``hist.Hist`` objects merged across chunks by coffea) instead of HaaS. A
+    stripped-down sibling of :class:`SkimAndAnalyseProcessor` with no file
+    saving, no manifests, no ROOT output, no statistics — useful for debugging
+    and as the local arm of HaaS vs local-reduce comparisons.
+
+    Attributes
+    ----------
+    config : Config
+        Full analysis configuration
+    output_manager : OutputDirectoryManager
+        Manager for output directory paths
+    metadata_lookup : Dict[str, Dict[str, Any]]
+        Pre-built metadata lookup mapping fileset_key to metadata dict
+    """
+
+    def __init__(
+        self,
+        config: Config,
+        output_manager: OutputDirectoryManager,
+        metadata_lookup: Dict[str, Dict[str, Any]],
+    ):
+        """Initialize HistLocalProcessor.
+
+        Parameters
+        ----------
+        config : Config
+            Full analysis configuration with general.run_* flags
+        output_manager : OutputDirectoryManager
+            For resolving output paths
+        metadata_lookup : Dict[str, Dict[str, Any]]
+            Pre-built metadata lookup mapping fileset_key -> metadata dict
+        """
+        self.config = config
+        self.output_manager = output_manager
+        self.metadata_lookup = metadata_lookup
+        self.skim_config = config.preprocess.skimming
+
+        self.analysis = CMSAnalysis(
+            config=config,
+            output_manager=output_manager,
+        )
+
+        logger.info(
+            f"Initialized HistLocalProcessor: "
+            f"analysis={config.general.run_analysis}, "
+            f"histogramming={config.general.run_histogramming}, "
+            f"systematics={config.general.run_systematics}"
+        )
+
+    @property
+    def accumulator(self):
+        """Define accumulator structure based on enabled stages."""
+        acc = {"processed_events": 0}
+        if self.config.general.run_histogramming:
+            acc["histograms"] = self.analysis.nD_hists_per_region
+        return acc
+
+    @track_metrics
+    def process(self, events: ak.Array) -> Dict[str, Any]:
+        """Process a single chunk of events."""
+        output = self.accumulator
+
+        dataset_name = events.metadata["dataset"]
+        metadata = self.metadata_lookup.get(dataset_name)
+
+        if not metadata:
+            logger.warning(f"No metadata found for dataset {dataset_name}, skipping chunk")
+            output["processed_events"] = 0
+            return output
+
+        input_events_count = len(events)
+
+        # Apply skim selection (filter always applies)
+        with track_time(self, "skim_selection"):
+            executor = SelectionExecutor(self.skim_config)
+            events = events[executor.execute(events)]
+
+        if self.config.general.run_analysis and len(events) > 0:
+            with track_time(self, "analysis"):
+                self.analysis.process(events=events, metadata=metadata)
+            if self.config.general.run_histogramming:
+                output["histograms"] = self.analysis.nD_hists_per_region
+
+        output["processed_events"] = input_events_count
+        return output
+
+    def postprocess(self, accumulator: Dict) -> Dict:
+        """Finalize accumulator after all chunks processed."""
         return accumulator
 
 
