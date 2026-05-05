@@ -388,6 +388,34 @@ def branches_to_dict(branch_names: List[str]) -> Dict[str, List[str]]:
     return grouped
 
 
+def dict_to_branches(
+    grouped: Mapping[str, Sequence[str]],
+    *,
+    nanoaod_collection_counts: bool = False,
+) -> List[str]:
+    """Expand ``preprocess.branches``-style mapping to flat names: ``"event"`` stays bare; others ``{obj}_{field}``.
+
+    If ``nanoaod_collection_counts``, emit ``n{Collection}`` before each uppercase collection block.
+
+    Examples
+    --------
+    >>> dict_to_branches({"Jet": ["pt"], "Muon": ["eta"], "event": ["PSWeight", "run"]})
+    ['Jet_pt', 'Muon_eta', 'PSWeight', 'run']
+    >>> dict_to_branches({"Muon": ["pt"]}, nanoaod_collection_counts=True)
+    ['nMuon', 'Muon_pt']
+    """
+    flat: List[str] = []
+    for key, fields in grouped.items():
+        if nanoaod_collection_counts and key != "event" and key[:1].isupper():
+            flat.append(f"n{key}")
+        for field in fields:
+            if key == "event":
+                flat.append(field)
+            else:
+                flat.append(f"{key}_{field}")
+    return flat
+
+
 def find_mc_only_branches(
     mc_file: str,
     data_file: str,

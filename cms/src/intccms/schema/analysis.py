@@ -101,6 +101,35 @@ class MetricsConfig(SubscriptableModel):
     ]
 
 
+class ServicexConfig(SubscriptableModel):
+    """ServiceX integration (metadata preskim, deliver options, S3 URL reading)."""
+
+    enable_preskim: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="If True, run ServiceX skimming before coffea metadata preprocess, "
+            "replacing original fileset paths with paths returned by ServiceX (e.g. S3 URLs).",
+        ),
+    ]
+    deliver_kwargs: Annotated[
+        Dict[str, Any],
+        Field(
+            default={"fail_if_incomplete": True, "ignore_local_cache": False},
+            description="Keyword arguments passed to servicex.deliver() during metadata "
+            "preskim.",
+        ),
+    ]
+    use_s3: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="If True, pass ``encoded=True`` to uproot via coffea preprocess and processor "
+            "(percent-encoded ServiceX S3/HTTP URLs).",
+        ),
+    ]
+
+
 class GeneralConfig(SubscriptableModel):
     lumi: Annotated[float, Field(description="Integrated luminosity in /pb")]
     weight_branch: Annotated[
@@ -196,6 +225,13 @@ class GeneralConfig(SubscriptableModel):
         Field(
             default=True,
             description="If True, run the JSON metadata generation step before constructing fileset.",
+        ),
+    ]
+    servicex: Annotated[
+        ServicexConfig,
+        Field(
+            default_factory=ServicexConfig,
+            description="ServiceX preskim configuration.",
         ),
     ]
     read_from_cache: Annotated[

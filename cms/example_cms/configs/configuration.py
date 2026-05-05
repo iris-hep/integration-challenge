@@ -66,6 +66,14 @@ general_config = {
         "run_plots_only": False,
         "run_mva_training": False,
         "run_metadata_generation": False,
+        "servicex": {
+            "enable_preskim": False,
+            "deliver_kwargs": {
+                "fail_if_incomplete": True,
+                "ignore_local_cache": False,
+            },
+            "use_s3": False,
+        },
         "read_from_cache": True,
         "output_dir": "example_cms/outputs/",
         "cache_dir": "/tmp/integration/",

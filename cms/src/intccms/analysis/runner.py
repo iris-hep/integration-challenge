@@ -215,6 +215,10 @@ def run_processor_workflow(
             **runner_kwargs,
         )
 
+        uopts: Dict[str, Any] = {}
+        if config.general.servicex.use_s3:
+            uopts["encoded"] = True
+
         run_kwargs = {"trace": trace} if preload else {}
 
         # Run processor over fileset or workitems
@@ -231,6 +235,7 @@ def run_processor_workflow(
                 coffea_fileset,
                 treename="Events",  # Will be overridden by fileset structure
                 processor_instance=processor,
+                uproot_options=uopts,
                 **run_kwargs,
             )
         else:
@@ -238,6 +243,7 @@ def run_processor_workflow(
             output, report = runner(
                 workitems,
                 processor_instance=processor,
+                uproot_options=uopts,
                 **run_kwargs,
             )
 

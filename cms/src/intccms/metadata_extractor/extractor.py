@@ -77,7 +77,11 @@ class CoffeaMetadataExtractor:
             f"and chunksize={chunksize}"
         )
 
-    def extract_metadata(self, fileset: Dict[str, Dict[str, str]]) -> List[WorkItem]:
+    def extract_metadata(
+        self,
+        fileset: Dict[str, Dict[str, str]],
+        uproot_options: Optional[Dict[str, Any]] = None,
+    ) -> List[WorkItem]:
         """
         Extract WorkItems from fileset using coffea preprocessing.
 
@@ -90,6 +94,9 @@ class CoffeaMetadataExtractor:
         ----------
         fileset : Dict[str, Dict[str, str]]
             Coffea-compatible fileset mapping dataset keys to file paths and tree names.
+        uproot_options : dict, optional
+            Passed to coffea ``Runner.preprocess`` (``uproot.open`` options). Support for
+            forwarding these options requires **coffea v2026.4.0 or later**.
 
         Returns
         -------
@@ -101,10 +108,13 @@ class CoffeaMetadataExtractor:
         Exception
             If coffea preprocessing fails
         """
-        logger.info("Extracting metadata using coffea.dataset_tools.preprocess")
+        logger.info("Extracting metadata using coffea Runner.preprocess")
         try:
             # Run the coffea preprocess function on the provided fileset
-            workitems = self.runner.preprocess(fileset)
+            workitems = self.runner.preprocess(
+                fileset,
+                uproot_options=uproot_options,
+            )
             # Convert the generator returned by preprocess to a list of WorkItems
             workitems_list = list(workitems)
             logger.info(f"Extracted {len(workitems_list)} WorkItems from {len(fileset)} datasets")
