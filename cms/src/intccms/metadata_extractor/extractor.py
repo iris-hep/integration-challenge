@@ -5,7 +5,7 @@ to extract WorkItems from ROOT files.
 """
 
 import logging
-from typing import Any, Dict, List, Tuple, Type, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from coffea.processor.executor import WorkItem
 from coffea import processor
