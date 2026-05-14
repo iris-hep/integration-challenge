@@ -274,6 +274,16 @@ class GeneralConfig(SubscriptableModel):
             "If None, uses output_dir/skimmed/ and creates if needed.",
         ),
     ]
+    fileset_path: Annotated[
+        Optional[str],
+        Field(
+            default=None,
+            description="Path to a JSON file mapping dataset_key -> [relative file paths]. "
+            "When set, replaces directory enumeration: only dataset_keys present in the "
+            "file are built; others are dropped. The redirector from skim.py is applied "
+            "at build time.",
+        ),
+    ]
     processes: Annotated[
         Optional[List[str]],
         Field(

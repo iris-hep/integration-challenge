@@ -78,6 +78,7 @@ class FilesetBuilder:
         self,
         identifiers: Optional[Union[int, List[int]]] = None,
         processes_filter: Optional[List[str]] = None,
+        file_listing: Optional[Dict[str, List[str]]] = None,
     ) -> Tuple[Dict[str, Dict[str, Any]], List[Dataset]]:
         """
         Build coffea-compatible fileset and Dataset objects from configurations.
@@ -93,6 +94,10 @@ class FilesetBuilder:
             Specific listing file IDs to process. If None, uses all .txt files.
         processes_filter : list of str, optional
             Only build fileset for these processes. If None, builds all.
+        file_listing : dict, optional
+            Mapping of dataset_key -> list of file paths (relative; redirector is
+            applied at build time). When set, replaces directory enumeration: only
+            dataset_keys present in the mapping are built; others are dropped.
 
         Returns
         -------
@@ -104,7 +109,8 @@ class FilesetBuilder:
         Raises
         ------
         ValueError
-            If max_files is configured but <= 0
+            If max_files is configured but <= 0, or if ``file_listing`` contains
+            dataset_keys that do not correspond to any configured dataset.
         """
         fileset: Dict[str, Dict[str, Any]] = {}
         datasets: List[Dataset] = []
@@ -113,6 +119,8 @@ class FilesetBuilder:
 
         if max_files and max_files <= 0:
             raise ValueError("max_files must be None or a positive integer.")
+
+        consumed_listing_keys: set[str] = set()
 
         # Iterate over each process configured in the dataset manager
         for process_name in self.dataset_manager.list_processes():
@@ -124,18 +132,30 @@ class FilesetBuilder:
             logger.info(f"Building fileset for process: {process_name}")
 
             try:
-                # Build fileset and dataset for this process
                 process_fileset, process_dataset = self._build_process_fileset(
-                    process_name, identifiers, max_files
+                    process_name, identifiers, max_files,
+                    file_listing=file_listing,
+                    consumed_listing_keys=consumed_listing_keys,
                 )
 
-                # Add to results
+                # Replace mode may drop all keys for a process; skip empty datasets
+                if not process_fileset:
+                    continue
+
                 fileset.update(process_fileset)
                 datasets.append(process_dataset)
 
             except FileNotFoundError as fnf:
                 logger.error(f"Could not build fileset for {process_name}: {fnf}")
                 continue
+
+        if file_listing is not None:
+            unknown = set(file_listing) - consumed_listing_keys
+            if unknown:
+                raise ValueError(
+                    "file_listing contains dataset_keys that do not match any "
+                    f"configured dataset: {sorted(unknown)}"
+                )
 
         logger.info(f"Built fileset with {len(fileset)} dataset keys from {len(datasets)} processes")
         return fileset, datasets
@@ -145,6 +165,8 @@ class FilesetBuilder:
         process_name: str,
         identifiers: Optional[Union[int, List[int]]],
         max_files: Optional[int],
+        file_listing: Optional[Dict[str, List[str]]] = None,
+        consumed_listing_keys: Optional[set[str]] = None,
     ) -> Tuple[Dict[str, Dict[str, Any]], Dataset]:
         """
         Build fileset entries and Dataset object for a single process.
@@ -157,6 +179,11 @@ class FilesetBuilder:
             Listing file IDs to process
         max_files : int, optional
             Maximum number of files per directory
+        file_listing : dict, optional
+            Mapping of dataset_key -> list of file paths. See ``build_fileset``.
+        consumed_listing_keys : set, optional
+            Mutated set tracking which file_listing keys have been used; the
+            caller uses it to detect unknown keys after all processes are built.
 
         Returns
         -------
@@ -191,28 +218,14 @@ class FilesetBuilder:
         # Build fileset entries for each directory
         fileset_entries = {}
         fileset_keys = []
+        kept_cross_sections = []
         lumi_mask_configs = []
         years_list = []
         variation_label = "nominal"
 
         for idx, (listing_dir, xsec, year) in enumerate(zip(listing_dirs, cross_sections, years)):
-            # Get lumi_mask_config for this directory
             directory_index = idx if len(listing_dirs) > 1 else None
-            lumi_mask_config = self.dataset_manager.get_lumi_mask_config(
-                process_name, directory_index=directory_index
-            )
-            lumi_mask_configs.append(lumi_mask_config)
-            years_list.append(year)
 
-            # Collect file paths
-            skip_files = self.dataset_manager.config.skip_files
-            file_paths = collect_file_paths(listing_dir, identifiers, redirector, skip_files=skip_files)
-
-            # Apply max_files limit
-            if max_files:
-                file_paths = file_paths[:max_files]
-
-            # Create dataset key
             dataset_key = format_dataset_key(
                 process_name,
                 variation=variation_label,
@@ -220,7 +233,31 @@ class FilesetBuilder:
                 is_data=is_data,
             )
 
-            # Build fileset entry
+            if file_listing is not None:
+                if dataset_key not in file_listing:
+                    logger.info(f"{dataset_key}: not in file_listing, skipped")
+                    continue
+                listed = file_listing[dataset_key]
+                file_paths = [f"{redirector}{p}" if redirector else p for p in listed]
+                if consumed_listing_keys is not None:
+                    consumed_listing_keys.add(dataset_key)
+                logger.info(f"{dataset_key}: using {len(file_paths)} files from file_listing")
+            else:
+                skip_files = self.dataset_manager.config.skip_files
+                file_paths = collect_file_paths(
+                    listing_dir, identifiers, redirector, skip_files=skip_files,
+                )
+
+            if max_files:
+                file_paths = file_paths[:max_files]
+
+            lumi_mask_config = self.dataset_manager.get_lumi_mask_config(
+                process_name, directory_index=directory_index
+            )
+            lumi_mask_configs.append(lumi_mask_config)
+            years_list.append(year)
+            kept_cross_sections.append(xsec)
+
             fileset_entries[dataset_key] = build_fileset_entry(
                 file_paths=file_paths,
                 tree_name=tree_name,
@@ -240,7 +277,7 @@ class FilesetBuilder:
             fileset_keys=fileset_keys,
             process=process_name,
             variation=variation_label,
-            cross_sections=cross_sections,
+            cross_sections=kept_cross_sections,
             is_data=is_data,
             lumi_mask_configs=lumi_mask_configs,
             years=years_list,
