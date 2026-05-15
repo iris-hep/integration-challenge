@@ -12,7 +12,7 @@ import uproot
 import dask
 from dask.distributed import as_completed
 
-from intccms.metadata_extractor.io import collect_file_paths
+from intccms.utils.file_listings import collect_file_paths
 
 logger = logging.getLogger(__name__)
 
