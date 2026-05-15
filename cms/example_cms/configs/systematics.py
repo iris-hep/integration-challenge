@@ -505,7 +505,7 @@ def _get_corrections_for_year(year: str) -> list:
         eval_name = f"{base}{btag_jes_eval_suffix}"
         btag_sources.append({
             "name": f"btag_{jec_name}",
-            "up_and_down_idx": [f"up_{eval_name}", f"down_{eval_name}"],
+            "up_and_down_idx": [f"up_{base}", f"down_{base}"],
             "varies_with": [jec_name],
             **_hf_transforms,
         })
