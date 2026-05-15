@@ -1,7 +1,7 @@
 """Integration with DatasetManager - extract files for inspection.
 
 This module bridges DatasetManager (which has dataset configurations and file listings)
-to the inspector module. It uses existing infrastructure from metadata_extractor.
+to the inspector module.
 
 IMPORTANT: This does NOT require metadata preprocessing - it works directly with
 the raw dataset configuration.
@@ -10,7 +10,7 @@ the raw dataset configuration.
 from typing import Dict, List, Optional, Tuple
 
 from intccms.datasets import DatasetManager
-from intccms.metadata_extractor.io import collect_file_paths
+from intccms.utils.file_listings import collect_file_paths
 from intccms.utils.filters import should_process
 
 
@@ -23,7 +23,6 @@ def extract_files_from_dataset_manager(
     """Extract file paths from DatasetManager for inspection.
 
     Reads .txt files from dataset directories to get actual ROOT file paths.
-    Uses the same infrastructure as metadata_extractor.
 
     Parameters
     ----------
