@@ -13,7 +13,8 @@ from intccms.metadata_extractor.core import (
     format_dataset_key,
     build_fileset_entry,
 )
-from intccms.metadata_extractor.io import collect_file_paths, save_json
+from intccms.metadata_extractor.io import save_json
+from intccms.utils.file_listings import collect_file_paths
 from intccms.utils.filters import should_process
 
 logger = logging.getLogger(__name__)
