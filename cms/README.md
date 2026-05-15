@@ -88,6 +88,7 @@ A coffea-based distributed analysis framework for the CMS Z' → tt̄ single-lep
 
 - [How do I collect performance metrics?](#how-do-i-collect-performance-metrics)
 - [How do I pre-warm xcache before a run?](#how-do-i-pre-warm-xcache-before-a-run)
+- [How do I measure xrdcp throughput?](#how-do-i-measure-xrdcp-throughput)
 - [How do I profile worker activity?](#how-do-i-profile-worker-activity)
 
 </details>
@@ -131,6 +132,7 @@ On an analysis facility (AF), use the notebooks directly &mdash; they install de
 | `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
 | `full_run_200gbps_preload_vs_not.ipynb` | Compares the 200gbps workflow with and without `preload=True` |
 | `full_run_200gbps_replicate_legacy.ipynb` | 200gbps run with the branch list hardcoded to the idap-200gbps legacy benchmark (via `prepare_branches_from_list`) for direct comparison |
+| `xrdcp_throughput.ipynb` | Distributed `xrdcp` via `warm_xcache` under `MetricsCollector` and dask profiling, prints wall-clock and per-worker throughput |
 | `full_run_histserv.ipynb` | Standard workflow with histograms filled via HaaS (histserv) instead of reduce-aggregate |
 | `full_run_haas_or_not.ipynb` | Runs `HistServProcessor` and `HistLocalProcessor` back-to-back and compares metrics plus bin-by-bin histogram outputs |
 | `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
@@ -808,6 +810,12 @@ print(f"Files: {meta['n_files']}, total GB: {meta['total_GB']:.1f}")
 ```
 
 Optional kwargs: `redirector` (override per-dataset), `max_files` (cap total), `processes` (subset by process name), `max_retries`.
+
+### How do I measure xrdcp throughput?
+
+`xrdcp_throughput.ipynb` runs `warm_xcache` wrapped in `MetricsCollector` and `acquire_client` profiling, then prints throughput and saves the dask profile and roastcoffea measurement to `example_cms/outputs_xrdcp_throughput/`.
+
+The notebook prints both the wall-clock throughput (total GB / wall time) and the per-worker throughput (sum of per-task time / total GB), and dumps roastcoffea throughput / resource / timing tables. By default it warms every file in the config; drop `config["datasets"]["max_files"]` to a small integer for a quick test.
 
 ### How do I profile worker activity?
 
