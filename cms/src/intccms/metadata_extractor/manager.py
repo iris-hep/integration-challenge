@@ -230,8 +230,15 @@ class DatasetMetadataManager:
         )
 
         # Step 1: Build and save fileset and Dataset objects
+        file_listing: Optional[Dict[str, List[str]]] = None
+        if self.config and self.config.general.fileset_path:
+            file_listing = load_json(Path(self.config.general.fileset_path))
+            logger.info(
+                f"Loaded file_listing from {self.config.general.fileset_path} "
+                f"with {len(file_listing)} dataset_keys"
+            )
         self.fileset, self.datasets = self.fileset_builder.build_fileset(
-            identifiers, self.processes_filter
+            identifiers, self.processes_filter, file_listing=file_listing,
         )
         if self.config and self.config.general.servicex.enable_preskim:
             preprocess_config = getattr(self.config, "preprocess", None)

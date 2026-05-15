@@ -167,6 +167,7 @@ def acquire_client(
                     Path(dask_worker.local_directory) / "access_token"
                 )
                 os.environ["BEARER_TOKEN_FILE"] = config_path
+                os.environ['MPLCONFIGDIR'] = '/tmp/matplotlib'
                 os.chmod(config_path, 0o600)
                 os.chmod("/etc/grid-security/certificates", 0o755)
                 config_path2 = str(
