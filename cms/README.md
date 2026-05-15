@@ -124,6 +124,7 @@ On an analysis facility (AF), use the notebooks directly &mdash; they install de
 |----------|---------|
 | `full_run.ipynb` | Standard analysis workflow (metadata &rarr; processing &rarr; histograms) |
 | `full_run_with_metrics.ipynb` | Same workflow with roastcoffea performance dashboards |
+| `full_run_with_metrics_rntuples.ipynb` | Same as `full_run_with_metrics.ipynb` but reads RNTuple inputs by pointing `general.fileset_path` at `example_cms/rntuples.json` |
 | `full_run_workflow_modes.ipynb` | Runs all four workflow modes (skim+analysis, analysis only, skim only, analysis on skims) with per-mode metrics comparison |
 | `full_run_skim_formats.ipynb` | Tests skimming output formats (Parquet/S3, TTree/XRootD, RNTuple/XRootD) with read-back verification |
 | `full_run_servicex_preskim.ipynb` | Tests ServiceX pre-skimming |
@@ -215,6 +216,34 @@ Override per dataset after validation:
 for dataset in validated_config.datasets.datasets:
     dataset.redirector = "root://xcache/"
 ```
+
+### How do I provide a custom fileset?
+
+Set `general.fileset_path` to a JSON file mapping `dataset_key -> [relative file paths]`. When set, `FilesetBuilder` skips directory enumeration for the listed keys and uses those files instead. Only dataset_keys present in the file are built; others are dropped. The redirector from `skim.py` is applied at build time, so paths in the JSON are relative.
+
+```python
+config["general"]["fileset_path"] = "example_cms/rntuples.json"
+```
+
+JSON shape:
+
+```json
+{
+    "signal_0__nominal": [
+        "//store/user/AGC/IC_rntuple/signal_0__nominal/abc.root",
+        "//store/user/AGC/IC_rntuple/signal_0__nominal/def.root"
+    ],
+    "signal_1__nominal": ["...", "..."]
+}
+```
+
+Dataset_keys follow the same format as `fileset.json` from a normal metadata generation run: `<process>_<dir_idx>__<variation>` for multi-directory MC, `<process>__<variation>` for single-directory MC, `<process>` (no `__variation`) for data. Run preprocessing once without `fileset_path` to see the exact keys for your datasets.
+
+If a key in the JSON does not match any configured dataset, `build_fileset` raises `ValueError` with the offending key. New processes still need a `skim.py` entry: this knob picks which files to use, not which processes exist.
+
+Re-run metadata generation (`run_metadata_generation=True`) after changing the listing so `workitems.json` and `nanoaods.json` reflect the new files.
+
+`example_cms/rntuples.json` is an example using RNTuple-format files, exercised by `full_run_with_metrics_rntuples.ipynb`.
 
 ## Dask client
 
