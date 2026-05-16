@@ -80,9 +80,7 @@ def run_processor_workflow(
     schema : Any, optional
         NanoAOD schema for coffea, by default NanoAODSchema
     chunksize : int
-        Events per chunk for Runner.preprocess. Only applies to the fileset /
-        skimming-input path; ignored when workitems are provided (workitems
-        carry their own entry ranges). Default 200_000.
+        Number of events per chunk, by default 200_000
     preload : bool, optional
         If True, pass coffea's ``trace`` function to the Runner so it
         preloads only the branches the processor accesses. Default False.
