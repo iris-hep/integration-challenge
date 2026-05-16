@@ -80,7 +80,9 @@ def run_processor_workflow(
     schema : Any, optional
         NanoAOD schema for coffea, by default NanoAODSchema
     chunksize : int
-        Number of events per chunk, by default 200_000
+        Events per chunk for Runner.preprocess. Only applies to the fileset /
+        skimming-input path; ignored when workitems are provided (workitems
+        carry their own entry ranges). Default 200_000.
     preload : bool, optional
         If True, pass coffea's ``trace`` function to the Runner so it
         preloads only the branches the processor accesses. Default False.
@@ -197,12 +199,15 @@ def run_processor_workflow(
         if config.general.use_skimmed_input:
             skim_format = config.preprocess.skimming.output.format
             runner_kwargs["format"] = "parquet" if skim_format == "parquet" else "root"
-            
+
+        # chunksize only matters when Runner.preprocess builds chunks itself.
+        if use_fileset:
+            runner_kwargs["chunksize"] = chunksize
+
         # Create coffea Runner
         runner = Runner(
             executor=executor,
             schema=schema,
-            chunksize=chunksize,
             savemetrics=True,
             skipbadfiles=skipbadfiles,
             **runner_kwargs,
@@ -232,7 +237,7 @@ def run_processor_workflow(
                 **run_kwargs,
             )
         else:
-            logger.info(f"Processing {len(workitems)} work items with chunksize={chunksize}")
+            logger.info(f"Processing {len(workitems)} work items")
             output, report = runner(
                 workitems,
                 processor_instance=processor,
