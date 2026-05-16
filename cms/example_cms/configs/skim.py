@@ -314,7 +314,6 @@ def default_skim_selection(puppimet, hlt):
 skimming_config = {
     "function": default_skim_selection,
     "use": [ObjVar("PuppiMET", None), ObjVar("HLT", None)],
-    "chunk_size": 200_000,
     "tree_name": "Events",
     # "output": {
     #     "format": "parquet",

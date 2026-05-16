@@ -44,7 +44,7 @@ def run_processor_workflow(
     workitems: Optional[List[WorkItem]] = None,
     executor: Any = None,
     schema: Any = NanoAODSchema,
-    chunksize: Optional[int] = None,
+    chunksize: int = 200_000,
     preload: bool = False,
     post: Optional[Callable] = None,
     skipbadfiles: Union[bool, Tuple[Type[BaseException], ...]] = DEFAULT_PROCESS_SKIPBADFILES,
@@ -79,8 +79,10 @@ def run_processor_workflow(
         User controls which executor to use
     schema : Any, optional
         NanoAOD schema for coffea, by default NanoAODSchema
-    chunksize : int, optional
-        Number of events per chunk, by default None (uses config value or 100k)
+    chunksize : int
+        Events per chunk for Runner.preprocess. Only applies to the fileset /
+        skimming-input path; ignored when workitems are provided (workitems
+        carry their own entry ranges). Default 200_000.
     preload : bool, optional
         If True, pass coffea's ``trace`` function to the Runner so it
         preloads only the branches the processor accesses. Default False.
@@ -193,23 +195,19 @@ def run_processor_workflow(
                 metadata_lookup=metadata_lookup,
             )
 
-        # Determine chunksize
-        if chunksize is None:
-            if hasattr(config, 'preprocess') and hasattr(config.preprocess, 'skimming'):
-                chunksize = config.preprocess.skimming.chunk_size
-            else:
-                chunksize = 100_000
-
         runner_kwargs = {}
         if config.general.use_skimmed_input:
             skim_format = config.preprocess.skimming.output.format
             runner_kwargs["format"] = "parquet" if skim_format == "parquet" else "root"
-            
+
+        # chunksize only matters when Runner.preprocess builds chunks itself.
+        if use_fileset:
+            runner_kwargs["chunksize"] = chunksize
+
         # Create coffea Runner
         runner = Runner(
             executor=executor,
             schema=schema,
-            chunksize=chunksize,
             savemetrics=True,
             skipbadfiles=skipbadfiles,
             **runner_kwargs,
@@ -239,7 +237,7 @@ def run_processor_workflow(
                 **run_kwargs,
             )
         else:
-            logger.info(f"Processing {len(workitems)} work items with chunksize={chunksize}")
+            logger.info(f"Processing {len(workitems)} work items")
             output, report = runner(
                 workitems,
                 processor_instance=processor,

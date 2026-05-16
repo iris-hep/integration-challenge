@@ -325,6 +325,20 @@ Set `config["general"]["run_metadata_generation"] = True` to run it (requires a 
 
 **Re-run when**: datasets change, files are added/removed, or you switch redirectors.
 
+### Changing chunksize
+
+`DatasetMetadataManager(chunksize=N)` sets how many events go into each `WorkItem` produced by coffea preprocess (default 200_000):
+
+```python
+metadata_generator = DatasetMetadataManager(
+    dataset_manager, output_manager,
+    config=validated_config,
+    chunksize=500_000,
+)
+```
+
+For the analysis pass on a `fileset` (skimming-input path), `run_processor_workflow(..., chunksize=N)` controls coffea's preprocess the same way. When premade workitems are passed instead, the kwarg is ignored. Chunksize was fixed at metadata generation time.
+
 ### [Advanced] What are the components of the preprocessing workflow?
 
 The metadata extraction pipeline lives in `src/intccms/metadata_extractor/` and has four components:

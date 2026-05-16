@@ -52,12 +52,6 @@ class SkimOutputConfig(SubscriptableModel):
 
 class SkimmingConfig(FunctorConfig):
     """Configuration for workitem-based skimming selections and output"""
-
-    # File handling configuration
-    chunk_size: Annotated[
-        int,
-        Field(default=100_000, description="Number of events to process per chunk (used for configuration compatibility)")
-    ]
     tree_name: Annotated[
         str,
         Field(default="Events", description="ROOT tree name for input and output files")

@@ -95,6 +95,7 @@ class DatasetMetadataManager:
         dataset_manager: DatasetManager,
         output_manager: Any,
         config: Optional[Any] = None,
+        chunksize=200_000,
     ):
         """
         Initialize DatasetMetadataManager.
@@ -113,20 +114,15 @@ class DatasetMetadataManager:
         self.output_manager = output_manager
         self.output_directory = self.output_manager.metadata_dir
         self.config = config
+        self.chunksize=chunksize
 
         # Extract config-derived attributes
         if config:
             self.generate_metadata = config.general.run_metadata_generation
             self.processes_filter = getattr(config.general, 'processes', None)
-            # Extract chunksize from config
-            if hasattr(config, 'preprocess') and hasattr(config.preprocess, 'skimming'):
-                self.chunksize = config.preprocess.skimming.chunk_size
-            else:
-                self.chunksize = 100_000
         else:
             self.generate_metadata = True
             self.processes_filter = None
-            self.chunksize = 100_000
 
         # Initialize fileset builder (doesn't need executor)
         self.fileset_builder = FilesetBuilder(dataset_manager, output_manager)
