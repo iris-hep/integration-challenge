@@ -44,7 +44,7 @@ def run_processor_workflow(
     workitems: Optional[List[WorkItem]] = None,
     executor: Any = None,
     schema: Any = NanoAODSchema,
-    chunksize: int = 200_000,
+    chunksize: int = 500_000,
     preload: bool = False,
     post: Optional[Callable] = None,
     skipbadfiles: Union[bool, Tuple[Type[BaseException], ...]] = DEFAULT_PROCESS_SKIPBADFILES,
@@ -80,9 +80,9 @@ def run_processor_workflow(
     schema : Any, optional
         NanoAOD schema for coffea, by default NanoAODSchema
     chunksize : int
-         Events per chunk for Runner.preprocess. Only applies to the fileset /
-        skimming-input path if used here; ignored when workitems are provided (default). 
-        Default 200_000.
+        Events per chunk for Runner.preprocess. Only applies to the fileset /
+        skimming-input path if used here; ignored when workitems are provided (default).
+        Default 500_000.
     preload : bool, optional
         If True, pass coffea's ``trace`` function to the Runner so it
         preloads only the branches the processor accesses. Default False.
