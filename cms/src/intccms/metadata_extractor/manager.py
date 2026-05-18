@@ -95,7 +95,7 @@ class DatasetMetadataManager:
         dataset_manager: DatasetManager,
         output_manager: Any,
         config: Optional[Any] = None,
-        chunksize=200_000,
+        chunksize=500_000,
     ):
         """
         Initialize DatasetMetadataManager.

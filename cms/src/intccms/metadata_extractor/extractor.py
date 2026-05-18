@@ -34,7 +34,7 @@ class CoffeaMetadataExtractor:
         self,
         executor: Any = None,
         schema: Any = None,
-        chunksize: int = 200_000,
+        chunksize: int = 500_000,
         skipbadfiles: Union[bool, Tuple[Type[BaseException], ...]] = DEFAULT_PREPROCESS_SKIPBADFILES,
     ):
         """
@@ -49,7 +49,7 @@ class CoffeaMetadataExtractor:
             Schema for parsing ROOT files (e.g., NanoAODSchema).
             If None, uses NanoAODSchema by default.
         chunksize : int, optional
-            Number of events per chunk for WorkItem splitting, default 200_000
+            Number of events per chunk for WorkItem splitting, default 500_000
         skipbadfiles : bool or tuple of exception types, optional
             Forwarded to coffea's Runner. Defaults to DEFAULT_PREPROCESS_SKIPBADFILES.
             Pass False to hard-fail on any bad file, True for coffea's built-in
