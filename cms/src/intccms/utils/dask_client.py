@@ -81,6 +81,43 @@ class _AWSEnvPlugin(WorkerPlugin):
             _os.environ["AWS_SECRET_ACCESS_KEY"] = self._secret
 
 
+class _ProfileIntervalPlugin(WorkerPlugin):
+    """WorkerPlugin that resets worker profile sampling intervals.
+
+    The coffeacasa-gateway facility ships workers with the dask profile
+    sampling intervals set to ``1d`` / ``2d``, which means
+    ``client.profile()`` returns empty data. This plugin replaces the
+    worker's ``profile`` and ``profile-cycle`` PeriodicCallbacks with
+    the dask defaults (10 ms sampling, 1 s cycle) so profile data is
+    actually collected.
+    """
+
+    def __init__(self, interval_ms: int = 10, cycle_ms: int = 1000):
+        self._interval_ms = interval_ms
+        self._cycle_ms = cycle_ms
+
+    def setup(self, worker):
+        from tornado.ioloop import PeriodicCallback
+
+        # Stop the worker's existing profile PeriodicCallbacks, which
+        # the gateway started with the 1d/2d intervals at worker init.
+        for name in ("profile", "profile-cycle"):
+            cb = worker.periodic_callbacks.get(name)
+            if cb is not None:
+                cb.stop()
+        # Build replacements at the dask defaults: trigger_profile fires
+        # every interval_ms to grab call stacks from active threads, and
+        # cycle_profile fires every cycle_ms to flush the recent buffer
+        # into the time-indexed history that client.profile() queries.
+        pc1 = PeriodicCallback(worker.trigger_profile, self._interval_ms)
+        pc2 = PeriodicCallback(worker.cycle_profile, self._cycle_ms)
+        worker.periodic_callbacks["profile"] = pc1
+        worker.periodic_callbacks["profile-cycle"] = pc2
+        # PeriodicCallback.start() must be invoked on the IOLoop thread.
+        worker.loop.add_callback(pc1.start)
+        worker.loop.add_callback(pc2.start)
+
+
 def live_prints(client: Client, interval: float = 1.0) -> threading.Event:
     """Poll worker print events and display them on the client side.
 
@@ -227,6 +264,11 @@ def acquire_client(
 
         # Register PrintForwarder on all AFs
         client.register_plugin(PrintForwarder())
+
+        # On coffeacasa-gateway, override the worker profile sampling
+        # intervals (the facility default of 1d/2d disables sampling).
+        if af == "coffeacasa-gateway":
+            client.register_plugin(_ProfileIntervalPlugin())
 
         # Install pip packages if requested
         if pip_packages:
