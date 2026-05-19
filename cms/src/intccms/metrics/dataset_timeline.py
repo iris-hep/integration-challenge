@@ -9,8 +9,9 @@ which datasets were running during throughput peaks or dips.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Callable, Iterable, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,13 +20,28 @@ import pandas as pd
 from intccms.utils.output import OutputDirectoryManager
 
 
+def strip_dataset_variation(name: str) -> str:
+    """Reduce a dataset key like ``signal_0__JES_up`` to the bare process name.
+
+    Dataset keys produced by ``format_dataset_key`` are
+    ``<process>(_<idx>)?(__<variation>)?``. This drops the variation (split
+    on the ``__`` delimiter) and any trailing ``_<digits>`` directory index,
+    leaving the bare process name. Process names that contain underscores
+    (e.g. ``qcd_2j``) are preserved since only a final ``_<digits>`` is
+    stripped.
+    """
+    process_with_idx = name.split("__", 1)[0]
+    return re.sub(r"_\d+$", "", process_with_idx)
+
+
 def build_active_chunks_timeline(
     chunk_metrics: Iterable[dict[str, Any]],
     bin_seconds: float = 1.0,
     t0: Optional[float] = None,
     t1: Optional[float] = None,
+    group_by: Optional[Callable[[str], str]] = strip_dataset_variation,
 ) -> pd.DataFrame:
-    """Count chunks active per dataset in each time bin.
+    """Count chunks active per dataset (or process group) in each time bin.
 
     Parameters
     ----------
@@ -35,11 +51,16 @@ def build_active_chunks_timeline(
         Time bin width.
     t0, t1 : float, optional
         UNIX-timestamp range to cover. Default: span of the data.
+    group_by : callable, optional
+        Maps each raw dataset key to a column name. The default folds
+        directory-index and variation suffixes into the bare process name
+        (``signal_0__JES_up`` and ``signal_2__nominal`` both end up as
+        ``signal``). Pass ``None`` to keep one column per raw dataset key.
 
     Returns
     -------
     pd.DataFrame
-        Indexed by elapsed seconds since ``t0``. One column per dataset, value
+        Indexed by elapsed seconds since ``t0``. One column per group, value
         is the count of chunks whose ``[t_start, t_end)`` overlapped the bin.
     """
     records = [
@@ -51,7 +72,10 @@ def build_active_chunks_timeline(
 
     starts = np.array([c["t_start"] for c in records], dtype=float)
     ends = np.array([c["t_end"] for c in records], dtype=float)
-    datasets = np.array([c["dataset"] for c in records])
+    if group_by is None:
+        keys = np.array([c["dataset"] for c in records])
+    else:
+        keys = np.array([group_by(c["dataset"]) for c in records])
 
     if t0 is None:
         t0 = float(starts.min())
@@ -62,14 +86,14 @@ def build_active_chunks_timeline(
     bin_edges = t0 + np.arange(n_bins + 1) * bin_seconds
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
 
-    unique_datasets = sorted(set(datasets.tolist()))
-    counts = {ds: np.zeros(n_bins, dtype=int) for ds in unique_datasets}
+    unique_keys = sorted(set(keys.tolist()))
+    counts = {k: np.zeros(n_bins, dtype=int) for k in unique_keys}
 
-    for s, e, ds in zip(starts, ends, datasets):
+    for s, e, k in zip(starts, ends, keys):
         i0 = max(0, int((s - t0) / bin_seconds))
         i1 = min(n_bins, int(np.ceil((e - t0) / bin_seconds)))
         if i1 > i0:
-            counts[ds][i0:i1] += 1
+            counts[k][i0:i1] += 1
 
     return pd.DataFrame(counts, index=bin_centers - t0)
 
@@ -81,6 +105,8 @@ def plot_dataset_timeline(
     output_manager: Optional[OutputDirectoryManager] = None,
     output_path: Optional[Union[str, Path]] = None,
     filename: str = "dataset_timeline.png",
+    group_by: Optional[Callable[[str], str]] = strip_dataset_variation,
+    top_n: Optional[int] = 10,
 ) -> plt.Axes:
     """Stacked-area plot of active chunks per dataset over time.
 
@@ -102,13 +128,30 @@ def plot_dataset_timeline(
         ``output_manager``.
     filename : str
         Filename used when saving via ``output_manager``.
+    group_by : callable, optional
+        Forwarded to :func:`build_active_chunks_timeline`. Default folds
+        index/variation suffixes into the bare process name. Pass ``None``
+        to keep one series per raw dataset key.
+    top_n : int, optional
+        Cap the number of series in the legend. Datasets are ranked by the
+        sum of their active-chunk counts; everything outside the top *n*
+        is summed into a single ``other`` series. Default 10. Pass ``None``
+        to disable the cap.
 
     Returns
     -------
     matplotlib.axes.Axes
         The axes object the plot was drawn on.
     """
-    df = build_active_chunks_timeline(chunk_metrics, bin_seconds=bin_seconds)
+    df = build_active_chunks_timeline(
+        chunk_metrics, bin_seconds=bin_seconds, group_by=group_by
+    )
+    if top_n is not None and len(df.columns) > top_n:
+        totals = df.sum(axis=0).sort_values(ascending=False)
+        keep = list(totals.index[:top_n])
+        other = df.drop(columns=keep).sum(axis=1)
+        df = df[keep].copy()
+        df["other"] = other
     if ax is None:
         _, ax = plt.subplots(figsize=(12, 5))
     ax.stackplot(df.index, df.T.values, labels=df.columns)
