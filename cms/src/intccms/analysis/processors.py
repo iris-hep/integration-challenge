@@ -831,3 +831,143 @@ class TwoHundredGbpsProcessor(ProcessorABC):
         )
         return accumulator
 
+
+class AnalysisWithExtraBranchesProcessor(ProcessorABC):
+    """Coffea processor that runs analysis and materializes extra branches.
+
+    Combines the analysis path of :class:`HistLocalProcessor` (skim filter +
+    :class:`CMSAnalysis`, no disk output) with the branch-reading behaviour of
+    :class:`TwoHundredGbpsProcessor`. After the skim filter, a user-supplied
+    dict of extra branches is read off disk via ``ak.materialize`` to probe
+    how reading more branches affects wall-clock throughput.
+
+    No file saving, no manifests, no ROOT output, no statistics.
+
+    Attributes
+    ----------
+    config : Config
+        Full analysis configuration
+    output_manager : OutputDirectoryManager
+        Manager for output directory paths
+    metadata_lookup : Dict[str, Dict[str, Any]]
+        Pre-built metadata lookup mapping fileset_key to metadata dict
+    extra_columns_to_keep : List[str]
+        Flat list of extra branches to materialize
+    extra_mc_only_columns : List[str]
+        Flat list of MC-only entries within the extras
+    """
+
+    def __init__(
+        self,
+        config: Config,
+        output_manager: OutputDirectoryManager,
+        metadata_lookup: Dict[str, Dict[str, Any]],
+        extra_branches: Dict[str, List[str]],
+        extra_mc_branches: Optional[Dict[str, List[str]]] = None,
+    ):
+        """Initialize AnalysisWithExtraBranchesProcessor.
+
+        Parameters
+        ----------
+        config : Config
+            Full analysis configuration with general.run_* flags
+        output_manager : OutputDirectoryManager
+            For resolving output paths
+        metadata_lookup : Dict[str, Dict[str, Any]]
+            Pre-built metadata lookup from
+            NanoAODMetadataGenerator.build_metadata_lookup()
+        extra_branches : Dict[str, List[str]]
+            Extra branches to materialize per chunk, in the same
+            ``{collection: [branches]}`` shape as ``config.preprocess.branches``.
+        extra_mc_branches : Dict[str, List[str]], optional
+            MC-only entries within ``extra_branches``. Same shape as
+            ``config.preprocess.mc_branches``.
+        """
+        self.config = config
+        self.output_manager = output_manager
+        self.metadata_lookup = metadata_lookup
+        self.skim_config = config.preprocess.skimming
+
+        self.extra_columns_to_keep, self.extra_mc_only_columns = build_column_list(
+            extra_branches,
+            extra_mc_branches,
+            is_data=False,  # filtered per-chunk in process()
+        )
+
+        self.analysis = CMSAnalysis(
+            config=config,
+            output_manager=output_manager,
+        )
+
+        logger.info(
+            f"Initialized AnalysisWithExtraBranchesProcessor: "
+            f"analysis={config.general.run_analysis}, "
+            f"histogramming={config.general.run_histogramming}, "
+            f"systematics={config.general.run_systematics}, "
+            f"{len(self.extra_columns_to_keep)} extra branches to materialize"
+        )
+
+    @property
+    def accumulator(self):
+        """Define accumulator structure based on enabled stages."""
+        acc = {"processed_events": 0}
+        if self.config.general.run_histogramming:
+            acc["histograms"] = self.analysis.nD_hists_per_region
+        return acc
+
+    @track_metrics
+    def process(self, events: ak.Array) -> Dict[str, Any]:
+        """Process a single chunk of events."""
+        output = self.accumulator
+
+        dataset_name = events.metadata["dataset"]
+        metadata = self.metadata_lookup.get(dataset_name)
+
+        if not metadata:
+            logger.warning(f"No metadata found for dataset {dataset_name}, skipping chunk")
+            output["processed_events"] = 0
+            return output
+
+        input_events_count = len(events)
+
+        # Apply skim selection (filter always applies)
+        with track_time(self, "skim_selection"):
+            executor = SelectionExecutor(self.skim_config)
+            events = events[executor.execute(events)]
+
+        # Materialize the configured extra branches on the surviving events
+        is_data = metadata.get("is_data", False)
+        with track_time(self, "extract_columns"), track_memory(self, "extract_columns"):
+            extra_columns = extract_columns(
+                events,
+                self.extra_columns_to_keep,
+                mc_only_columns=self.extra_mc_only_columns,
+                is_data=is_data,
+            )
+        branches_read = set()
+        with track_time(self, "materialize"), track_memory(self, "materialize"):
+            for key, arr in extra_columns.items():
+                try:
+                    ak.materialize(arr)
+                    branches_read.add(key)
+                except Exception as e:
+                    print(e)
+                    if "unrecognized compression algorithm" in str(e) or "lzma data error" in str(e):
+                        continue
+                    else:
+                        raise e
+        output["branches_read"] = branches_read
+
+        if self.config.general.run_analysis and len(events) > 0:
+            with track_time(self, "analysis"):
+                self.analysis.process(events=events, metadata=metadata)
+            if self.config.general.run_histogramming:
+                output["histograms"] = self.analysis.nD_hists_per_region
+
+        output["processed_events"] = input_events_count
+        return output
+
+    def postprocess(self, accumulator: Dict) -> Dict:
+        """Finalize accumulator after all chunks processed."""
+        return accumulator
+

@@ -5,6 +5,7 @@ from . import cms as cms
 from .base import Analysis
 from .cms import CMSAnalysis
 from .processors import (
+    AnalysisWithExtraBranchesProcessor,
     HistLocalProcessor,
     HistServProcessor,
     SkimAndAnalyseProcessor,
@@ -22,6 +23,7 @@ __all__ = [
     "TwoHundredGbpsProcessor",
     "HistServProcessor",
     "HistLocalProcessor",
+    "AnalysisWithExtraBranchesProcessor",
     "run_processor_workflow",
 ]
 
