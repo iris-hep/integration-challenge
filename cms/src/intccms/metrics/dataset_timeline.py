@@ -158,7 +158,12 @@ def plot_dataset_timeline(
     ax.set_xlabel("Elapsed seconds")
     ax.set_ylabel("Active chunks")
     ax.set_title(f"Dataset processing timeline (bin={bin_seconds}s)")
-    ax.legend(loc="upper right", fontsize="small", ncol=2)
+    ax.legend(
+        loc="upper left",
+        bbox_to_anchor=(1.02, 1.0),
+        fontsize="small",
+        borderaxespad=0,
+    )
     ax.margins(x=0)
     ax.figure.tight_layout()
 
