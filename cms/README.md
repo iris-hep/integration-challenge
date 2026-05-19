@@ -491,7 +491,7 @@ Three layers in `src/intccms/analysis/`:
 |------|-------|------|
 | `base.py` | `Analysis` | Generic base class. Handles corrections (correctionlib + custom functions), object masks, baseline selection, ghost observables. Experiment-agnostic. |
 | `cms.py` | `CMSAnalysis(Analysis)` | CMS-specific implementation. Initializes histograms, runs the histogramming loop (nominal + systematic variations), runs statistical inference via cabinetry. |
-| `processors.py` | `SkimAndAnalyseProcessor`, `TwoHundredGbpsProcessor` | Coffea processors. `SkimAndAnalyseProcessor` owns a `CMSAnalysis` instance and dispatches to it for the analysis step. |
+| `processors.py` | `SkimAndAnalyseProcessor`, `TwoHundredGbpsProcessor`, `HistServProcessor`, `HistLocalProcessor`, `AnalysisWithExtraBranchesProcessor` | Coffea processors. `SkimAndAnalyseProcessor` owns a `CMSAnalysis` instance and dispatches to it for the analysis step. See the per-class breakdown below. |
 
 The flow per chunk: `SkimAndAnalyseProcessor.process()` → skim selection → optionally save to disk → `CMSAnalysis.process()` → `Analysis.prepare_objects()` (corrections + masks) → `CMSAnalysis.histogramming()` (fill histograms).
 
