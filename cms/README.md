@@ -132,6 +132,7 @@ On an analysis facility (AF), use the notebooks directly &mdash; they install de
 | `full_run_200gbps.ipynb` | I/O throughput benchmark with profiling |
 | `full_run_200gbps_preload_vs_not.ipynb` | Compares the 200gbps workflow with and without `preload=True` |
 | `full_run_200gbps_replicate_legacy.ipynb` | 200gbps run with the branch list hardcoded to the idap-200gbps legacy benchmark (via `prepare_branches_from_list`) for direct comparison |
+| `full_run_analysis_with_extra_branches.ipynb` | Standard analysis flow run through `AnalysisWithExtraBranchesProcessor`, with `extra_branches` defaulted to the idap-200gbps legacy list so throughput numbers can be compared with `full_run_200gbps_replicate_legacy.ipynb` |
 | `xrdcp_throughput.ipynb` | Distributed `xrdcp` via `warm_xcache` under `MetricsCollector` and dask profiling, prints wall-clock and per-worker throughput |
 | `full_run_histserv.ipynb` | Standard workflow with histograms filled via HaaS (histserv) instead of reduce-aggregate |
 | `full_run_haas_or_not.ipynb` | Runs `HistServProcessor` and `HistLocalProcessor` back-to-back and compares metrics plus bin-by-bin histogram outputs |
@@ -490,20 +491,21 @@ Three layers in `src/intccms/analysis/`:
 |------|-------|------|
 | `base.py` | `Analysis` | Generic base class. Handles corrections (correctionlib + custom functions), object masks, baseline selection, ghost observables. Experiment-agnostic. |
 | `cms.py` | `CMSAnalysis(Analysis)` | CMS-specific implementation. Initializes histograms, runs the histogramming loop (nominal + systematic variations), runs statistical inference via cabinetry. |
-| `processors.py` | `SkimAndAnalyseProcessor`, `TwoHundredGbpsProcessor` | Coffea processors. `SkimAndAnalyseProcessor` owns a `CMSAnalysis` instance and dispatches to it for the analysis step. |
+| `processors.py` | `SkimAndAnalyseProcessor`, `TwoHundredGbpsProcessor`, `HistServProcessor`, `HistLocalProcessor`, `AnalysisWithExtraBranchesProcessor` | Coffea processors. `SkimAndAnalyseProcessor` owns a `CMSAnalysis` instance and dispatches to it for the analysis step. See the per-class breakdown below. |
 
 The flow per chunk: `SkimAndAnalyseProcessor.process()` → skim selection → optionally save to disk → `CMSAnalysis.process()` → `Analysis.prepare_objects()` (corrections + masks) → `CMSAnalysis.histogramming()` (fill histograms).
 
 ### Where does the processor live?
 
-`src/intccms/analysis/processors.py` has four processors:
+`src/intccms/analysis/processors.py` has five processors:
 
 - **`SkimAndAnalyseProcessor`**: The main processor. Per chunk, it: (1) applies skim selection, (2) saves filtered events to disk if enabled, (3) calls `CMSAnalysis.process()` for corrections and histogramming if enabled. All controlled by the config flags above.
 - **`TwoHundredGbpsProcessor`**: Minimal I/O benchmark. Reads and materializes configured branches, returns event count only.
 - **`HistServProcessor`**: HaaS variant. Applies the skim selection and fills histograms via a remote histserv server instead of coffea's reduce step. See [Histogramming as a Service (HaaS)](#histogramming-as-a-service-haas).
 - **`HistLocalProcessor`**: Local-reduce sibling of `HistServProcessor`, kept for HaaS-vs-local comparisons. See same section.
+- **`AnalysisWithExtraBranchesProcessor`**: Runs the same skim filter + `CMSAnalysis` flow as `HistLocalProcessor`, and additionally materializes a constructor-supplied list of `extra_branches` (and optional `extra_mc_branches`) per chunk via `ak.materialize`. Used to probe how reading more branches affects wall-clock throughput while the analysis is running. The materialize block has its own `track_time` / `track_memory` spans.
 
-All four are passed to `run_processor_workflow()` in `src/intccms/analysis/runner.py`.
+All five are passed to `run_processor_workflow()` in `src/intccms/analysis/runner.py`.
 
 ### How do I write a custom processor?
 
