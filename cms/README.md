@@ -135,6 +135,7 @@ On an analysis facility (AF), use the notebooks directly &mdash; they install de
 | `xrdcp_throughput.ipynb` | Distributed `xrdcp` via `warm_xcache` under `MetricsCollector` and dask profiling, prints wall-clock and per-worker throughput |
 | `full_run_histserv.ipynb` | Standard workflow with histograms filled via HaaS (histserv) instead of reduce-aggregate |
 | `full_run_haas_or_not.ipynb` | Runs `HistServProcessor` and `HistLocalProcessor` back-to-back and compares metrics plus bin-by-bin histogram outputs |
+| `full_run_big_hist_local_vs_histserv.ipynb` | Same HistLocal vs HistServ back-to-back run as `full_run_haas_or_not.ipynb`, but the config is inflated inline to 5 channels x 20 observables x 1000 bins and 50 no-op uncertainty sources (= 100 variation labels) so the per-chunk histogram state is large enough to expose HistServ's memory advantage |
 | `input_inspector.ipynb` | Inspect NanoAOD input files (event counts, branch sizes, compression) |
 | `skim_inspector.ipynb` | Inspect skimmed output files on XRootD or other remote storage |
 
