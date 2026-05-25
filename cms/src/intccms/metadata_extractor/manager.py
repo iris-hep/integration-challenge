@@ -248,6 +248,11 @@ class DatasetMetadataManager:
                 self.fileset,
                 preprocess_config,
                 servicex_deliver_kwargs=self.config.general.servicex.deliver_kwargs,
+                selection_config=(
+                    self.config.baseline_selection
+                    if self.config.general.servicex.apply_baseline_selection
+                    else None
+                ),
             )
         self.fileset_builder.save_fileset(self.fileset)
 

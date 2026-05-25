@@ -128,6 +128,14 @@ class ServicexConfig(SubscriptableModel):
             "(percent-encoded ServiceX S3/HTTP URLs).",
         ),
     ]
+    apply_baseline_selection: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="If True, apply ``baseline_selection`` as a cut inside the ServiceX "
+            "preskim query, filtering events on the transformer workers before delivery.",
+        ),
+    ]
 
 
 class GeneralConfig(SubscriptableModel):
