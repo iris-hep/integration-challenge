@@ -1,0 +1,21 @@
+inputs:
+  files:
+    - ntuple_production/file_metadata.json.gz
+    - ntuple_production/reco.yaml
+    - servicex/skim.py
+    - utils.py
+  parameters:
+    events: 20000
+    data: results/data.root
+    plot: results/plot.png
+workflow:
+  type: serial
+  specification:
+    steps:
+      - name: skim
+        environment: 'docker.io/bengal1/integration-challenge:pixi2'
+        commands:
+         - pixi run python servicex/skim.py
+outputs:
+  files:
+    - results/plot.png
