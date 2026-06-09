@@ -218,3 +218,7 @@ preprocess_output.json
 *png
 # histograms
 hist.json.gz
+# benchmarking results
+output/
+
+.servicex
