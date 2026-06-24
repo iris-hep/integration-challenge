@@ -4,7 +4,7 @@ import numpy as np
 import awkward as ak
 
 
-class MLModel:
+class MLModelEvent:
     def __init__(self):
         self.nn_path = "/data/acordeir/integ-challenge/network.onnx" 
         self.norm_path = "/data/acordeir/integ-challenge/IC-input-norms-final.yaml"
@@ -69,4 +69,87 @@ class MLModel:
         })
 
         prob = 1 / (1 + np.exp(-out[0].item()))
+        return prob
+
+
+class MLModel:
+    """
+    Inferencing utilities for batched dimension ONNX models
+    """
+    def __init__(self):
+        self.nn_path = "./ml_framework/salt-models/logs/event_classifier-3_20260413-T095706/network_batch.onnx"
+        self.norm_path = "/data/acordeir/integ-challenge/IC-input-norms-final.yaml"
+
+        self.ort_model = None
+        self.norm_dict = None
+
+    def load_onnx(self):
+        self.ort_model = ort.InferenceSession(self.nn_path)
+        
+    def load_norms(self):
+        with open(self.norm_path) as f:
+            self.norm_dict = yaml.safe_load(f)
+            
+    def prep_features(self, events):
+        norm = self.norm_dict
+    
+        max_jets = int(ak.max(ak.num(events.jet.pt)))
+        max_els  = int(ak.max(ak.num(events.el.pt)))
+    
+        jet_arr = ak.zip([
+            (events.jet.pt  - norm["jet"]["pt"]["mean"])  / norm["jet"]["pt"]["std"],
+            (events.jet.eta - norm["jet"]["eta"]["mean"]) / norm["jet"]["eta"]["std"],
+            (events.jet.phi - norm["jet"]["phi"]["mean"]) / norm["jet"]["phi"]["std"],
+            (events.jet.GN2v01_FixedCutBEff_77_select - norm["jet"]["btag"]["mean"])
+                / norm["jet"]["btag"]["std"],
+        ])
+    
+        el_arr = ak.zip([
+            (events.el.pt  - norm["el"]["pt"]["mean"])  / norm["el"]["pt"]["std"],
+            (events.el.eta - norm["el"]["eta"]["mean"]) / norm["el"]["eta"]["std"],
+            (events.el.phi - norm["el"]["phi"]["mean"]) / norm["el"]["phi"]["std"],
+        ])
+
+
+        jet_arr = ak.pad_none(jet_arr, max_jets)
+        el_arr = ak.pad_none(el_arr, max_els)
+    
+        jet_mask = ak.is_none(jet_arr, axis = 1)
+        el_mask = ak.is_none(el_arr, axis = 1)
+        
+        jet_arr = ak.fill_none(
+            jet_arr,
+            (0.0, 0.0, 0.0, 0.0),
+        )
+    
+        el_arr = ak.fill_none(
+            el_arr,
+            (0.0, 0.0, 0.0),
+        )
+
+        jet_features = np.array(ak.to_list(jet_arr), dtype=np.float32)
+        el_features = np.array(ak.to_list(el_arr), dtype=np.float32)
+        
+        jet_mask = np.array(ak.to_list(jet_mask), dtype=bool)
+        el_mask = np.array(ak.to_list(el_mask), dtype=bool)
+    
+        return jet_features, jet_mask, el_features, el_mask
+    
+    def run_inference(self, events):
+        if self.ort_model is None:
+            raise ValueError("ONNX model not loaded")
+
+        jet_features, jet_mask, el_features, el_mask = self.prep_features(events)
+
+        out = self.ort_model.run(  
+            None,
+            {
+                "jet_features": jet_features,
+                "jet_features_mask": jet_mask,
+                "el_features": el_features,
+                "el_features_mask": el_mask,
+            }
+        )
+
+        prob = 1 / (1 + np.exp(-out[0]))
         return prob
