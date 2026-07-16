@@ -77,7 +77,7 @@ class MLModel:
     Inferencing utilities for batched dimension ONNX models
     """
     def __init__(self):
-        self.nn_path = "./ml_framework/salt-models/logs/event_classifier-3_20260413-T095706/network_batch.onnx"
+        self.nn_path = "/data/acordeir/integ-challenge/network_batch.onnx"
         self.norm_path = "/data/acordeir/integ-challenge/IC-input-norms-final.yaml"
 
         self.ort_model = None
