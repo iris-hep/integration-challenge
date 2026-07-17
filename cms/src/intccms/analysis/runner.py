@@ -1,23 +1,25 @@
 """High-level orchestration for processor-based workflow.
 
-This module provides a clean entry point for running the UnifiedProcessor
+This module provides a clean entry point for running implemented coffea processors
 workflow, handling both the full processor execution and the histogram loading
 path (for iterating on statistical models without re-processing).
 """
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 from lzma import LZMAError
+from cramjam import DecompressionError
+from collections import defaultdict
 
 from coffea.nanoevents import NanoAODSchema
-from coffea.processor import Runner
+from coffea.nanoevents.trace import trace
+from coffea.processor import Runner, ProcessorABC
 from coffea.processor.executor import WorkItem
 from coffea.processor.executor import UprootMissTreeError
 from uproot import DeserializationError
 
-
-from intccms.analysis.processor import UnifiedProcessor
+from intccms.analysis.processors import SkimAndAnalyseProcessor
 from intccms.skimming import FilesetManager
 from intccms.utils.filters import filter_by_process
 from intccms.utils.output import (
@@ -29,20 +31,30 @@ from intccms.schema import Config
 logger = logging.getLogger(__name__)
 
 
+DEFAULT_PROCESS_SKIPBADFILES: Tuple[Type[BaseException], ...] = (
+    OSError, LZMAError, UprootMissTreeError, DeserializationError, DecompressionError, AssertionError,
+)
+
+
 def run_processor_workflow(
     config: Config,
     output_manager: OutputDirectoryManager,
     metadata_lookup: Dict[str, Dict[str, Any]],
+    processor: Optional[ProcessorABC] = None,
     workitems: Optional[List[WorkItem]] = None,
     executor: Any = None,
     schema: Any = NanoAODSchema,
-    chunksize: Optional[int] = None,
+    chunksize: int = 500_000,
+    preload: bool = False,
+    post: Optional[Callable] = None,
+    skipbadfiles: Union[bool, Tuple[Type[BaseException], ...]] = DEFAULT_PROCESS_SKIPBADFILES,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """Execute processor workflow or load saved histograms.
 
     This function provides a unified entry point for the processor-based workflow.
-    When run_processor=True, it runs the UnifiedProcessor over data and saves
-    histograms. When run_processor=False, it loads previously saved histograms,
+    When run_processor=True, it runs a user-passed processor over data. If user
+    does not provide a processor, the SkimAndAnalyseProcessor will be used. 
+    When run_processor=False, it loads previously saved histograms,
     enabling fast iteration on statistical models without re-processing events.
 
     Metrics collection should be handled externally using roastcoffea's
@@ -57,15 +69,31 @@ def run_processor_workflow(
     metadata_lookup : Dict[str, Dict[str, Any]]
         Pre-built metadata lookup from DatasetMetadataManager.build_metadata_lookup()
         Maps dataset_key -> {process, variation, xsec, nevts, is_data, dataset}
-    workitems : List[WorkItem]
+    processor: Optional[ProcessorABC]:
+        An instantised coffea processor to be used in the runner exeutor workflows.
+        If not provided, SkimAndAnalyseProcessor is used.
+    workitems :  Optional[List[WorkItem]]
         Pre-generated work items from DatasetMetadataManager.workitems
     executor : Any
         Coffea executor (DaskExecutor, FuturesExecutor, etc.)
         User controls which executor to use
     schema : Any, optional
         NanoAOD schema for coffea, by default NanoAODSchema
-    chunksize : int, optional
-        Number of events per chunk, by default None (uses config value or 100k)
+    chunksize : int
+        Events per chunk for Runner.preprocess. Only applies to the fileset /
+        skimming-input path if used here; ignored when workitems are provided (default).
+        Default 500_000.
+    preload : bool, optional
+        If True, pass coffea's ``trace`` function to the Runner so it
+        preloads only the branches the processor accesses. Default False.
+    post: Callable, optional
+        If not None, this is a post-processing function that runs over the output from
+        the coffea processor. The function must accept the processor and its output (in order)
+        and return and updated output dictionary/accumlator.
+    skipbadfiles : bool or tuple of exception types, optional
+        Forwarded to coffea's Runner. Defaults to DEFAULT_PROCESS_SKIPBADFILES.
+        Pass False to hard-fail on any bad file, True for coffea's built-in
+        OSError-only behavior, or a custom tuple of exception types.
 
     Returns
     -------
@@ -159,34 +187,37 @@ def run_processor_workflow(
                     logger.warning("No workitems remain after process filtering")
                     return {"histograms": {}, "processed_events": 0, "skimmed_events": 0}
 
-        # Initialize UnifiedProcessor
-        unified_processor = UnifiedProcessor(
-            config=config,
-            output_manager=output_manager,
-            metadata_lookup=metadata_lookup,
-        )
-
-        # Determine chunksize
-        if chunksize is None:
-            if hasattr(config, 'preprocess') and hasattr(config.preprocess, 'skimming'):
-                chunksize = config.preprocess.skimming.chunk_size
-            else:
-                chunksize = 100_000
+        # Initialize processor
+        if not processor:
+            processor = SkimAndAnalyseProcessor(
+                config=config,
+                output_manager=output_manager,
+                metadata_lookup=metadata_lookup,
+            )
 
         runner_kwargs = {}
         if config.general.use_skimmed_input:
             skim_format = config.preprocess.skimming.output.format
             runner_kwargs["format"] = "parquet" if skim_format == "parquet" else "root"
-            
+
+        # chunksize only matters when Runner.preprocess builds chunks itself.
+        if use_fileset:
+            runner_kwargs["chunksize"] = chunksize
+
         # Create coffea Runner
         runner = Runner(
             executor=executor,
             schema=schema,
-            chunksize=chunksize,
             savemetrics=True,
-            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, DeserializationError),
+            skipbadfiles=skipbadfiles,
             **runner_kwargs,
         )
+
+        uopts: Dict[str, Any] = {}
+        if config.general.servicex.use_s3:
+            uopts["encoded"] = True
+
+        run_kwargs = {"trace": trace} if preload else {}
 
         # Run processor over fileset or workitems
         if use_fileset:
@@ -196,23 +227,36 @@ def run_processor_workflow(
             for dataset_name, dataset_info in fileset.items():
                 files = dataset_info["files"]
                 treename = dataset_info["metadata"].get("treename", "Events")
-                coffea_fileset[dataset_name] = {"files": files, "treename": treename} 
+                coffea_fileset[dataset_name] = {"files": files, "treename": treename}
 
             output, report = runner(
                 coffea_fileset,
                 treename="Events",  # Will be overridden by fileset structure
-                processor_instance=unified_processor,
+                processor_instance=processor,
+                uproot_options=uopts,
+                **run_kwargs,
             )
         else:
-            logger.info(f"Processing {len(workitems)} work items with chunksize={chunksize}")
+            logger.info(f"Processing {len(workitems)} work items")
             output, report = runner(
                 workitems,
-                processor_instance=unified_processor,
+                processor_instance=processor,
+                uproot_options=uopts,
+                **run_kwargs,
             )
 
+        if post is not None:
+            try:
+                output = post(processor, output)
+            except Exception as e:
+                logger.warning("Could not run post processing function. Ensure the signature is:" \
+                              "def post(processor: coffea.processor.ProcessorABC, accumlator: dict) -> dict"
+                             )
+                raise e
+            
         logger.info(
             f"Processor complete: {output.get('processed_events', 0):,} events processed, "
-            f"{output.get('skimmed_events', 0):,} events after skim"
+            f"{output.get('skimmed_events', -1):,} events after skim"
         )
 
         return output, report

@@ -10,6 +10,7 @@ import os
 import sys
 import threading
 from contextlib import contextmanager
+from datetime import datetime
 import cloudpickle
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -80,6 +81,43 @@ class _AWSEnvPlugin(WorkerPlugin):
             _os.environ["AWS_SECRET_ACCESS_KEY"] = self._secret
 
 
+class _ProfileIntervalPlugin(WorkerPlugin):
+    """WorkerPlugin that resets worker profile sampling intervals.
+
+    The coffeacasa-gateway facility ships workers with the dask profile
+    sampling intervals set to ``1d`` / ``2d``, which means
+    ``client.profile()`` returns empty data. This plugin replaces the
+    worker's ``profile`` and ``profile-cycle`` PeriodicCallbacks with
+    the dask defaults (10 ms sampling, 1 s cycle) so profile data is
+    actually collected.
+    """
+
+    def __init__(self, interval_ms: int = 10, cycle_ms: int = 1000):
+        self._interval_ms = interval_ms
+        self._cycle_ms = cycle_ms
+
+    def setup(self, worker):
+        from tornado.ioloop import PeriodicCallback
+
+        # Stop the worker's existing profile PeriodicCallbacks, which
+        # the gateway started with the 1d/2d intervals at worker init.
+        for name in ("profile", "profile-cycle"):
+            cb = worker.periodic_callbacks.get(name)
+            if cb is not None:
+                cb.stop()
+        # Build replacements at the dask defaults: trigger_profile fires
+        # every interval_ms to grab call stacks from active threads, and
+        # cycle_profile fires every cycle_ms to flush the recent buffer
+        # into the time-indexed history that client.profile() queries.
+        pc1 = PeriodicCallback(worker.trigger_profile, self._interval_ms)
+        pc2 = PeriodicCallback(worker.cycle_profile, self._cycle_ms)
+        worker.periodic_callbacks["profile"] = pc1
+        worker.periodic_callbacks["profile-cycle"] = pc2
+        # PeriodicCallback.start() must be invoked on the IOLoop thread.
+        worker.loop.add_callback(pc1.start)
+        worker.loop.add_callback(pc2.start)
+
+
 def live_prints(client: Client, interval: float = 1.0) -> threading.Event:
     """Poll worker print events and display them on the client side.
 
@@ -116,6 +154,8 @@ def acquire_client(
     close_after: bool = False,
     pip_packages: Optional[List[str]] = None,
     propagate_aws_env: bool = False,
+    profile_output_dir: Optional[str] = None,
+    profile_suffix: Optional[str] = None,
 ) -> Tuple[Client, Optional[object]]:
     """Context manager to acquire a Dask client for a given analysis facility.
 
@@ -124,7 +164,7 @@ def acquire_client(
     - ``"coffeacasa-condor"``: Direct connection to ``tls://localhost:8786``.
     - ``"coffeacasa-gateway"``: Connects via ``dask_gateway.Gateway()`` with
       X509 proxy setup and access token upload.
-    - ``"purdue-af"``: Connects via ``dask_gateway.Gateway()`` with minimal
+    - ``"purdue-af-k8s"` and ``"purdue-af-slurm"``: Connects via ``dask_gateway.Gateway()`` with minimal
       setup.
 
     :class:`PrintForwarder` is always registered. ``client.forward_logging()``
@@ -141,6 +181,10 @@ def acquire_client(
         propagate_aws_env: If True, capture ``AWS_ACCESS_KEY_ID`` and
             ``AWS_SECRET_ACCESS_KEY`` from the client environment and set
             them on all workers.
+        profile_output_dir: If set, save the Dask worker profile as an
+            HTML file in this directory when the context exits.
+        profile_suffix: Optional suffix appended to the profile filename
+            (e.g., ``"baseschema"`` → ``dask_profile_baseschema.html``).
 
     Yields:
         Tuple of ``(client, cluster)`` where *cluster* is ``None`` for
@@ -160,6 +204,7 @@ def acquire_client(
                     Path(dask_worker.local_directory) / "access_token"
                 )
                 os.environ["BEARER_TOKEN_FILE"] = config_path
+                os.environ['MPLCONFIGDIR'] = '/tmp/matplotlib'
                 os.chmod(config_path, 0o600)
                 os.chmod("/etc/grid-security/certificates", 0o755)
                 config_path2 = str(
@@ -179,10 +224,22 @@ def acquire_client(
             client.upload_file("/tmp/x509up_u6440")
             client.register_worker_callbacks(setup=_set_gateway_env)
 
-        elif af == "purdue-af":
+        elif "purdue-af" in af:
             from dask_gateway import Gateway
 
-            gateway = Gateway()
+            if af == "purdue-af-k8s":
+                gateway = Gateway()
+            elif af == "purdue-af-slurm":
+                gateway = Gateway(
+                    "http://dask-gateway-k8s-slurm.geddes.rcac.purdue.edu/",
+                    proxy_address="api-dask-gateway-k8s-slurm.cms.geddes.rcac.purdue.edu:8000",
+                )
+            else:
+                raise NotImplementedError(
+                    f"Analysis facility '{af}' is not supported. "
+                    f"Supported Purdue AF options: purdue-af-k8s, purdue-af-slurm"
+                )
+
             clusters = gateway.list_clusters()
             cluster = gateway.connect(clusters[0].name)
             client = cluster.get_client()
@@ -193,7 +250,7 @@ def acquire_client(
         else:
             raise NotImplementedError(
                 f"Analysis facility '{af}' is not supported. "
-                f"Supported: coffeacasa-condor, coffeacasa-gateway, purdue-af"
+                f"Supported: coffeacasa-condor, coffeacasa-gateway, purdue-af-k8s, purdue-af-slurm"
             )
 
         # Propagate AWS credentials to workers
@@ -208,9 +265,14 @@ def acquire_client(
         # Register PrintForwarder on all AFs
         client.register_plugin(PrintForwarder())
 
+        # On coffeacasa-gateway, override the worker profile sampling
+        # intervals (the facility default of 1d/2d disables sampling).
+        if af == "coffeacasa-gateway":
+            client.register_plugin(_ProfileIntervalPlugin())
+
         # Install pip packages if requested
         if pip_packages:
-            _is_gateway = af in ("coffeacasa-gateway", "purdue-af")
+            _is_gateway = af in ("coffeacasa-gateway", "purdue-af-k8s", "purdue-af-slurm")
             _has_git = any("git" in pkg for pkg in pip_packages)
             if _is_gateway and _has_git:
                 raise ValueError(
@@ -231,6 +293,14 @@ def acquire_client(
         yield client, cluster
 
     finally:
+        if profile_output_dir is not None and client is not None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            suffix = f"_{profile_suffix}" if profile_suffix else ""
+            profile_dir = Path(profile_output_dir) / timestamp
+            profile_dir.mkdir(parents=True, exist_ok=True)
+            profile_path = profile_dir / f"dask_profile{suffix}.html"
+            client.profile(filename=str(profile_path))
+            logger.info("Saved Dask profile to %s", profile_path)
         if close_after and client is not None:
             client.close()
             logger.info("Client closed")

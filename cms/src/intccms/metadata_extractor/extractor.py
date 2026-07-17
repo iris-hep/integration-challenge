@@ -5,13 +5,14 @@ to extract WorkItems from ROOT files.
 """
 
 import logging
-from typing import Any, Dict, List
-from lzma import LZMAError
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from coffea.processor.executor import WorkItem
-from coffea.processor.executor import UprootMissTreeError
 from coffea import processor
 from coffea.nanoevents import NanoAODSchema
+
+from intccms.metadata_extractor.manager import DEFAULT_PREPROCESS_SKIPBADFILES
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,13 @@ class CoffeaMetadataExtractor:
         The coffea processor runner configured for preprocessing
     """
 
-    def __init__(self, executor: Any = None, schema: Any = None, chunksize: int = 100_000):
+    def __init__(
+        self,
+        executor: Any = None,
+        schema: Any = None,
+        chunksize: int = 500_000,
+        skipbadfiles: Union[bool, Tuple[Type[BaseException], ...]] = DEFAULT_PREPROCESS_SKIPBADFILES,
+    ):
         """
         Initialize CoffeaMetadataExtractor with configurable executor.
 
@@ -42,7 +49,11 @@ class CoffeaMetadataExtractor:
             Schema for parsing ROOT files (e.g., NanoAODSchema).
             If None, uses NanoAODSchema by default.
         chunksize : int, optional
-            Number of events per chunk for WorkItem splitting, default 100_000
+            Number of events per chunk for WorkItem splitting, default 500_000
+        skipbadfiles : bool or tuple of exception types, optional
+            Forwarded to coffea's Runner. Defaults to DEFAULT_PREPROCESS_SKIPBADFILES.
+            Pass False to hard-fail on any bad file, True for coffea's built-in
+            OSError-only behavior, or a custom tuple of exception types.
         """
 
 
@@ -58,7 +69,7 @@ class CoffeaMetadataExtractor:
             schema=schema,
             savemetrics=True,
             chunksize=chunksize,
-            skipbadfiles=(OSError, LZMAError, UprootMissTreeError, Exception),
+            skipbadfiles=skipbadfiles,
         )
 
         logger.debug(
@@ -66,7 +77,11 @@ class CoffeaMetadataExtractor:
             f"and chunksize={chunksize}"
         )
 
-    def extract_metadata(self, fileset: Dict[str, Dict[str, str]]) -> List[WorkItem]:
+    def extract_metadata(
+        self,
+        fileset: Dict[str, Dict[str, str]],
+        uproot_options: Optional[Dict[str, Any]] = None,
+    ) -> List[WorkItem]:
         """
         Extract WorkItems from fileset using coffea preprocessing.
 
@@ -79,6 +94,9 @@ class CoffeaMetadataExtractor:
         ----------
         fileset : Dict[str, Dict[str, str]]
             Coffea-compatible fileset mapping dataset keys to file paths and tree names.
+        uproot_options : dict, optional
+            Passed to coffea ``Runner.preprocess`` (``uproot.open`` options). Support for
+            forwarding these options requires **coffea v2026.4.0 or later**.
 
         Returns
         -------
@@ -90,10 +108,16 @@ class CoffeaMetadataExtractor:
         Exception
             If coffea preprocessing fails
         """
-        logger.info("Extracting metadata using coffea.dataset_tools.preprocess")
+        logger.info(
+            "Extracting metadata using coffea Runner.preprocess "
+            f"(chunksize={self.runner.chunksize})"
+        )
         try:
             # Run the coffea preprocess function on the provided fileset
-            workitems = self.runner.preprocess(fileset)
+            workitems = self.runner.preprocess(
+                fileset,
+                uproot_options=uproot_options,
+            )
             # Convert the generator returned by preprocess to a list of WorkItems
             workitems_list = list(workitems)
             logger.info(f"Extracted {len(workitems_list)} WorkItems from {len(fileset)} datasets")

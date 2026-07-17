@@ -8,12 +8,20 @@ and core functions.
 import json
 import logging
 import sys
+from lzma import LZMAError
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TypedDict, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, TypedDict, Union
 
+from cramjam import DecompressionError
 from rich.pretty import pretty_repr
-from coffea.processor.executor import WorkItem
+from coffea.processor.executor import WorkItem, UprootMissTreeError
 from coffea.nanoevents import NanoAODSchema
+from uproot import DeserializationError
+
+
+DEFAULT_PREPROCESS_SKIPBADFILES: Tuple[Type[BaseException], ...] = (
+    OSError, LZMAError, UprootMissTreeError, DeserializationError, DecompressionError,
+)
 
 
 from intccms.datasets import DatasetManager, Dataset
@@ -30,6 +38,7 @@ from intccms.metadata_extractor.io import (
     serialize_workitems,
     deserialize_workitems,
 )
+from intccms.metadata_extractor.servicex_preskim import ServiceXMetadataSkimmer
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +95,7 @@ class DatasetMetadataManager:
         dataset_manager: DatasetManager,
         output_manager: Any,
         config: Optional[Any] = None,
+        chunksize=500_000,
     ):
         """
         Initialize DatasetMetadataManager.
@@ -104,20 +114,15 @@ class DatasetMetadataManager:
         self.output_manager = output_manager
         self.output_directory = self.output_manager.metadata_dir
         self.config = config
+        self.chunksize=chunksize
 
         # Extract config-derived attributes
         if config:
             self.generate_metadata = config.general.run_metadata_generation
             self.processes_filter = getattr(config.general, 'processes', None)
-            # Extract chunksize from config
-            if hasattr(config, 'preprocess') and hasattr(config.preprocess, 'skimming'):
-                self.chunksize = config.preprocess.skimming.chunk_size
-            else:
-                self.chunksize = 100_000
         else:
             self.generate_metadata = True
             self.processes_filter = None
-            self.chunksize = 100_000
 
         # Initialize fileset builder (doesn't need executor)
         self.fileset_builder = FilesetBuilder(dataset_manager, output_manager)
@@ -151,6 +156,7 @@ class DatasetMetadataManager:
         executor: Any = None,
         schema: Any = None,
         identifiers: Optional[Union[int, List[int]]] = None,
+        skipbadfiles: Union[bool, Tuple[Type[BaseException], ...]] = DEFAULT_PREPROCESS_SKIPBADFILES,
     ) -> None:
         """
         Generate or load metadata based on config settings.
@@ -167,6 +173,9 @@ class DatasetMetadataManager:
             Schema for parsing ROOT files. Defaults to NanoAODSchema.
         identifiers : int or list of ints, optional
             Specific listing file IDs to process. Only used when generating metadata.
+        skipbadfiles : bool or tuple of exception types, optional
+            Forwarded to CoffeaMetadataExtractor and coffea's Runner. Defaults to
+            DEFAULT_PREPROCESS_SKIPBADFILES.
 
         Raises
         ------
@@ -181,7 +190,7 @@ class DatasetMetadataManager:
                     "executor is required when run_metadata_generation=True. "
                     "Pass a DaskExecutor or FuturesExecutor."
                 )
-            self._generate_metadata(executor, schema, identifiers)
+            self._generate_metadata(executor, schema, identifiers, skipbadfiles)
         else:
             self._load_existing_metadata()
 
@@ -190,6 +199,7 @@ class DatasetMetadataManager:
         executor: Any,
         schema: Any,
         identifiers: Optional[Union[int, List[int]]],
+        skipbadfiles: Union[bool, Tuple[Type[BaseException], ...]] = DEFAULT_PREPROCESS_SKIPBADFILES,
     ) -> None:
         """
         Generate metadata workflow.
@@ -202,22 +212,52 @@ class DatasetMetadataManager:
             Schema for parsing ROOT files. If None, uses NanoAODSchema.
         identifiers : int or list of ints, optional
             Listing file IDs to process
+        skipbadfiles : bool or tuple of exception types, optional
+            Forwarded to CoffeaMetadataExtractor. Defaults to
+            DEFAULT_PREPROCESS_SKIPBADFILES.
         """
         logger.info("Starting metadata generation workflow...")
 
         # Create extractor on-demand with provided executor
         if schema is None:
             schema = NanoAODSchema
-        metadata_extractor = CoffeaMetadataExtractor(executor, schema, self.chunksize)
+        metadata_extractor = CoffeaMetadataExtractor(
+            executor, schema, self.chunksize, skipbadfiles=skipbadfiles,
+        )
 
         # Step 1: Build and save fileset and Dataset objects
+        file_listing: Optional[Dict[str, List[str]]] = None
+        if self.config and self.config.general.fileset_path:
+            file_listing = load_json(Path(self.config.general.fileset_path))
+            logger.info(
+                f"Loaded file_listing from {self.config.general.fileset_path} "
+                f"with {len(file_listing)} dataset_keys"
+            )
         self.fileset, self.datasets = self.fileset_builder.build_fileset(
-            identifiers, self.processes_filter
+            identifiers, self.processes_filter, file_listing=file_listing,
         )
+        if self.config and self.config.general.servicex.enable_preskim:
+            preprocess_config = getattr(self.config, "preprocess", None)
+            if preprocess_config is None:
+                raise ValueError(
+                    "general.servicex.enable_preskim=True requires config.preprocess "
+                    "(preprocess_config with branches and mc_branches for ServiceX "
+                    "filter_name)."
+                )
+            self.fileset = ServiceXMetadataSkimmer().run(
+                self.fileset,
+                preprocess_config,
+                servicex_deliver_kwargs=self.config.general.servicex.deliver_kwargs,
+            )
         self.fileset_builder.save_fileset(self.fileset)
 
         # Step 2: Extract and save WorkItem metadata
-        self.workitems = metadata_extractor.extract_metadata(self.fileset)
+        uproot_opts: Dict[str, Any] = {}
+        if self.config and self.config.general.servicex.use_s3:
+            uproot_opts["encoded"] = True
+        self.workitems = metadata_extractor.extract_metadata(
+            self.fileset, uproot_options=uproot_opts
+        )
         self._save_workitems()
 
         # Step 3: Aggregate event counts and save summary

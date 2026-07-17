@@ -1,8 +1,8 @@
 """I/O operations for metadata extraction.
 
-This module handles all file system operations including reading file listings,
-saving/loading JSON metadata, and WorkItem serialization. All functions in this
-module interact with the file system.
+This module handles file system operations for JSON metadata save/load and
+WorkItem serialization. All functions in this module interact with the file
+system.
 """
 
 import base64
@@ -16,71 +16,6 @@ from typing import Any, Dict, List, Union
 from coffea.processor.executor import WorkItem
 
 logger = logging.getLogger(__name__)
-
-
-def collect_file_paths(
-    directory: Union[str, Path],
-    identifiers: int | List[int] | None = None,
-    redirector: str | None = None,
-) -> List[str]:
-    """
-    Read ROOT file paths from .txt listing files.
-
-    Reads .txt files where each line contains one ROOT file path. This approach
-    separates file lists from code, enabling version control and easy updates.
-    The `identifiers` parameter allows processing subsets for testing.
-    The `redirector` parameter prepends protocol prefixes for remote access.
-
-    Parameters
-    ----------
-    directory : str or Path
-        Directory containing .txt listing files
-    identifiers : int or list of ints, optional
-        Process only specific listing files by ID (e.g., [0, 1] reads 0.txt, 1.txt).
-        If None, reads all .txt files in directory.
-    redirector : str, optional
-        URL prefix to prepend to paths (e.g., "root://xrootd.server.com//").
-        If None, paths used as-is.
-
-    Returns
-    -------
-    List[str]
-        ROOT file paths with optional redirector prefix applied.
-
-    Raises
-    ------
-    FileNotFoundError
-        If directory contains no .txt files or specified identifier file missing.
-    """
-    dir_path = Path(directory)
-
-    # Determine which text files to parse
-    if identifiers is None:
-        listing_files = list(dir_path.glob("*.txt"))
-    else:
-        ids = [identifiers] if isinstance(identifiers, int) else identifiers
-        listing_files = [dir_path / f"{i}.txt" for i in ids]
-
-    # Raise error if no listing files are found
-    if not listing_files:
-        raise FileNotFoundError(f"No listing files found in {dir_path}")
-
-    root_paths: List[str] = []
-
-    # Iterate through each listing file
-    for txt_file in listing_files:
-        if not txt_file.is_file():
-            raise FileNotFoundError(f"Missing listing file: {txt_file}")
-
-        # Read each non-empty line as a file path
-        for line in txt_file.read_text().splitlines():
-            path_str = line.strip()
-            if path_str:
-                if redirector:
-                    path_str = f"{redirector}{path_str}"
-                root_paths.append(path_str)
-
-    return root_paths
 
 
 def save_json(data: Dict[str, Any], output_path: Path) -> None:

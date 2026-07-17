@@ -1,19 +1,29 @@
 import logging
 
 from . import base as base
-from . import nondiff as nondiff
+from . import cms as cms
 from .base import Analysis
-from .nondiff import NonDiffAnalysis
-from .processor import UnifiedProcessor
+from .cms import CMSAnalysis
+from .processors import (
+    AnalysisWithExtraBranchesProcessor,
+    HistLocalProcessor,
+    HistServProcessor,
+    SkimAndAnalyseProcessor,
+    TwoHundredGbpsProcessor,
+)
 from .runner import run_processor_workflow
 
 
 __all__ = [
     "base",
-    "nondiff",
+    "cms",
     "Analysis",
-    "NonDiffAnalysis",
-    "UnifiedProcessor",
+    "CMSAnalysis",
+    "SkimAndAnalyseProcessor",
+    "TwoHundredGbpsProcessor",
+    "HistServProcessor",
+    "HistLocalProcessor",
+    "AnalysisWithExtraBranchesProcessor",
     "run_processor_workflow",
 ]
 

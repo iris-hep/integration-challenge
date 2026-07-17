@@ -17,14 +17,13 @@ from typing import (
 import awkward as ak
 import vector
 from coffea.nanoevents import NanoAODSchema
-from correctionlib import Correction, CorrectionSet
+from correctionlib import CorrectionSet
 
 from intccms.schema import GoodObjectMasksConfig, ObjVar, Sys
 from intccms.utils.functors import (
     GhostObservableExecutor,
     MaskExecutor,
     SelectionExecutor,
-    get_function_arguments,
 )
 from intccms.utils.output import OutputDirectoryManager
 
@@ -100,7 +99,14 @@ class Analysis:
         self._year_keyed_corrections = isinstance(self._corrections_config, dict)
         self._year_keyed_systematics = isinstance(self._systematics_config, dict)
 
-        self.corrlib_evaluators = self._load_correctionlib()
+        if config.general.run_corrections:
+            self.corrlib_evaluators = self._load_correctionlib()
+        else:
+            # Clear corrections so downstream loops are no-ops without
+            # touching files. _systematics_config is left untouched —
+            # run_corrections and run_systematics are independent flags.
+            self._corrections_config = {} if self._year_keyed_corrections else []
+            self.corrlib_evaluators = {}
 
     def _load_correctionlib(self) -> Dict[str, CorrectionSet]:
         """
@@ -183,7 +189,11 @@ class Analysis:
             return []
 
         if year not in self._corrections_config:
-            logger.warning(f"Year '{year}' not found in corrections config. Available: {list(self._corrections_config.keys())}")
+            # Only warn if there are other years to suggest — silent when
+            # the dict is empty (e.g. run_corrections=False or no corrections
+            # configured at all), since there's nothing useful to report.
+            if self._corrections_config:
+                logger.warning(f"Year '{year}' not found in corrections config. Available: {list(self._corrections_config.keys())}")
             return []
 
         return self._corrections_config[year]
@@ -211,7 +221,10 @@ class Analysis:
             return []
 
         if year not in self._systematics_config:
-            logger.warning(f"Year '{year}' not found in systematics config. Available: {list(self._systematics_config.keys())}")
+            # Only warn if there are other years to suggest — silent when
+            # the dict is empty, since there's nothing useful to report.
+            if self._systematics_config:
+                logger.warning(f"Year '{year}' not found in systematics config. Available: {list(self._systematics_config.keys())}")
             return []
 
         return self._systematics_config[year]
