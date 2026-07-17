@@ -32,4 +32,4 @@ servicex-analysis-utils = ">=1.2.2,<2"
 func_adl_servicex_xaodr25 = ">=2.4.5.25.2.41,<3"
 
 [pypi-dependencies]
-salt-ml = { git = "https://gitlab.cern.ch/alfroch/salt.git", branch = "add-batched-export" }
+salt-ml = { git = "https://gitlab.cern.ch/aft/algorithms/salt.git", branch = "main" }
