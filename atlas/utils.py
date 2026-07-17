@@ -120,10 +120,8 @@ def plot_worker_count(
     datarates: Optional[list[float]],
 ):
     """plot worker count over time and data rate samples in Gbps"""
-    fig, ax1 = plt.subplots()
-    ax1.plot(
-        worker_count_dict.keys(), worker_count_dict.values(), linewidth=2, color="C0"
-    )
+    fig, ax1 = plt.subplots(constrained_layout=True)
+    ax1.plot(worker_count_dict.keys(), worker_count_dict.values(), linewidth=2, color="C0")
     ax1.set_title("worker count and data rate over time")
     ax1.set_xlabel("time")
     ax1.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
@@ -208,6 +206,11 @@ def dsid_rtag_campaign(name: str) -> tuple[str, str, str]:
         campaign = None
 
     return dsid, rtag, campaign
+
+def hplus_signal_mass(name: str) -> str:
+    """get the mass from these signal samples"""
+    m = re.search(r'(?i)mhc(\d+)(?=\.)', name)  # case-insensitive, stop at the dot
+    return str(m.group(1)+"GeV") if m else None
 
 
 def integrated_luminosity(campaign: str, total=False) -> float:
@@ -333,12 +336,7 @@ def check_for_ntuples(dataset_info):
 ### fileset handling
 ##################################################
 
-
-def get_fileset(
-    campaign_filter: list | None = None,
-    dsid_filter: list | None = None,
-    max_files_per_sample: int | None = None,
-):
+def get_fileset(campaign_filter: list | None = None, dsid_filter: list | None = None, max_files_per_sample: int | None = None, version: str = "v2"):
     """prepare fileset, with possibility to only include subset of input files"""
     # load metadata from file
     fname = f"ntuple_production/file_metadata_{version}.json.gz"
@@ -521,35 +519,43 @@ def custom_process(
 
     def run_analysis(wi: coffea.processor.executor.WorkItem):
         """workload to be distributed"""
-
-        t0 = time.time()
-        analysis_instance = processor_class()
-        array_cache = {}
-        f = uproot.open(wi.filename, array_cache=array_cache)
-        events = coffea.nanoevents.NanoEventsFactory.from_root(
-            f,
-            treepath=wi.treename,
-            mode="virtual",
-            access_log=(access_log := []),
-            preload=lambda b: b.name in preload,
-            schemaclass=schema,
-            entry_start=wi.entrystart,
-            entry_stop=wi.entrystop,
-        ).events()
-        events.metadata.update(wi.usermeta)
-        out = analysis_instance.process(events)
-        bytesread = f.file.source.num_requested_bytes
-        t1 = time.time()
-        report = {
-            "bytesread": bytesread,
-            "entries": wi.entrystop - wi.entrystart,
-            "processtime": t1 - t0,
-            "chunks": 1,
-            "columns": access_log,
-            "chunk_info": {
-                (wi.filename, wi.entrystart, wi.entrystop): (t0, t1, bytesread)
-            },
-        }
+        try:
+            t0 = time.time()
+            analysis_instance = processor_class()
+            array_cache = {} if preload is None else None  # only use when not preloading
+            f = uproot.open(wi.filename, array_cache=array_cache)
+            events = coffea.nanoevents.NanoEventsFactory.from_root(
+                f,
+                treepath=wi.treename,
+                mode="virtual",
+                access_log=(access_log := []),
+                preload=lambda b: b.name in preload,
+                schemaclass=schema,
+                entry_start=wi.entrystart,
+                entry_stop=wi.entrystop,
+            ).events()
+            events.metadata.update(wi.usermeta)
+            out = analysis_instance.process(events)
+            bytesread = f.file.source.num_requested_bytes
+            t1 = time.time()
+            report = {
+                "bytesread": bytesread,
+                "entries": wi.entrystop - wi.entrystart,
+                "processtime": t1 - t0,
+                "chunks": 1,
+                "columns": access_log,
+                "chunk_info": {(wi.filename, wi.entrystart, wi.entrystop): (t0, t1, bytesread)},
+            }
+        except Exception as e:
+            out = None
+            report = {
+                "bytesread": 0,
+                "entries": 0,
+                "processtime": 0,
+                "chunks": 1,
+                "columns": access_log,
+                "chunk_info": {(wi.filename, wi.entrystart, wi.entrystop): (0, 0, 0)},
+            }
         return out, report
 
     def sum_output(a, b):
