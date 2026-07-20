@@ -4,7 +4,7 @@ version = "0.0.1"
 description = "IRIS-HEP ATLAS integration challenge"
 authors = ["Alexander Held <alexander.held@cern.ch>"]
 channels = ["conda-forge"]
-platforms = ["osx-arm64", "linux-64"]
+platforms = ["linux-64"]
 
 [tasks.lab]
 description = "Start a JupyterLab instance"
@@ -14,8 +14,15 @@ cmd = "jupyter lab"
 description = "Get started with the repository"
 depends-on = ["lab"]
 
+
+[pypi-dependencies]
+salt-ml = { git = "https://gitlab.cern.ch/aft/algorithms/salt.git", branch = "main" }
+
+
 [dependencies]
 python = "3.11.*" #no torch wheels on cp313
+numpy = ">=2.2.6,<2.4"#for salt-ml
+matplotlib = ">=3.10.6,<3.11" #for salt-mp
 ipykernel = "*"
 notebook = ">=7.5.0,<8"
 jupyterlab = ">=4.5.0,<5"
@@ -31,5 +38,3 @@ servicex = ">=3.2.3,<4"
 servicex-analysis-utils = ">=1.2.2,<2"
 func_adl_servicex_xaodr25 = ">=2.4.5.25.2.41,<3"
 
-[pypi-dependencies]
-salt-ml = { git = "https://gitlab.cern.ch/aft/algorithms/salt.git", branch = "main" }
