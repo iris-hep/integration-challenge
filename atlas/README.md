@@ -23,3 +23,16 @@ pixi run python -m ipykernel install --user \
     --name some-name \
     --display-name "What you see in the notebook"
 ```
+
+### Start Triton server locally
+
+To run a template version of Triton locally (running on the CPU), the following command may be used:
+
+```
+apptainer run \
+    -B triton-models:/models  \
+    /data/milescb/apptainer/triton_sandbox  \
+    tritonserver --model-repository=/models
+```
+
+To ensure everything is working while running inference, try `curl -s localhost:8002/metrics | grep -E "nv_inference_request_success"`
