@@ -17,9 +17,12 @@ class TritonInference:
         self.triton_client = grpcclient.InferenceServerClient(url=self.triton_url)
 
         if not self.triton_client.is_model_ready(self.triton_model):
-            raise RuntimeError(
-                f"model '{self.triton_model}' is not ready on server {self.triton_url}"
-            )
+                try:
+                    self.triton_client.load_model(self.triton_model)
+                except InferenceServerException as e:
+                    raise RuntimeError(
+                        f"Failed to load model '{self.triton_model}': {e}"
+                    ) from e
 
         # take the output names from the server so they stay in sync with config.pbtxt
         metadata = self.triton_client.get_model_metadata(self.triton_model)
@@ -45,15 +48,29 @@ class TritonInference:
         )
         return [response.as_numpy(name) for name in self.triton_outputs]
 
+    def cleanup_triton(self):
+        """Unload the model from the server and close the client connection."""
+        if self.triton_client is None:
+            return
+
+        try:
+            if self.triton_client.is_model_ready(self.triton_model):
+                self.triton_client.unload_model(self.triton_model)
+        except InferenceServerException as e:
+            print(f"warning: failed to unload {self.triton_model}: {e}")
+
+        self.triton_client.close()
+        self.triton_client = None
+
 
 class MLModelEvent(TritonInference):
-    def __init__(self, use_triton=False, triton_url="localhost:8001"):
+    def __init__(self, use_triton=False):
         self.nn_path = "/data/acordeir/integ-challenge/network.onnx"
         self.norm_path = "/data/acordeir/integ-challenge/IC-input-norms-final.yaml"
 
         self.use_triton = use_triton
         self.triton_model = "jet_network"
-        self.triton_url = triton_url
+        self.triton_url = "triton-traefik.triton.svc.cluster.local:8001"
 
         self.ort_model = None
         self.triton_client = None
@@ -136,13 +153,13 @@ class MLModelEvent(TritonInference):
 
 
 class MLModel(TritonInference):
-    def __init__(self, use_triton=False, triton_url="localhost:8001"):
+    def __init__(self, use_triton=False):
         self.nn_path = "/data/acordeir/integ-challenge/network_batch.onnx"
         self.norm_path = "/data/acordeir/integ-challenge/IC-input-norms-final.yaml"
 
         self.use_triton = use_triton
         self.triton_model = "jet_network_batch"
-        self.triton_url = triton_url
+        self.triton_url = "triton-traefik.triton.svc.cluster.local:8001"
 
         self.ort_model = None
         self.triton_client = None
