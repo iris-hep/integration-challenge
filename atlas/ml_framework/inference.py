@@ -1,3 +1,5 @@
+import json
+
 import onnxruntime as ort
 import yaml
 import numpy as np
@@ -5,28 +7,65 @@ import awkward as ak
 
 try:
     import tritonclient.grpc as grpcclient
-    from tritonclient.utils import np_to_triton_dtype
+    from tritonclient.utils import np_to_triton_dtype, InferenceServerException
+    from google.protobuf import json_format
 except ImportError:  # tritonclient is optional, only needed with use_triton=True
     grpcclient = None
     np_to_triton_dtype = None
+    InferenceServerException = None
+    json_format = None
 
 
 class TritonInference:
 
-    def load_triton_client(self):
+    def load_triton_client(self, num_instances=None, kind=None):
+        """Connect to the server and make sure the model is loaded and ready."""
         self.triton_client = grpcclient.InferenceServerClient(url=self.triton_url)
 
+        if not (self.triton_client.is_server_live() and self.triton_client.is_server_ready()):
+            raise RuntimeError(f"Server at {self.triton_url} not live")
+
         if not self.triton_client.is_model_ready(self.triton_model):
-                try:
-                    self.triton_client.load_model(self.triton_model)
-                except InferenceServerException as e:
-                    raise RuntimeError(
-                        f"Failed to load model '{self.triton_model}': {e}"
-                    ) from e
+            self.load_model()
+
+        config_override = self.instance_group_override(num_instances, kind)
+        if config_override is not None:
+            self.load_model(config_override)
 
         # take the output names from the server so they stay in sync with config.pbtxt
         metadata = self.triton_client.get_model_metadata(self.triton_model)
         self.triton_outputs = [out.name for out in metadata.outputs]
+
+    def load_model(self, config=None):
+        try:
+            self.triton_client.load_model(self.triton_model, config=config)
+        except InferenceServerException as e:
+            raise RuntimeError(
+                f"Failed to load model '{self.triton_model}': {e}"
+            ) from e
+
+    def instance_group_override(self, num_instances=None, kind=None):
+        """Build the model config that requests the given instance_group."""
+
+        if num_instances is None and kind is None:
+            return None
+
+        config = self.triton_client.get_model_config(self.triton_model).config
+        config = json_format.MessageToDict(config, preserving_proto_field_name=True)
+
+        group = {}
+        if num_instances is not None:
+            group["count"] = num_instances
+        if kind is not None:
+            group["kind"] = kind
+
+        running = config["instance_group"]
+        if len(running) == 1:
+            if all(running[0].get(key) == value for key, value in group.items()):
+                return None  # already loaded with the requested instance_group
+
+        config["instance_group"] = [group]
+        return json.dumps(config)
 
     def run_triton(self, feed):
         if self.triton_client is None:
@@ -51,7 +90,7 @@ class TritonInference:
     def cleanup_triton(self):
         """Unload the model from the server and close the client connection."""
         if self.triton_client is None:
-            return
+            self.triton_client = grpcclient.InferenceServerClient(url=self.triton_url)
 
         try:
             if self.triton_client.is_model_ready(self.triton_model):
@@ -64,13 +103,15 @@ class TritonInference:
 
 
 class MLModelEvent(TritonInference):
-    def __init__(self, use_triton=False):
+    def __init__(self, use_triton=False, num_instances=None, kind=None):
         self.nn_path = "/data/acordeir/integ-challenge/network.onnx"
         self.norm_path = "/data/acordeir/integ-challenge/IC-input-norms-final.yaml"
 
         self.use_triton = use_triton
         self.triton_model = "jet_network"
         self.triton_url = "triton-traefik.triton.svc.cluster.local:8001"
+        self.num_instances = num_instances
+        self.kind = kind
 
         self.ort_model = None
         self.triton_client = None
@@ -80,7 +121,7 @@ class MLModelEvent(TritonInference):
     def load(self):
         self.load_norms()
         if self.use_triton:
-            self.load_triton_client()
+            self.load_triton_client(self.num_instances, self.kind)
         else:
             self.load_onnx()
 
@@ -153,13 +194,15 @@ class MLModelEvent(TritonInference):
 
 
 class MLModel(TritonInference):
-    def __init__(self, use_triton=False):
+    def __init__(self, use_triton=False, num_instances=None, kind=None):
         self.nn_path = "/data/acordeir/integ-challenge/network_batch.onnx"
         self.norm_path = "/data/acordeir/integ-challenge/IC-input-norms-final.yaml"
 
         self.use_triton = use_triton
         self.triton_model = "jet_network_batch"
         self.triton_url = "triton-traefik.triton.svc.cluster.local:8001"
+        self.num_instances = num_instances
+        self.kind = kind
 
         self.ort_model = None
         self.triton_client = None
@@ -169,7 +212,7 @@ class MLModel(TritonInference):
     def load(self):
         self.load_norms()
         if self.use_triton:
-            self.load_triton_client()
+            self.load_triton_client(self.num_instances, self.kind)
         else:
             self.load_onnx()
 

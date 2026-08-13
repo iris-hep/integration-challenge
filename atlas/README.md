@@ -24,15 +24,10 @@ pixi run python -m ipykernel install --user \
     --display-name "What you see in the notebook"
 ```
 
-### Start Triton server locally
+### Triton Server
 
-To run a template version of Triton locally (running on the CPU), the following command may be used:
+If running inference on the Triton server, this is already installed on the [AF Triton deployment](https://usatlas.github.io/af-docs/uchicago/triton/?h=Triton#4-request-model-activation). The model installed here is called `jet_network_batch` and corresponds directly to the model used in the `onnx` deployment. 
 
-```
-apptainer run \
-    -B triton-models:/models  \
-    /data/milescb/apptainer/triton_sandbox  \
-    tritonserver --model-repository=/models
-```
+Loading the model is done via `MLModel(use_triton=True).load()` which loads the Triton model and prepares it for inference. Inference is run simply with `MLModel(use_triton=True).run(events)`. Once inference is complete, unload the model with `MLModel(use_triton=True).cleanup_triton()`. 
 
-To ensure everything is working while running inference, try `curl -s localhost:8002/metrics | grep -E "nv_inference_request_success"`
+During inference, the Triton server can be monitored via the [AF Grafana instance](https://grafana.af.uchicago.edu/d/02cfc53d-de9b-4c53-84ee-e60b29a0b76e/triton-inference-server?orgId=1&from=now-1h&to=now&timezone=utc&var-datasource=beken5g2xymm8c&var-cluster=af&refresh=10s).
