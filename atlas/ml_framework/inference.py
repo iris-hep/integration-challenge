@@ -1,4 +1,5 @@
 import json
+import os
 
 import onnxruntime as ort
 import yaml
@@ -14,6 +15,21 @@ except ImportError:  # tritonclient is optional, only needed with use_triton=Tru
     np_to_triton_dtype = None
     InferenceServerException = None
     json_format = None
+
+
+def pad_and_stack(fields, max_len):
+    """Pad ragged per-object fields to `max_len` and stack them densely."""
+
+    padded = [ak.pad_none(field, max_len, clip=True) for field in fields]
+
+    # True where the slot is padding rather than a real object
+    mask = ak.to_numpy(ak.is_none(padded[0], axis=1))
+
+    features = np.stack(
+        [ak.to_numpy(ak.fill_none(field, 0.0)) for field in padded], axis=-1
+    ).astype(np.float32, copy=False)
+
+    return features, mask
 
 
 class TritonInference:
@@ -229,42 +245,25 @@ class MLModel(TritonInference):
         max_jets = int(ak.max(ak.num(events.jet.pt)))
         max_els  = int(ak.max(ak.num(events.el.pt)))
 
-        jet_arr = ak.zip([
-            (events.jet.pt  - norm["jet"]["pt"]["mean"])  / norm["jet"]["pt"]["std"],
-            (events.jet.eta - norm["jet"]["eta"]["mean"]) / norm["jet"]["eta"]["std"],
-            (events.jet.phi - norm["jet"]["phi"]["mean"]) / norm["jet"]["phi"]["std"],
-            (events.jet.GN2v01_FixedCutBEff_77_select - norm["jet"]["btag"]["mean"])
+        jets = events.jet
+        els = events.el
+
+        jet_fields = [
+            (jets.pt  - norm["jet"]["pt"]["mean"])  / norm["jet"]["pt"]["std"],
+            (jets.eta - norm["jet"]["eta"]["mean"]) / norm["jet"]["eta"]["std"],
+            (jets.phi - norm["jet"]["phi"]["mean"]) / norm["jet"]["phi"]["std"],
+            (jets.GN2v01_FixedCutBEff_77_select - norm["jet"]["btag"]["mean"])
                 / norm["jet"]["btag"]["std"],
-        ])
+        ]
 
-        el_arr = ak.zip([
-            (events.el.pt  - norm["el"]["pt"]["mean"])  / norm["el"]["pt"]["std"],
-            (events.el.eta - norm["el"]["eta"]["mean"]) / norm["el"]["eta"]["std"],
-            (events.el.phi - norm["el"]["phi"]["mean"]) / norm["el"]["phi"]["std"],
-        ])
+        el_fields = [
+            (els.pt  - norm["el"]["pt"]["mean"])  / norm["el"]["pt"]["std"],
+            (els.eta - norm["el"]["eta"]["mean"]) / norm["el"]["eta"]["std"],
+            (els.phi - norm["el"]["phi"]["mean"]) / norm["el"]["phi"]["std"],
+        ]
 
-
-        jet_arr = ak.pad_none(jet_arr, max_jets)
-        el_arr = ak.pad_none(el_arr, max_els)
-
-        jet_mask = ak.is_none(jet_arr, axis = 1)
-        el_mask = ak.is_none(el_arr, axis = 1)
-
-        jet_arr = ak.fill_none(
-            jet_arr,
-            (0.0, 0.0, 0.0, 0.0),
-        )
-
-        el_arr = ak.fill_none(
-            el_arr,
-            (0.0, 0.0, 0.0),
-        )
-
-        jet_features = np.array(ak.to_list(jet_arr), dtype=np.float32)
-        el_features = np.array(ak.to_list(el_arr), dtype=np.float32)
-
-        jet_mask = np.array(ak.to_list(jet_mask), dtype=bool)
-        el_mask = np.array(ak.to_list(el_mask), dtype=bool)
+        jet_features, jet_mask = pad_and_stack(jet_fields, max_jets)
+        el_features, el_mask = pad_and_stack(el_fields, max_els)
 
         return jet_features, jet_mask, el_features, el_mask
 
