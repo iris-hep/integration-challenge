@@ -355,7 +355,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/matplotlib-inline-0.2.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/mdurl-0.1.2-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/mistune-3.3.4-pyhcf101f3_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/mplhep-0.4.1-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/mplhep-1.2.0-pyhc364b38_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/mplhep_data-0.1.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/munkres-1.1.4-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/narwhals-2.24.0-pyhcf101f3_0.conda
@@ -6174,23 +6174,24 @@ packages:
   run_exports: {}
   size: 93811
   timestamp: 1784722859728
-- conda: https://conda.anaconda.org/conda-forge/noarch/mplhep-0.4.1-pyhd8ed1ab_0.conda
-  sha256: 8cc30255a5eda612db4fa6b7eb998a34432213c7a2b62c06773a88adb26ea4f0
-  md5: 2969d22d9c6ca07d5087ce9fbbb1d39b
+- conda: https://conda.anaconda.org/conda-forge/noarch/mplhep-1.2.0-pyhc364b38_0.conda
+  sha256: ef19c9e25bb018554d91d747b3f93dad38f643a960f4ac1f8d14f776c69a1fba
+  md5: b603bdaa10fa260d1cfb6fb9b4a7aa4c
   depends:
-  - matplotlib-base >=3.4
-  - mplhep_data >=0.0.4
+  - matplotlib-base >=3.10.8
   - numpy >=1.16.0
   - packaging
-  - python >=3.8
+  - python >=3.10
+  - mplhep_data >=0.0.4
   - uhi >=0.2.0
+  - python
   license: MIT
   license_family: MIT
   purls:
   - pkg:pypi/mplhep?source=hash-mapping
   run_exports: {}
-  size: 47103
-  timestamp: 1756231131892
+  size: 85781
+  timestamp: 1778761321429
 - conda: https://conda.anaconda.org/conda-forge/noarch/mplhep_data-0.1.0-pyhd8ed1ab_0.conda
   sha256: 3de3c7a07846480caafc7e00ba7c98257f7af6b966cb7b5a4a269127a522b6c6
   md5: 3709fa339f379337f8f4bd157811babf
