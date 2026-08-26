@@ -132,7 +132,7 @@ def plot_taskstream(ts: dict):
     """simplified version of Dask html report task stream"""
     fig, ax = plt.subplots(constrained_layout=True)
     t0 = min(min(t["start"] for t in ts_["startstops"]) for ts_ in ts)
-    tmax = max(max(t["start"] for t in ts_["startstops"]) for ts_ in ts) - t0
+    tmax = max(max(t["stop"] for t in ts_["startstops"]) for ts_ in ts) - t0
     y_next = 0
     worker_pos = {}
     for task in ts:
@@ -397,33 +397,33 @@ def custom_preprocess(fileset: dict, *, client, chunksize: int = 100_000, custom
 
 
 ##################################################
-### custom processing
+### custom processing with optional histserv
 ##################################################
 
-def custom_process(workitems, processor_class, schema, client, preload: Optional[list] = None):
+def custom_process(workitems, processor_instance, schema, client, preload: Optional[list] = None, use_histserv=False):
     """Dask-based processing similar to coffea, can return more metadata"""
     if preload is None:
         preload = []
 
     def run_analysis(wi: coffea.processor.executor.WorkItem):
         """workload to be distributed"""
+        access_log = []
         try:
             t0 = time.time()
-            analysis_instance = processor_class()
-            array_cache = {} if preload is None else None  # only use when not preloading
+            array_cache = {} if not preload else None  # only use when not preloading
             f = uproot.open(wi.filename, array_cache=array_cache)
             events = coffea.nanoevents.NanoEventsFactory.from_root(
                 f,
                 treepath=wi.treename,
                 mode="virtual",
-                access_log=(access_log := []),
+                access_log=access_log,
                 preload=lambda b: b.name in preload,
                 schemaclass=schema,
                 entry_start=wi.entrystart,
                 entry_stop=wi.entrystop,
             ).events()
-            events.metadata.update(wi.usermeta)
-            out = analysis_instance.process(events)
+            events.metadata.update(wi.usermeta | {"entrystart": wi.entrystart, "entrystop": wi.entrystop, "fileuuid": wi.fileuuid})
+            out = processor_instance.process(events)
             bytesread = f.file.source.num_requested_bytes
             t1 = time.time()
             report = {
@@ -433,6 +433,7 @@ def custom_process(workitems, processor_class, schema, client, preload: Optional
                 "chunks": 1,
                 "columns": access_log,
                 "chunk_info": {(wi.filename, wi.entrystart, wi.entrystop): (t0, t1, bytesread)},
+                "exceptions": ""
             }
         except Exception as e:
             out = None
@@ -443,8 +444,12 @@ def custom_process(workitems, processor_class, schema, client, preload: Optional
                 "chunks": 1,
                 "columns": access_log,
                 "chunk_info": {(wi.filename, wi.entrystart, wi.entrystop): (0, 0, 0)},
+                "exceptions": [e]
             }
-        return out, report
+        if not use_histserv:
+            return out, report
+        else:
+            return report | {"histserv_info": out}
 
     def sum_output(a, b):
         """accumulation function"""
@@ -467,17 +472,25 @@ def custom_process(workitems, processor_class, schema, client, preload: Optional
                 "chunks": a[1]["chunks"] + b[1]["chunks"],
                 "columns": list(set(a[1]["columns"]) | set(b[1]["columns"])),
                 "chunk_info": a[1]["chunk_info"] | b[1]["chunk_info"],
+                "exceptions": a[1]["exceptions"] + b[1]["exceptions"],
             }
         )
 
     workitems_bag = dask.bag.from_sequence(workitems, partition_size=1)
     tasks = workitems_bag.map(run_analysis).to_delayed()
-    futures = client.compute(tasks, rerun_exceptions_locally=True)
-    workitems_bag = dask.bag.from_delayed(futures)
-    res = client.compute(workitems_bag.fold(sum_output), rerun_exceptions_locally=True)
+    futures = client.compute(tasks)
+
+    if not use_histserv:
+        # add tree reduction
+        workitems_bag = dask.bag.from_delayed(futures)
+        res = client.compute(workitems_bag.fold(sum_output))
 
     with tqdm.notebook.tqdm(total=len(futures)) as pbar:
         for _ in dask.distributed.as_completed(futures):
             pbar.update(1)
 
-    return res.result()
+    if not use_histserv:
+        return res.result()
+
+    else:
+        return client.gather(futures)  # more efficient way of .result() on all the futures
