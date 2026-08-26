@@ -431,7 +431,7 @@ def custom_process(workitems, processor_instance, schema, client, preload: Optio
                 "entries": wi.entrystop - wi.entrystart,
                 "processtime": t1 - t0,
                 "chunks": 1,
-                "columns": access_log,
+                "columns": sorted({a.branch for a in access_log}),
                 "chunk_info": {(wi.filename, wi.entrystart, wi.entrystop): (t0, t1, bytesread)},
                 "exceptions": ""
             }
@@ -442,7 +442,7 @@ def custom_process(workitems, processor_instance, schema, client, preload: Optio
                 "entries": 0,
                 "processtime": 0,
                 "chunks": 1,
-                "columns": access_log,
+                "columns": sorted({a.branch for a in access_log}),
                 "chunk_info": {(wi.filename, wi.entrystart, wi.entrystop): (0, 0, 0)},
                 "exceptions": [e]
             }
@@ -470,7 +470,7 @@ def custom_process(workitems, processor_instance, schema, client, preload: Optio
                 "entries": a[1]["entries"] + b[1]["entries"],
                 "processtime": a[1]["processtime"] + b[1]["processtime"],
                 "chunks": a[1]["chunks"] + b[1]["chunks"],
-                "columns": list(set(a[1]["columns"]) | set(b[1]["columns"])),
+                "columns": sorted(list(set(a[1]["columns"]) | set(b[1]["columns"]))),
                 "chunk_info": a[1]["chunk_info"] | b[1]["chunk_info"],
                 "exceptions": a[1]["exceptions"] + b[1]["exceptions"],
             }
