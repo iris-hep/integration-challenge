@@ -135,6 +135,7 @@ def plot_taskstream(ts: dict):
     tmax = max(max(t["stop"] for t in ts_["startstops"]) for ts_ in ts) - t0
     y_next = 0
     worker_pos = {}
+    patches = []
     for task in ts:
         # get y position for worker or create new one for new worker
         y_pos = worker_pos.get(task["worker"], None)
@@ -148,9 +149,9 @@ def plot_taskstream(ts: dict):
                 continue
             start = subtask["start"] - t0
             stop = subtask["stop"] - t0
-            c = "yellow" if subtask["action"] == "compute" else "red"
-            patch = mpl.patches.Rectangle((start, y_pos - 0.4), stop - start, 0.8, facecolor=c, edgecolor="black")
-            ax.add_patch(patch)
+            patches.append(mpl.patches.Rectangle((start, y_pos - 0.4), stop - start, 0.8))
+
+    ax.add_collection(mpl.collections.PatchCollection(patches, facecolor="yellow", edgecolor="black"))
 
     ax.set_xlim(0, tmax)
     ax.set_ylim(-0.5, y_next - 0.5)
