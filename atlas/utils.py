@@ -434,7 +434,7 @@ def custom_process(workitems, processor_instance, schema, client, preload: Optio
                 "chunks": 1,
                 "columns": sorted({a.branch for a in access_log}),
                 "chunk_info": {(wi.filename, wi.entrystart, wi.entrystop): (t0, t1, bytesread)},
-                "exceptions": ""
+                "exceptions": []
             }
         except Exception as e:
             out = None
