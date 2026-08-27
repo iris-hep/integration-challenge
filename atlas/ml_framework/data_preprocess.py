@@ -10,145 +10,128 @@ import numpy as np
 import h5py
 
 
-def to_hdf5(samples_dict, output_file, max_events_per_sample=-1):
+def to_hdf5(files_dict, labels_dict, config, output_file, max_events=-1):
+    """
+    Configurable translation layer from ServiceX to Salt
+    Writes out an .h5 file containing object descriptions for specified files
+    labels and files dict are built similarly
 
+    example config: {
+        "event": {
+            "branches": {
+                "met": "met_met_NOSYS",
+                "met_phi": "met_phi_NOSYS",
+            },
+            "attach_label": True,}, #Attach training labels to global variable for Salt
+        "jet": {
+            "branches": {
+                "pt": "jet_pt_NOSYS",
+                "eta": "jet_eta",
+            }}
+            }
+    
+    """
+        
+    # ----------------------------------
+    # Load arrays and label per sample
+    # ----------------------------------
+    
     arrays = []
-
-    for sample, files in samples_dict.items():
-
-        label = 1 if sample.startswith("Hplus") else 0
-
-        arr = ak.from_parquet(list(files)) #files is ServiceX Guardlist wrapper
-
-        if max_events_per_sample != -1:
-            arr = arr[:max_events_per_sample]
-
-        # add fields
-        arr = ak.with_field(arr, label, "label")
-   #     arr = ak.with_field(arr, sample, "sample") 
-
-        print(f"\Loading {sample} ({len(files)} files, label={label})")
-
-
+    print("LOADING")
+    print("=" * 30)
+    for sample, files in files_dict.items():
+        arr = ak.from_parquet(list(files))
+        if max_events > 0:
+            arr = arr[:max_events]
+        arr = ak.with_field(arr, labels_dict[sample], "label")
         arrays.append(arr)
+        print(f"{sample} - {len(arr)} events")
 
-        print(f"Loaded {len(arr)} events")
-
-    # -----------------
-    # merge all samples
-    # -----------------
-
-    arr = ak.concatenate(arrays)
-    num_events = len(arr)
-
-    print(f"\nTotal events: {num_events}")
-
-    max_jets = int(ak.max(ak.num(arr.jet_pt_NOSYS)))
-    max_els  = int(ak.max(ak.num(arr.el_pt_NOSYS)))
+    all_samples = ak.concatenate(arrays)
+    num_events = len(all_samples)
+    print("\n--- Combined dataset ---")
+    print(f"Total events : {num_events}")
 
     # -----------------
-    # dtypes
+    # Validate config 
     # -----------------
+    for obj, obj_cfg in config.items():
+        for out_name, branch in obj_cfg.get("branches", {}).items():
+            if branch not in ak.fields(all_samples):
+                raise ValueError(
+                    f"Branch '{branch}' (mapped to '{obj}/{out_name}') not found. "
+                    "Verify config or file content."
+                )
+        if obj_cfg.get("attach_label", False) and "label" not in ak.fields(all_samples):
+            raise ValueError(
+                f"config['{obj}']['attach_label'] is True but no 'label' field "
+                "was found on the loaded samples."
+            )
 
-    event_dtype = np.dtype([
-        ("met", "f4"),
-        ("met_phi", "f4"),
-        ("met_sig", "f4"),
-        ("met_sumet", "f4"),
-        ("label", "i4"),
-#        ("sample", "S64"), 
-    ])
+    # ----------------------------------
+    # Build h5 objects from config 
+    # ----------------------------------
 
-    jet_dtype = np.dtype([
-        ("valid", "?"),
-        ("pt", "f4"),
-        ("eta", "f4"),
-        ("phi", "f4"),
-        ("btag", "?"),
-    ])
+    output_arrays = {}
 
-    el_dtype = np.dtype([
-        ("valid", "?"),
-        ("pt", "f4"),
-        ("eta", "f4"),
-        ("phi", "f4"),
-    ])
+    for obj, obj_cfg in config.items():
+        branches = obj_cfg.get("branches", {})
+        attach_label = obj_cfg.get("attach_label", False)
 
-    # -----------------
-    # allocate
-    # -----------------
+        if branches:
+            first_branch = list(branches.values())[0]
+            # check nesting
+            is_jagged = all_samples[first_branch].ndim > 1
+            max_length = int(ak.max(ak.num(all_samples[first_branch]))) if is_jagged else None
+        else: #when no branches (only global to attach label)
+            is_jagged = False
+            max_length = None
 
-    event = np.zeros(num_events, dtype=event_dtype)
-    jet   = np.zeros((num_events, max_jets), dtype=jet_dtype)
-    el    = np.zeros((num_events, max_els), dtype=el_dtype)
+        print(f"{obj}: {'jagged (max=' + str(max_length) + ')' if is_jagged else 'flat'}")
 
-    # event-level (vectorized)
-    event["met"]       = ak.to_numpy(arr.met_met_NOSYS)
-    event["met_phi"]   = ak.to_numpy(arr.met_phi_NOSYS)
-    event["met_sig"]   = ak.to_numpy(arr.met_significance_NOSYS)
-    event["met_sumet"] = ak.to_numpy(arr.met_sumet_NOSYS)
-    event["label"]     = ak.to_numpy(arr.label)
-#    event["sample"]    = ak.to_numpy(arr.sample).astype("S64")
+        converted = {} #to hold on numpy arrays of the current object
+        valid_arr = None #to hold valid masks 
 
-    # -----------------
-    # loop objects
-    # -----------------
+        for out_name, branch in branches.items():
+            branch_arr = all_samples[branch]
 
-    #log_step = max(1, num_events // 20)
+            if is_jagged:
+                padded = ak.pad_none(branch_arr, max_length, clip=True)
 
-    # -----------------
-    # vectorized objects
-    # -----------------
-    
-    # ---- Jets ----
-    max_jets = int(ak.max(ak.num(arr.jet_pt_NOSYS)))
-    #pad_none default axis is 1
-    jet_pt   = ak.pad_none(arr.jet_pt_NOSYS, max_jets, clip=True)
-    jet_eta  = ak.pad_none(arr.jet_eta, max_jets, clip=True)
-    jet_phi  = ak.pad_none(arr.jet_phi, max_jets, clip=True)
-    jet_btag = ak.pad_none(arr.jet_GN2v01_FixedCutBEff_77_select, max_jets, clip=True)
-    
-    jet_valid = ~ak.is_none(jet_pt, axis=-1)
-    
-    jet_pt   = ak.fill_none(jet_pt, 0)
-    jet_eta  = ak.fill_none(jet_eta, 0)
-    jet_phi  = ak.fill_none(jet_phi, 0)
-    jet_btag = ak.fill_none(jet_btag, False)
-    
-    jet["valid"] = ak.to_numpy(jet_valid)
-    jet["pt"]    = ak.to_numpy(jet_pt)
-    jet["eta"]   = ak.to_numpy(jet_eta)
-    jet["phi"]   = ak.to_numpy(jet_phi)
-    jet["btag"]  = ak.to_numpy(jet_btag)
-    
-    
-    # ---- Electrons ----
-    max_els = int(ak.max(ak.num(arr.el_pt_NOSYS)))
-    
-    el_pt  = ak.pad_none(arr.el_pt_NOSYS, max_els, clip=True)
-    el_eta = ak.pad_none(arr.el_eta, max_els, clip=True)
-    el_phi = ak.pad_none(arr.el_phi, max_els, clip=True)
-    
-    el_valid = ~ak.is_none(el_pt, axis=-1)
-    
-    el_pt  = ak.fill_none(el_pt, 0)
-    el_eta = ak.fill_none(el_eta, 0)
-    el_phi = ak.fill_none(el_phi, 0)
-    
-    el["valid"] = ak.to_numpy(el_valid)
-    el["pt"]    = ak.to_numpy(el_pt)
-    el["eta"]   = ak.to_numpy(el_eta)
-    el["phi"]   = ak.to_numpy(el_phi)
+                if valid_arr is None:
+                    valid_arr = ak.to_numpy(~ak.is_none(padded, axis=-1))
+                    
+                np_arr = ak.to_numpy(ak.fill_none(padded, 0))
+
+                converted[out_name] = np_arr
+            else:
+                converted[out_name] = ak.to_numpy(branch_arr) #no padding
+
+        if attach_label: #attached only to specified object
+            converted["label"] = ak.to_numpy(all_samples["label"])
+
+        dtype_fields = [(out_name, arr.dtype) for out_name, arr in converted.items()]
+        if is_jagged:
+            dtype_fields.append(("valid", "?"))  #required by salt to read var len
+        obj_dtype = np.dtype(dtype_fields)
+        print(f"{obj} dtype (derived): {obj_dtype}")
+
+        shape = (num_events, max_length) if is_jagged else (num_events,)
+        out = np.zeros(shape, dtype=obj_dtype) #np obj to allocate all features
+
+        for out_name, np_arr in converted.items():
+            out[out_name] = np_arr
+        if is_jagged:
+            out["valid"] = valid_arr
+
+        output_arrays[obj] = out
 
     # -----------------
     # write
     # -----------------
-
     with h5py.File(output_file, "w") as f:
-        f.create_dataset("event", data=event)
-        f.create_dataset("jet", data=jet)
-        f.create_dataset("el", data=el)
-
+        for obj, arr in output_arrays.items():
+            f.create_dataset(obj, data=arr)
     print(f"\nWritten {output_file}")
 
 
