@@ -1,4 +1,3 @@
-import collections
 import concurrent.futures
 import gzip
 import itertools
@@ -107,7 +106,7 @@ def rucio_file_paths(name, num_files_expected):
     return unique_paths, sizes_GB
 
 
-def process_one_category(category, container_list, production_map):
+def process_one_category(category, container_list, production_map, old_metadata):
     """combine all metadata for a category"""
     print(f"starting {category}")
     metadata = {}
@@ -129,8 +128,20 @@ def process_one_category(category, container_list, production_map):
 
         if container in production_map:
             # job has run, combine bigpanda and rucio (information should match)
-            assert info_input["nfiles"] == production_map[container]["nfiles_input"]
-            assert info_input["nevts"] == production_map[container]["nevts_input"]
+            if info_input["nevts"] is None:
+                # handle case where input container is lost
+                print(f"[WARNING] container {container} is empty")
+                metadata[container]["nfiles_input"] = production_map[container]["nfiles_input"]
+                metadata[container]["nevts_input"] = production_map[container]["nevts_input"]
+                if old_metadata is not None:
+                    oc = old_metadata[category][container]
+                    assert oc["nfiles_input"] == production_map[container]["nfiles_input"]
+                    assert oc["nevts_input"] == production_map[container]["nevts_input"]
+                    # set input container size from previous run
+                    metadata[container]["size_input_GB"] = oc["size_input_GB"]
+            else:
+                assert info_input["nfiles"] == production_map[container]["nfiles_input"]
+                assert info_input["nevts"] == production_map[container]["nevts_input"]
 
             # update task information
             metadata[container]["output"] = production_map[container]["output"]
@@ -150,14 +161,15 @@ def process_one_category(category, container_list, production_map):
     return {category: metadata}
 
 
-def save_full_metadata(production_map, fname, max_workers=8):
+def save_full_metadata(production_map, fname, max_workers=8, old_metadata=None):
     """combine all metadata into a file, multi-threaded"""
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         res = executor.map(
             process_one_category,
             input_containers.containers.keys(),
             input_containers.containers.values(),
-            itertools.repeat(production_map)
+            itertools.repeat(production_map),
+            itertools.repeat(old_metadata),
         )
 
     metadata = {k: v for r in res for k, v in r.items()}
@@ -179,5 +191,11 @@ if __name__ == "__main__":
     get_job_json(username, production_tag, fname_bigpanda)
     production_map = parse_job_json(fname_bigpanda)
 
+    # load old metadata to inject size information for now-deleted files
     fname_full = "file_metadata_v2.json.gz"
-    metadata = save_full_metadata(production_map, fname_full, max_workers=8)
+    with gzip.open(fname_full) as f:
+        old_metadata = json.load(f)
+
+    save_full_metadata(
+        production_map, fname_full, max_workers=8, old_metadata=old_metadata
+    )
