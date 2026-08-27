@@ -130,7 +130,8 @@ def plot_worker_count(worker_count_dict: dict, timestamps: Optional[list[float]]
 
 def plot_taskstream(ts: dict):
     """simplified version of Dask html report task stream"""
-    fig, ax = plt.subplots(constrained_layout=True)
+    num_workers = len(set(t["worker"] for t in ts))
+    fig, ax = plt.subplots(figsize=(8, num_workers/50+2), constrained_layout=True)
     t0 = min(min(t["start"] for t in ts_["startstops"]) for ts_ in ts)
     tmax = max(max(t["stop"] for t in ts_["startstops"]) for ts_ in ts) - t0
     y_next = 0
@@ -151,7 +152,7 @@ def plot_taskstream(ts: dict):
             stop = subtask["stop"] - t0
             patches.append(mpl.patches.Rectangle((start, y_pos - 0.4), stop - start, 0.8))
 
-    ax.add_collection(mpl.collections.PatchCollection(patches, facecolor="yellow", edgecolor="black"))
+    ax.add_collection(mpl.collections.PatchCollection(patches, facecolor="yellow", edgecolor="black", linewidth=0.5))
 
     ax.set_xlim(0, tmax)
     ax.set_ylim(-0.5, y_next - 0.5)
