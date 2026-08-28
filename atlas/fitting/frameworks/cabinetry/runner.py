@@ -24,6 +24,9 @@ from .systematics import systematic_blocks
 
 NAME = "cabinetry"
 
+# smallest expected yield a bin may take, see `model_and_data`
+MIN_EXPECTED_YIELD = 1e-6
+
 
 def config_path(args):
     return os.path.join(args.config_outdir, f"{args.job_name}.yml")
@@ -56,6 +59,23 @@ def write_config(args):
         yaml.safe_dump(config, f, default_flow_style=False, sort_keys=False)
 
     return outpath
+
+
+def model_and_data(workspace):
+    """build the pyhf model and its data, with the expected yields floored"""
+    
+    import pyhf
+
+    workspace = pyhf.Workspace(workspace)
+    model = workspace.model(
+        # cabinetry's interpolation codes, HistFactory InterpCode=4
+        modifier_settings={
+            "normsys": {"interpcode": "code4"},
+            "histosys": {"interpcode": "code4p"},
+        },
+        clip_bin_data=MIN_EXPECTED_YIELD,
+    )
+    return model, workspace.data(model)
 
 
 def run_fit(args, outpath):
@@ -92,9 +112,7 @@ def run_fit(args, outpath):
     if not steps & set("dfpr"):
         return
 
-    model, data = cabinetry.model_utils.model_and_data(
-        cabinetry.workspace.load(workspace_path)
-    )
+    model, data = model_and_data(cabinetry.workspace.load(workspace_path))
     if not args.unblind:
         # the counterpart of TRExFitter's `FitBlind: TRUE`: fit an Asimov dataset built
         # at the nominal parameter values with the POI set to `--mu-asimov`

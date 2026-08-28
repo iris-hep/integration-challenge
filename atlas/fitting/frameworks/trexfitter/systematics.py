@@ -24,7 +24,7 @@ def _write_histo_syst(f, name, samples, onesided, region):
 
 
 def write_systematic_blocks(f, args, samples):
-    systematics = discover_systematics(args, samples)
+    systematics, pruned = discover_systematics(args, samples)
 
     f.write("% --------------------- %\n")
     f.write("% ---  Systematics  --- %\n")
@@ -37,4 +37,4 @@ def write_systematic_blocks(f, args, samples):
             f.write(f"% --- {current_category} --- %\n\n")
         _write_histo_syst(f, name, syst_samples, onesided, args.region_name)
 
-    print_summary(systematics)
+    print_summary(systematics, pruned, args.syst_pruning_threshold)

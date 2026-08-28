@@ -54,6 +54,10 @@ if __name__ == "__main__":
                      help="Job name written to config (also used as filename)")
     job.add_argument("-stat", "--stats-only", action="store_true",
                      help="Stats-only fit (drops all systematics and MC stat uncertainties)")
+    job.add_argument("--syst-pruning-threshold", type=float, default=0.01,
+                     help="Drop a systematic from a sample when both its normalisation "
+                          "and shape effects stay below this fraction of the nominal "
+                          "yield; also written as SystPruningNorm/SystPruningShape")
     job.add_argument("-com", "--center-of-mass-energy", type=float, default=13.6,
                      help="Centre-of-mass energy in TeV (TRExFitter only)")
     job.add_argument("-lumi", "--luminosity", type=float, default=26.3,

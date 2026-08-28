@@ -6,13 +6,15 @@ Every variation is a `NormPlusShape` systematic, the equivalent of TRExFitter's
 `Type: HISTO`: a `normsys` plus a `histosys` modifier in the pyhf workspace. One-sided
 variations get `Down: {Symmetrize: true}`, so cabinetry builds the down template as
 `2 * nominal - up` instead of reading a histogram.
+
+Negligible variations are pruned during discovery.
 """
 
 from ..inputs import DOWN_SUFFIX, UP_SUFFIX, discover_systematics, print_summary
 
 
 def systematic_blocks(args, samples):
-    systematics = discover_systematics(args, samples)
+    systematics, pruned = discover_systematics(args, samples)
 
     blocks = []
     for name, syst_samples, onesided in systematics:
@@ -31,5 +33,5 @@ def systematic_blocks(args, samples):
             }
         )
 
-    print_summary(systematics)
+    print_summary(systematics, pruned, args.syst_pruning_threshold)
     return blocks
