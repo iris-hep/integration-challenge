@@ -227,3 +227,6 @@ output/
 *.xml
 *.tex
 *.config
+# configs and output from cabinetry
+*_cabinetry/
+fitting/configs/*.yml
