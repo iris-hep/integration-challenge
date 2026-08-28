@@ -221,3 +221,9 @@ preprocess_output.json
 hist.json.gz
 # benchmarking results
 output/
+# output from trexfitter
+*.txt
+*.yaml
+*.xml
+*.tex
+*.config
