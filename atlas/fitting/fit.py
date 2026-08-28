@@ -2,13 +2,13 @@ import argparse
 import copy
 import os
 
-from fitting.config_blocks import (MC_SAMPLES,
+from trexfitter.config_blocks import (MC_SAMPLES,
                                    write_job_block,
                                    write_fit_block,
                                    write_normfactor_blocks,
                                    write_region_block,
                                    write_sample_blocks)
-from fitting.systematics import write_systematic_blocks
+from trexfitter.systematics import write_systematic_blocks
 
 STAT_ONLY_SUFFIX = "_stat_only"
 
