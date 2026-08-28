@@ -1,0 +1,51 @@
+General:
+  Measurement: Hplus_cb_mjj_stat_only
+  POI: mu
+  InputPath: wsi/trexfitter.root:{RegionPath}{SamplePath}/{VariationPath}
+  VariationPath: nominal
+  HistogramFolder: Hplus_cb_mjj_stat_only_cabinetry/histograms
+Regions:
+- Name: SR
+  Variable: $m_{jj}$ [GeV]
+  RegionPath: SR_
+Samples:
+- Name: data
+  SamplePath: data
+  Data: true
+- Name: Hplus_cb
+  SamplePath: Hplus_cb
+  DisableStaterror: true
+- Name: ttbar
+  SamplePath: ttbar_nom
+  DisableStaterror: true
+- Name: Wt
+  SamplePath: Wt
+  DisableStaterror: true
+- Name: st_tchan
+  SamplePath: st_tchan
+  DisableStaterror: true
+- Name: st_schan
+  SamplePath: st_schan
+  DisableStaterror: true
+- Name: wjets
+  SamplePath: wjets
+  DisableStaterror: true
+- Name: zjets
+  SamplePath: zjets
+  DisableStaterror: true
+- Name: diboson
+  SamplePath: diboson
+  DisableStaterror: true
+- Name: ttV
+  SamplePath: ttV
+  DisableStaterror: true
+- Name: rare_top
+  SamplePath: rare_top
+  DisableStaterror: true
+NormFactors:
+- Name: mu
+  Samples: Hplus_cb
+  Nominal: 1
+  Bounds:
+  - 0.0
+  - 5.0
