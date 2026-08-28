@@ -1,0 +1,5 @@
+mplhep
+scipy
+numpy
+matplotlib
+cabinetry
