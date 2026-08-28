@@ -10,11 +10,14 @@ try:
     import tritonclient.grpc as grpcclient
     from tritonclient.utils import np_to_triton_dtype, InferenceServerException
     from google.protobuf import json_format
-except ImportError:  # tritonclient is optional, only needed with use_triton=True
+except ImportError as e:  # tritonclient is optional, only needed with use_triton=True
     grpcclient = None
     np_to_triton_dtype = None
     InferenceServerException = None
     json_format = None
+    triton_import_error = e
+else:
+    triton_import_error = None
 
 
 def pad_and_stack(fields, max_len):
@@ -36,6 +39,12 @@ class TritonInference:
 
     def load_triton_client(self, num_instances=None, kind=None):
         """Connect to the server and make sure the model is loaded and ready."""
+        if triton_import_error is not None:
+            raise ImportError(
+                "use_triton=True requires tritonclient and protobuf, which failed "
+                f"to import: {triton_import_error}"
+            ) from triton_import_error
+
         self.triton_client = grpcclient.InferenceServerClient(url=self.triton_url)
 
         if not (self.triton_client.is_server_live() and self.triton_client.is_server_ready()):
