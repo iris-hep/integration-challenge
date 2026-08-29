@@ -73,10 +73,14 @@ if __name__ == "__main__":
     fit.add_argument("--mu-asimov", type=float, default=1.0,
                      help="Injected Asimov signal strength (POIAsimov)")
     fit.add_argument("--mu-min", type=float, default=0.0,
-                     help="Lower bound for the mu NormFactor and LH scan")
+                     help="Lower bound for the mu NormFactor")
     fit.add_argument("--mu-max", type=float, default=5.0,
-                     help="Upper bound for the mu NormFactor and LH scan")
-    fit.add_argument("--lh-scan-steps", type=int, default=120,
+                     help="Upper bound for the mu NormFactor")
+    fit.add_argument("--lh-scan-min", type=float, default=0.3,
+                     help="Lower end of the LH scan, roughly 4 sigma below the best fit")
+    fit.add_argument("--lh-scan-max", type=float, default=1.7,
+                     help="Upper end of the LH scan, roughly 4 sigma above the best fit")
+    fit.add_argument("--lh-scan-steps", type=int, default=20,
                      help="Number of LH scan steps")
     fit.add_argument("--unblind", action="store_true",
                      help="Fit the observed data instead of an Asimov dataset")

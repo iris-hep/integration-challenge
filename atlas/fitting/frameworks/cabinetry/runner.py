@@ -24,8 +24,11 @@ from .systematics import systematic_blocks
 
 NAME = "cabinetry"
 
-# smallest expected yield a bin may take, see `model_and_data`
+# Collection of fit tuning parameters that loosen conversion requirements for cabinetry
+# in an attempt to match trexfitter and converge the fit
 MIN_EXPECTED_YIELD = 1e-6
+MAX_CALLS = 1_000_000
+FIT_TOLERANCE = 5.0
 
 
 def config_path(args):
@@ -130,7 +133,14 @@ def run_fit(args, outpath):
     if not steps & set("fpr"):
         return
 
-    fit_results = cabinetry.fit.fit(model, data, minos=poi, goodness_of_fit=True)
+    fit_results = cabinetry.fit.fit(
+        model,
+        data,
+        minos=poi,
+        goodness_of_fit=True,
+        maxiter=MAX_CALLS,
+        tolerance=FIT_TOLERANCE,
+    )
     cabinetry.fit.print_results(fit_results)
 
     if "f" in steps:
@@ -147,8 +157,10 @@ def run_fit(args, outpath):
                 model,
                 data,
                 poi,
-                par_range=(args.mu_min, args.mu_max),
+                par_range=(args.lh_scan_min, args.lh_scan_max),
                 n_steps=args.lh_scan_steps,
+                maxiter=MAX_CALLS,
+                tolerance=FIT_TOLERANCE,
             )
             cabinetry.visualize.scan(scan_results, figure_folder=figure_folder)
 
@@ -166,7 +178,13 @@ def run_fit(args, outpath):
             print("No nuisance parameters to rank, skipping the ranking step")
             return
 
-        ranking_results = cabinetry.fit.ranking(model, data, fit_results=fit_results)
+        ranking_results = cabinetry.fit.ranking(
+            model,
+            data,
+            fit_results=fit_results,
+            maxiter=MAX_CALLS,
+            tolerance=FIT_TOLERANCE,
+        )
         cabinetry.visualize.ranking(
             ranking_results, figure_folder=figure_folder, max_pars=args.ranking_max_np
         )

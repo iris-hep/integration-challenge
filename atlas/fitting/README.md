@@ -37,6 +37,10 @@ has no down histogram, or when its up and down histograms are identical; otherwi
 sides are used. That becomes `Symmetrisation: ONESIDED` in TRExFitter and
 `Down: {Symmetrize: true}` in cabinetry.
 
+Discovery also prunes: a variation is dropped from a sample when both its normalisation
+and shape effects stay below `--syst-pruning-threshold` (1% by default). This happens
+before either config is written, so the two frameworks fit the same nuisance parameters.
+
 To see all available options, run `python fit.py --help`.
 
 ### Layout
@@ -93,5 +97,7 @@ cabinetry fit --pulls Hplus_cb_mjj_cabinetry/workspace.json
 * Systematics are `Type: HISTO` in TRExFitter and `Type: NormPlusShape` in cabinetry
   (a `normsys` plus a `histosys` modifier in the workspace).
 * `--center-of-mass-energy`, `--luminosity`, `--plot-systematics` and `--num-cpu` only
-  affect the TRExFitter config; TRExFitter's systematic pruning has no cabinetry
-  equivalent.
+  affect the TRExFitter config.
+* Pruning is shared, as described above. `--syst-pruning-threshold` is additionally
+  written as TRExFitter's `SystPruningNorm`/`SystPruningShape`, where it is a no-op on
+  already-pruned inputs.
