@@ -16,6 +16,7 @@ import urllib.request
 import coffea.nanoevents
 import coffea.processor
 import dask.bag
+import distributed
 import matplotlib as mpl
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -593,3 +594,75 @@ def custom_process(
             pbar.update(1)
 
     return res.result()
+
+
+##################################################
+### Dask executor workaround
+##################################################
+
+
+class ReplicatingDaskExecutor(coffea.processor.DaskExecutor):
+    """DaskExecutor that broadcasts the processor blob to every worker."""
+
+    def __call__(self, items, function, accumulator):
+        client = self.client
+        original_submit = client.submit
+
+        def submit_and_replicate(*args, **kwargs):
+            future = original_submit(*args, **kwargs)
+            client.replicate(future)
+            return future
+
+        # only heavy_input goes through submit(); the chunk tasks use map()
+        client.submit = submit_and_replicate
+        try:
+            return super().__call__(items, function, accumulator)
+        finally:
+            client.submit = original_submit
+
+
+def report_task_placement(client) -> dict:
+    """how many workers are actually running tasks right now"""
+
+    def probe(dask_scheduler):
+        busy = [len(w.processing) for w in dask_scheduler.workers.values()]
+        states = {}
+        for task in dask_scheduler.tasks.values():
+            states[task.state] = states.get(task.state, 0) + 1
+        return {
+            "n_workers": len(dask_scheduler.workers),
+            "workers_with_work": sum(1 for n in busy if n > 0),
+            "total_processing": sum(busy),
+            "max_on_one_worker": max(busy) if busy else 0,
+            "task_states": states,
+        }
+
+    return client.run_on_scheduler(probe)
+
+
+def patch_tolerant_reduce():
+    """Let coffea's tree reduction survive groups where every chunk was skipped."""
+    from coffea.processor import executor as _executor
+
+    if getattr(_executor._reduce, "_tolerates_empty_groups", False):
+        return False
+
+    original_call = _executor._reduce.__call__
+
+    def __call__(self, items):
+        if not any(item is not None for item in items):
+            return None
+        return original_call(self, items)
+
+    _executor._reduce.__call__ = __call__
+    _executor._reduce._tolerates_empty_groups = True
+    return True
+
+
+class TolerantReducePlugin(distributed.WorkerPlugin):
+    """Apply patch_tolerant_reduce() on every worker, new ones included."""
+
+    name = "tolerant-reduce"
+
+    def setup(self, worker=None):
+        patch_tolerant_reduce()
