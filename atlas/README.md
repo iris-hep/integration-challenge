@@ -16,7 +16,7 @@ Use `analysis.ipynb` for this step, which is instrumented with utilities to extr
 
 ### Register the pixi env as a Jupyter kernel:
 
-To register the pixi env as a local kernel to be selected from the notebook (top-rigth corner)
+To register the pixi env as a local kernel to be selected from the notebook (top-right corner)
 
 ```bash
 pixi run python -m ipykernel install --user \
