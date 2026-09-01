@@ -441,10 +441,11 @@ config["general"]["servicex"] = {
         "ignore_local_cache": False,
     },
     "use_s3": True,          # if using S3 for ServiceX outputs, we need to pass encoded=True to uproot.open() to read S3 URLs
+    "apply_baseline_selection": True, # if True, ServiceX will apply event cuts as defined in baseline_selection_config in configuration.py.
 }
 ```
+NOTE: if `apply_baseline_selection=True`, the Docker image used by Python code generator in ServiceX must have Coffea package installed. This is not done for default image used by ServiceX, but can be achieved with a custom image. For testing purposes, the following image can be used: `docker.io/sslhep/servicex_science_image_combined_root:5.7.4-6.38.04@sha256:dc101f071c09908bc6475c822b7c4a98e8ee9b40c19b2a838ad69c509d7e5213`.
 
-At the moment, ServiceX skimming implements branch/column skimming only (no event-level selection yet).
 
 ### How do I skim events with Coffea processor?
 
