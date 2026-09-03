@@ -221,3 +221,12 @@ preprocess_output.json
 hist.json.gz
 # benchmarking results
 output/
+# output from trexfitter
+*.txt
+*.yaml
+*.xml
+*.tex
+*.config
+# configs and output from cabinetry
+*_cabinetry/
+fitting/configs/*.yml
