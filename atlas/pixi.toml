@@ -4,7 +4,7 @@ version = "0.0.1"
 description = "IRIS-HEP ATLAS integration challenge"
 authors = ["Alexander Held <alexander.held@cern.ch>"]
 channels = ["conda-forge"]
-platforms = ["osx-arm64", "linux-64"]
+platforms = ["linux-64"]
 
 [tasks.lab]
 description = "Start a JupyterLab instance"
@@ -14,13 +14,35 @@ cmd = "jupyter lab"
 description = "Get started with the repository"
 depends-on = ["lab"]
 
+
+[pypi-dependencies]
+salt-ml = { git = "https://gitlab.cern.ch/aft/algorithms/salt.git", branch = "main" }
+
+
 [dependencies]
+python = "3.12.*"
+# Cluster has numpy 2.4.2, but salt-ml -> puma-hep 0.5.3 caps this at <2.4.
+numpy = ">=2.2.6,<2.4"
+pandas = "==2.3.3"
+matplotlib = ">=3.10.6,<3.11"
+ipykernel = "*"
 notebook = ">=7.5.0,<8"
 jupyterlab = ">=4.5.0,<5"
-mplhep = ">=0.4.1,<0.5"
+mplhep = ">=1.2.0,<2"
 xrootd = ">=5.8.4,<6"
 fsspec-xrootd = ">=0.5.1,<0.6"
 ipywidgets = ">=8.1.7,<9"
 coffea = ">=2025.10.1,<2026"
-atlas-schema = ">=0.4.1,<0.5"
+# Pinned to the cluster image's versions -- these cross the wire as task graphs
+# and results, so client/worker skew here is a correctness risk.
+atlas-schema = ">=0.5.0,<0.6"
 atlasopenmagic = ">=1.6.1,<2"
+awkward = "==2.8.12"
+uproot = "==5.7.1"
+servicex = ">=3.2.3,<4"
+servicex-analysis-utils = ">=1.2.2,<2"
+func_adl_servicex_xaodr25 = ">=2.4.5.25.2.41,<3"
+tritonclient = ">=2.69.0,<3"
+grpcio = ">=1.82.1,<2"
+apptainer = ">=1.5.3,<2"
+
