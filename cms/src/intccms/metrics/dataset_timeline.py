@@ -10,14 +10,14 @@ which datasets were running during throughput peaks or dips.
 from __future__ import annotations
 
 import re
-from pathlib import Path
-from typing import Any, Callable, Iterable, Optional, Union
+from typing import Any, Callable, Iterable, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from intccms.utils.output import OutputDirectoryManager
+from intccms.utils.save_figure import save_fig
 
 
 def strip_dataset_variation(name: str) -> str:
@@ -103,8 +103,7 @@ def plot_dataset_timeline(
     bin_seconds: float = 1.0,
     ax: Optional[plt.Axes] = None,
     output_manager: Optional[OutputDirectoryManager] = None,
-    output_path: Optional[Union[str, Path]] = None,
-    filename: str = "dataset_timeline.png",
+    name: str = "dataset_timeline",
     group_by: Optional[Callable[[str], str]] = strip_dataset_variation,
     top_n: Optional[int] = 10,
 ) -> plt.Axes:
@@ -121,13 +120,10 @@ def plot_dataset_timeline(
         panel via ``plt.subplots(2, 1, sharex=True)``). If None a new figure
         is created.
     output_manager : OutputDirectoryManager, optional
-        If set and ``output_path`` is not, the figure is saved to
-        ``output_manager.plots_dir / filename``.
-    output_path : str or Path, optional
-        Explicit destination for the figure. Takes precedence over
-        ``output_manager``.
-    filename : str
-        Filename used when saving via ``output_manager``.
+        If set, the figure is saved via :func:`intccms.utils.save_figure.save_fig`
+        under ``output_manager.plots_dir / <session timestamp> / <name>.pdf``.
+    name : str
+        Filename stem passed to :func:`save_fig`. Default ``"dataset_timeline"``.
     group_by : callable, optional
         Forwarded to :func:`build_active_chunks_timeline`. Default folds
         index/variation suffixes into the bare process name. Pass ``None``
@@ -167,11 +163,6 @@ def plot_dataset_timeline(
     ax.margins(x=0)
     ax.figure.tight_layout()
 
-    save_to = None
-    if output_path is not None:
-        save_to = Path(output_path)
-    elif output_manager is not None:
-        save_to = Path(output_manager.plots_dir) / filename
-    if save_to is not None:
-        ax.figure.savefig(save_to, dpi=150, bbox_inches="tight")
+    if output_manager is not None:
+        save_fig(ax.figure, output_manager, name)
     return ax
