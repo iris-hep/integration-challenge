@@ -16,6 +16,7 @@ import urllib.request
 import coffea.nanoevents
 import coffea.processor
 import dask.bag
+import distributed
 import matplotlib as mpl
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
@@ -197,6 +198,26 @@ def hplus_signal_mass(name: str) -> str:
     """get the mass from these signal samples"""
     m = re.search(r'(?i)mhc(\d+)(?=\.)', name)  # case-insensitive, stop at the dot
     return str(m.group(1)+"GeV") if m else None
+
+
+def check_for_ntuples(dataset_info):
+    keys_with_ntuples = {}
+
+    for key, sample in dataset_info.items():
+        container_with_ntuples = 0
+        total_output = 0
+        n_containers = len(sample.keys())
+        for info in sample.values():
+            if info["output"] is not None:
+                container_with_ntuples += 1
+                total_output += info["size_output_GB"]
+        if container_with_ntuples > 0:
+            keys_with_ntuples[key] = {
+                "samples": n_containers,
+                "samples_with_ntuples": container_with_ntuples,
+                "total_output_GB": round(total_output, 2),
+            }
+    return keys_with_ntuples
 
 
 def integrated_luminosity(campaign: str, total=False) -> float:
@@ -496,3 +517,75 @@ def custom_process(workitems, processor_instance, schema, client, preload: Optio
 
     else:
         return client.gather(futures)  # more efficient way of .result() on all the futures
+
+
+##################################################
+### Dask executor workaround
+##################################################
+
+
+class ReplicatingDaskExecutor(coffea.processor.DaskExecutor):
+    """DaskExecutor that broadcasts the processor blob to every worker."""
+
+    def __call__(self, items, function, accumulator):
+        client = self.client
+        original_submit = client.submit
+
+        def submit_and_replicate(*args, **kwargs):
+            future = original_submit(*args, **kwargs)
+            client.replicate(future)
+            return future
+
+        # only heavy_input goes through submit(); the chunk tasks use map()
+        client.submit = submit_and_replicate
+        try:
+            return super().__call__(items, function, accumulator)
+        finally:
+            client.submit = original_submit
+
+
+def report_task_placement(client) -> dict:
+    """how many workers are actually running tasks right now"""
+
+    def probe(dask_scheduler):
+        busy = [len(w.processing) for w in dask_scheduler.workers.values()]
+        states = {}
+        for task in dask_scheduler.tasks.values():
+            states[task.state] = states.get(task.state, 0) + 1
+        return {
+            "n_workers": len(dask_scheduler.workers),
+            "workers_with_work": sum(1 for n in busy if n > 0),
+            "total_processing": sum(busy),
+            "max_on_one_worker": max(busy) if busy else 0,
+            "task_states": states,
+        }
+
+    return client.run_on_scheduler(probe)
+
+
+def patch_tolerant_reduce():
+    """Let coffea's tree reduction survive groups where every chunk was skipped."""
+    from coffea.processor import executor as _executor
+
+    if getattr(_executor._reduce, "_tolerates_empty_groups", False):
+        return False
+
+    original_call = _executor._reduce.__call__
+
+    def __call__(self, items):
+        if not any(item is not None for item in items):
+            return None
+        return original_call(self, items)
+
+    _executor._reduce.__call__ = __call__
+    _executor._reduce._tolerates_empty_groups = True
+    return True
+
+
+class TolerantReducePlugin(distributed.WorkerPlugin):
+    """Apply patch_tolerant_reduce() on every worker, new ones included."""
+
+    name = "tolerant-reduce"
+
+    def setup(self, worker=None):
+        patch_tolerant_reduce()

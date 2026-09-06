@@ -1,0 +1,24 @@
+name: "jet_network"
+platform: "onnxruntime_onnx"
+max_batch_size: 0
+
+input [
+  {
+    name: "jet_features"
+    data_type: TYPE_FP32
+    dims: [ -1, 4 ]
+  },
+  {
+    name: "el_features"
+    data_type: TYPE_FP32
+    dims: [ -1, 3 ]
+  }
+]
+
+output [
+  {
+    name: "ModelV1_pmc"
+    data_type: TYPE_FP32
+    dims: [ 1 ]
+  }
+]
