@@ -41,13 +41,13 @@ from coffea.nanoevents import NanoEventsFactory
 from coffea.processor import Accumulatable, accumulate
 from coffea.processor.executor import WorkItem
 from coffea.util import rich_bar
-from dask.distributed import Client
+from dask.distributed import as_completed, Client
 from dask.tokenize import tokenize
 from rich.console import Group
 from rich.live import Live
 from rich.progress import Progress
 
-from util._futures import DynamicAsCompleted, FutureLike
+from util._futures import FutureLike
 
 try:
     from coffea.util import coffea_console
@@ -198,15 +198,10 @@ def dask_reduce(
             )
 
         failed_items: defaultdict[list[Failure]] = defaultdict(list)
-        dynac = DynamicAsCompleted(futures)
+        ac = as_completed(futures)
 
         # in-dataset merging loop, we merge first within datasets to avoid large accumulators in memory
-        # some reasonable value for the batch_size:
-        # yield in batches of treereduction, and we want at least 1 item per batch
-        batch_size = min(
-            treereduction, max(int(len(futures) / 100), 1)
-        )  # this is heuristic, can be tuned
-        for batch in dynac.iter_batches(batch_size=batch_size):
+        for batch in ac.batches():
             for future in batch:
                 ds = key2ds[future.key]
 
@@ -281,9 +276,9 @@ def dask_reduce(
                     buf.clear()
 
                     # add back to the ac, recursively merge
-                    dynac.add(work)
+                    ac.add(work)
 
-        del dynac
+        del ac
 
         # not needed anymore
         pbar_merge_count.clear()
@@ -314,8 +309,8 @@ def dask_reduce(
         # track how much to advance
         pbar_merge_count = {}
 
-        dynac = DynamicAsCompleted(final_merge_futures.values())
-        for future in dynac:
+        ac = as_completed(final_merge_futures.values())
+        for future in ac:
             if failed_future(future):
                 raise future.exception()
 
@@ -353,10 +348,10 @@ def dask_reduce(
                 buf.clear()
 
                 # add back to the ac, recursively merge
-                dynac.add(future)
+                ac.add(future)
 
         # not needed anymore
-        del dynac
+        del ac
         pbar_merge_count.clear()
 
         pbars[_final_merge_sentinel].update(
